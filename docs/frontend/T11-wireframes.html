@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T11 UI Wireframes &amp; Layout Gallery — Intelligent Lab Equipment Platform</title>
+  <style>
+    /* ==========================================================================
+       T11 LOW-FIDELITY WIREFRAME SYSTEM DESIGN TOKENS & RESET
+       Clean blueprint grayscale/slate palette for layout validation.
+       No external CDNs, web fonts, or dependencies.
+       ========================================================================== */
+    :root {
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-muted: #e2e8f0;
+      --border-subtle: #cbd5e1;
+      --border-medium: #94a3b8;
+      --border-dark: #475569;
+      --text-main: #0f172a;
+      --text-muted: #334155;
+      --text-faint: #475569;
+      --wireframe-blue: #1d4ed8;
+      --wireframe-blue-light: #eff6ff;
+      --wireframe-green: #047857;
+      --wireframe-green-light: #ecfdf5;
+      --wireframe-amber: #b45309;
+      --wireframe-amber-light: #fffbeb;
+      --wireframe-red: #b91c1c;
+      --wireframe-red-light: #fef2f2;
+      --wireframe-purple: #6d28d9;
+      --wireframe-purple-light: #f5f3ff;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    *:focus-visible {
+      outline: 2px solid var(--wireframe-blue) !important;
+      outline-offset: 2px !important;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 14px;
+      overflow-x: hidden;
+      padding-top: 72px; /* For fixed gallery navbar */
+    }
+
+    /* ==========================================================================
+       TOP GALLERY NAVIGATION BAR (Wireframe Gallery Switcher)
+       ========================================================================== */
+    .gallery-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      background: #0f172a;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      border-bottom: 2px solid var(--wireframe-blue);
+    }
+
+    .gallery-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #ffffff;
+    }
+
+    .brand-badge {
+      background: var(--wireframe-blue);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .gallery-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .gallery-subtitle {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .gallery-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      overflow-x: auto;
+      max-width: 60%;
+      padding: 4px 0;
+    }
+
+    .nav-pill {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      background: #1e293b;
+      border: 1px solid #334155;
+    }
+
+    .nav-pill:hover, .nav-pill.active {
+      background: var(--wireframe-blue);
+      color: #ffffff;
+      border-color: var(--wireframe-blue);
+    }
+
+    .role-simulator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      background: #1e293b;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #334155;
+    }
+
+    .role-simulator select {
+      background: #0f172a;
+      color: #ffffff;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* ==========================================================================
+       CONTAINERS, HEADINGS & WIREFRAME WATERMARKS
+       ========================================================================== */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .wireframe-section {
+      background: var(--bg-surface);
+      border: 2px dashed var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 56px;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section-header {
+      border-bottom: 2px solid var(--border-subtle);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .wireframe-watermark {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      border: 1px dashed var(--border-medium);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.5px;
+    }
+
+    /* ==========================================================================
+       COMMON WIREFRAME COMPONENTS (Headers, Sidebars, Cards, Badges, Buttons)
+       ========================================================================== */
+    .wf-shell-header {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--wireframe-blue);
+    }
+
+    .wf-shell-header .logo-area {
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wf-search-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      width: 280px;
+    }
+
+    .wf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .wf-badge-green { background: var(--wireframe-green-light); color: var(--wireframe-green); border: 1px solid #a7f3d0; }
+    .wf-badge-blue { background: var(--wireframe-blue-light); color: var(--wireframe-blue); border: 1px solid #bfdbfe; }
+    .wf-badge-amber { background: var(--wireframe-amber-light); color: var(--wireframe-amber); border: 1px solid #fde68a; }
+    .wf-badge-red { background: var(--wireframe-red-light); color: var(--wireframe-red); border: 1px solid #fecaca; }
+    .wf-badge-purple { background: var(--wireframe-purple-light); color: var(--wireframe-purple); border: 1px solid #ddd6fe; }
+    .wf-badge-slate { background: var(--bg-subtle); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+
+    .wf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.1s ease;
+      border: 1px solid transparent;
+      min-height: 38px;
+    }
+
+    .wf-btn-primary { background: var(--wireframe-blue); color: #ffffff; }
+    .wf-btn-primary:hover { background: #1d4ed8; }
+    .wf-btn-secondary { background: var(--bg-subtle); color: var(--text-main); border-color: var(--border-medium); }
+    .wf-btn-secondary:hover { background: var(--bg-muted); }
+    .wf-btn-danger { background: var(--wireframe-red-light); color: var(--wireframe-red); border-color: #fca5a5; }
+    .wf-btn-sm { font-size: 11px; padding: 4px 10px; min-height: 28px; }
+
+    .wf-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: border-color 0.15s ease;
+    }
+
+    .wf-card:hover {
+      border-color: var(--border-dark);
+    }
+
+    .wf-stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .wf-stat-number {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .wf-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .wf-stat-subtext {
+      font-size: 11px;
+      color: var(--wireframe-green);
+      font-weight: 600;
+    }
+
+    .wf-table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .wf-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .wf-table th {
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    .wf-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    .wf-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .wf-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .wf-img-placeholder {
+      background: #e2e8f0;
+      border: 2px dashed #cbd5e1;
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      padding: 16px;
+      position: relative;
+    }
+
+    .wf-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .wf-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .wf-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    /* ==========================================================================
+       SECTION 1: LANDING PAGE WIREFRAME
+       ========================================================================== */
+    .landing-hero {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 60px 32px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .landing-hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .landing-hero p {
+      font-size: 16px;
+      color: #94a3b8;
+      max-width: 720px;
+      margin: 0 auto 24px auto;
+    }
+
+    .landing-search-box {
+      max-width: 640px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .landing-search-box input {
+      flex: 1;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #ffffff;
+      font-size: 14px;
+    }
+
+    .category-tile {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .category-tile:hover {
+      border-color: var(--wireframe-blue);
+      transform: translateY(-2px);
+    }
+
+    .category-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--wireframe-blue-light);
+      border-radius: 50%;
+      margin: 0 auto 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--wireframe-blue);
+    }
+
+    /* ==========================================================================
+       SECTION 2: AUTHENTICATION SUITE WIREFRAMES
+       ========================================================================== */
+    .auth-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      box-shadow: var(--shadow-md);
+    }
+
+    .auth-branding-pane {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .auth-form-pane {
+      padding: 40px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--wireframe-blue);
+      box-shadow: 0 0 0 2px var(--wireframe-blue-light);
+    }
+
+    .form-help {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ==========================================================================
+       SECTION 3: EQUIPMENT CATALOG WIREFRAME
+       ========================================================================== */
+    .catalog-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+    }
+
+    .catalog-sidebar {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .filter-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .filter-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+
+    .filter-option label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .filter-count {
+      color: var(--text-muted);
+      font-size: 11px;
+      background: var(--bg-muted);
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .catalog-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-subtle);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .catalog-item-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-thumb {
+      height: 140px;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-size: 12px;
+      position: relative;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .card-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px dashed var(--border-subtle);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+
+    .card-footer {
+      padding: 12px 16px;
+      background: var(--bg-subtle);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       SECTION 4: EQUIPMENT DETAILS WIREFRAME
+       ========================================================================== */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 28px;
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      row-gap: 8px;
+      font-size: 13px;
+      padding: 16px;
+      background: var(--bg-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .specs-label {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .booking-sidebar-widget {
+      background: var(--bg-surface);
+      border: 2px solid var(--wireframe-blue);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ==========================================================================
+       SECTION 5: ADD / EDIT EQUIPMENT MODAL
+       ========================================================================== */
+    .modal-wireframe {
+      background: var(--bg-surface);
+      border: 2px solid var(--border-dark);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+      box-shadow: var(--shadow-md);
+    }
+
+    .modal-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border-subtle);
+      margin-bottom: 20px;
+      gap: 8px;
+    }
+
+    .modal-tab {
+      padding: 8px 16px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .modal-tab.active {
+      color: var(--wireframe-blue);
+      border-bottom-color: var(--wireframe-blue);
+    }
+
+    /* ==========================================================================
+       SECTION 6: BOOKING & AVAILABILITY CALENDAR WIREFRAME
+       ========================================================================== */
+    .calendar-wireframe {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--bg-surface);
+    }
+
+    .cal-header-bar {
+      background: var(--bg-subtle);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: 80px repeat(5, 1fr);
+      border-collapse: collapse;
+    }
+
+    .cal-time-col, .cal-day-col {
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .cal-day-header {
+      background: #f8fafc;
+      padding: 10px;
+      font-weight: 600;
+      font-size: 12px;
+      text-align: center;
+      border-bottom: 2px solid var(--border-subtle);
+    }
+
+    .cal-slot {
+      height: 52px;
+      border-bottom: 1px dashed #e2e8f0;
+      padding: 4px;
+      position: relative;
+    }
+
+    .cal-event-block {
+      background: var(--wireframe-blue-light);
+      border-left: 3px solid var(--wireframe-blue);
+      color: var(--wireframe-blue);
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 2px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .cal-event-pending {
+      background: var(--wireframe-amber-light);
+      border-left: 3px solid var(--wireframe-amber);
+      color: var(--wireframe-amber);
+    }
+
+    .cal-event-maintenance {
+      background: #f1f5f9;
+      border-left: 3px solid #64748b;
+      color: #475569;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(148, 163, 184, 0.15) 10px, rgba(148, 163, 184, 0.15) 20px);
+    }
+
+    /* ==========================================================================
+       SECTION 7: ROLE DASHBOARDS
+       ========================================================================== */
+    .dashboard-shell {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 32px;
+      background: var(--bg-surface);
+    }
+
+    .dashboard-header-bar {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ==========================================================================
+       SECTION 8: IMPORTANT UI STATES
+       ========================================================================== */
+    .state-box {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      text-align: center;
+      background: var(--bg-surface);
+    }
+
+    /* Skeleton shimmer simulation */
+    .skeleton-bar {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+      height: 16px;
+      margin-bottom: 10px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ==========================================================================
+       RESPONSIVE MEDIA QUERIES (Desktop, Tablet, Mobile)
+       ========================================================================== */
+    @media (max-width: 1199px) {
+      .catalog-layout {
+        grid-template-columns: 240px 1fr;
+      }
+      .detail-layout {
+        grid-template-columns: 1fr;
+      }
+      .wf-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .wf-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 767px) {
+      body {
+        padding-top: 112px;
+      }
+      .gallery-nav {
+        height: auto;
+        padding: 12px;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .gallery-links {
+        max-width: 100%;
+        width: 100%;
+      }
+      .auth-container {
+        grid-template-columns: 1fr;
+      }
+      .catalog-layout {
+        grid-template-columns: 1fr;
+      }
+      .catalog-sidebar {
+        margin-bottom: 16px;
+      }
+      .wf-grid-3, .wf-grid-4, .wf-grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .cal-grid {
+        grid-template-columns: 60px 1fr;
+      }
+      .cal-day-col:not(:nth-child(2)) {
+        display: none; /* Mobile switches to single day agenda view */
+      }
+      .specs-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       TOP GALLERY NAVIGATION BAR (Sticky interactive switcher)
+       ========================================================================== -->
+  <header class="gallery-nav" role="banner">
+    <a href="#overview" class="gallery-brand">
+      <span class="brand-badge">T11 WIREFRAME</span>
+      <div>
+        <div class="gallery-title">Intelligent Lab Equipment Platform</div>
+        <div class="gallery-subtitle">UI Wireframes &amp; Layout Specification Gallery</div>
+      </div>
+    </a>
+
+    <nav class="gallery-links" aria-label="Wireframe Sections">
+      <a href="#landing" class="nav-pill">1. Landing</a>
+      <a href="#auth" class="nav-pill">2. Auth</a>
+      <a href="#catalog" class="nav-pill">3. Catalog</a>
+      <a href="#equipment-detail" class="nav-pill">4. Details</a>
+      <a href="#equipment-edit" class="nav-pill">5. Add/Edit</a>
+      <a href="#calendar" class="nav-pill">6. Calendar</a>
+      <a href="#dashboards" class="nav-pill">7. 6 Role Dashboards</a>
+      <a href="#ui-states" class="nav-pill">8. UI States</a>
+    </nav>
+
+    <div class="role-simulator">
+      <label for="role-select"><strong>Role Preview:</strong></label>
+      <select id="role-select" onchange="switchRolePreview(this.value)">
+        <option value="RESEARCHER_STUDENT">1. Researcher / Student</option>
+        <option value="LAB_TECHNICIAN">2. Lab Technician</option>
+        <option value="LAB_MANAGER">3. Lab Manager</option>
+        <option value="DEPARTMENT_HEAD">4. Department Head</option>
+        <option value="INSTITUTION_ADMINISTRATOR">5. Institution Admin</option>
+        <option value="SYSTEM_ADMINISTRATOR">6. System Admin</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       MAIN GALLERY CONTENT
+       ========================================================================== -->
+  <main class="container" id="overview">
+
+    <!-- METADATA & TASK HEADER -->
+    <div style="background: #1e293b; color: #ffffff; padding: 20px 24px; border-radius: var(--radius-md); margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">Task T11 — UI Wireframe &amp; Layout Specification Baseline</h1>
+        <p style="font-size: 13px; color: #94a3b8;">
+          All wireframes below represent low-fidelity architectural layouts for validation before React implementation.
+        </p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <span class="wireframe-watermark" style="color: #cbd5e1; background: #0f172a; border-color: #334155;">Branch: kaif-khan</span>
+        <span class="wireframe-watermark" style="color: #86efac; background: #064e3b; border-color: #059669;">T11 Planning Complete</span>
+      </div>
+    </div>
+
+    <!-- ========================================================================
+         SECTION 1: LANDING PAGE WIREFRAME
+         ======================================================================== -->
+    <section id="landing" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">1. Public Home &amp; Landing Page Wireframe <span class="section-tag">Route: /</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Public discovery portal for research equipment across university departments and institutes.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <!-- Landing Navigation Mock -->
+      <div class="wf-shell-header">
+        <div class="logo-area">
+          <span style="background: var(--wireframe-blue); color: #fff; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px;">U</span>
+          <strong>UniLab Share Platform</strong>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center; font-size: 13px;">
+          <span>Catalog Preview</span>
+          <span>Core Facilities</span>
+          <span>Lab Safety SOPs</span>
+          <span>Grant Recharge</span>
+          <a href="#auth" class="wf-btn wf-btn-secondary wf-btn-sm" style="color: #ffffff; background: #334155; border: none;">Sign In</a>
+          <a href="#auth" class="wf-btn wf-btn-primary wf-btn-sm">Register Affiliation</a>
+        </div>
+      </div>
+
+      <!-- Landing Hero -->
+      <div class="landing-hero">
+        <span class="wf-badge wf-badge-blue" style="margin-bottom: 12px;">Institutional Resource Sharing Platform</span>
+        <h1>Discover, Book &amp; Share High-End Scientific Instrumentation</h1>
+        <p>A unified campus ecosystem optimizing the utilization of analytical electron microscopes, NMR spectrometers, mass spectrometers, and specialized cleanroom machinery.</p>
+        <div class="landing-search-box">
+          <input type="text" placeholder="Search instruments by name, technique, or department (e.g., 'TEM', '600 MHz NMR', 'LC-MS')...">
+          <a href="#catalog" class="wf-btn wf-btn-primary">Search Catalog</a>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8;">Popular queries: Transmission Electron Microscope &bull; Liquid Chromatography &bull; X-Ray Diffraction</div>
+      </div>
+
+      <!-- Platform Stat Ticker -->
+      <div class="wf-grid-4" style="margin-bottom: 32px;">
+        <div class="wf-stat-card">
+          <div class="wf-stat-number">142+</div>
+          <div class="wf-stat-label">Active Scientific Instruments</div>
+          <div class="wf-stat-subtext">Sample equipment records (Mock)</div>
+        </div>
+        <div class="wf-stat-card">
+          <div class="wf-stat-number">18</div>
+          <div class="wf-stat-label">Core Laboratory Bays</div>
+          <div class="wf-stat-subtext">Participating campus facilities (Mock)</div>
+        </div>
+        <div class="wf-stat-card">
+          <div class="wf-stat-number">89.4%</div>
+          <div class="wf-stat-label">On-Time Calibration Rate</div>
+          <div class="wf-stat-subtext">Sample compliance status (Mock)</div>
+        </div>
+        <div class="wf-stat-card">
+          <div class="wf-stat-number">120+ hrs</div>
+          <div class="wf-stat-label">Logged Research Usage</div>
+          <div class="wf-stat-subtext">Across campus research labs (Mock)</div>
+        </div>
+      </div>
+
+      <!-- Category Tiles -->
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Browse by Scientific Domain</h3>
+      <div class="wf-grid-3">
+        <div class="category-tile">
+          <div class="category-icon">EM</div>
+          <h4 style="font-size: 14px; font-weight: 600;">Electron &amp; Optical Microscopy</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">TEM, SEM, Confocal Laser Scanning, Atomic Force Microscopes (18 Units)</p>
+        </div>
+        <div class="category-tile">
+          <div class="category-icon">SP</div>
+          <h4 style="font-size: 14px; font-weight: 600;">Spectroscopy &amp; Resonance</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">400MHz-800MHz NMR, Raman, FTIR, UV-Vis Spectrophotometers (24 Units)</p>
+        </div>
+        <div class="category-tile">
+          <div class="category-icon">MS</div>
+          <h4 style="font-size: 14px; font-weight: 600;">Separation &amp; Mass Spec</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">LC-MS/MS, GC-MS, Preparative HPLC, Ion Chromatography (14 Units)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 2: AUTHENTICATION SUITE WIREFRAME
+         ======================================================================== -->
+    <section id="auth" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">2. Authentication Suite Wireframes <span class="section-tag">Routes: /login &bull; /register &bull; /forgot-password &bull; /reset-password</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Role-aware onboarding, institutional identity verification, Google Workspace SSO, and secure password recovery lifecycle.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <!-- Auth Navigation Sub-bar -->
+      <div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        <strong style="font-size: 12px; align-self: center; margin-right: 8px; color: var(--text-muted);">Auth Views:</strong>
+        <a href="#auth-login" class="wf-btn wf-btn-sm wf-btn-primary">1. Login View</a>
+        <a href="#auth-register" class="wf-btn wf-btn-sm wf-btn-secondary">2. Registration View</a>
+        <a href="#auth-forgot" class="wf-btn wf-btn-sm wf-btn-secondary">3. Forgot Password View</a>
+        <a href="#auth-reset" class="wf-btn wf-btn-sm wf-btn-secondary">4. Reset Password View</a>
+      </div>
+
+      <!-- 2.1 LOGIN VIEW WIREFRAME -->
+      <div class="auth-container" id="auth-login" style="margin-bottom: 32px;">
+        <!-- Left Branding Panel -->
+        <div class="auth-branding-pane">
+          <div>
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Intelligent Lab Resource Platform</div>
+            <p style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+              Unified scheduling, booking approvals, preventative maintenance, and grant compliance for shared university research infrastructure.
+            </p>
+          </div>
+          <div style="font-size: 12px; color: #94a3b8; border-top: 1px solid #334155; padding-top: 16px;">
+            <div>Institutional Access Only &bull; Spring Boot Security RBAC</div>
+            <div style="color: #64748b; margin-top: 4px;">[Illustrative Wireframe Mock Data — Not Real Database Records]</div>
+          </div>
+        </div>
+
+        <!-- Right Form Panel: Wireframe Login Form -->
+        <div class="auth-form-pane">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <h3 style="font-size: 18px; font-weight: 700;">Sign In to Your Workspace</h3>
+            <span class="section-tag">Route: /login</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Use your registered institutional credentials to access your lab schedule.</p>
+
+          <form onsubmit="event.preventDefault(); alert('Wireframe demonstration only — no backend authentication called.');">
+            <div class="form-group">
+              <label class="form-label" for="auth-email">Institutional Email Address</label>
+              <input type="email" id="auth-email" class="form-control" placeholder="researcher@university.edu" value="e.vance@university.edu">
+              <div class="form-help">Must match verified university domain (@university.edu)</div>
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between;">
+                <label class="form-label" for="auth-pwd">Password</label>
+                <a href="#auth-forgot" style="font-size: 11px; color: var(--wireframe-blue); text-decoration: none; font-weight: 600;">Forgot password?</a>
+              </div>
+              <input type="password" id="auth-pwd" class="form-control" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" value="mockPassword123!">
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="auth-remember" checked>
+              <label for="auth-remember" style="font-size: 12px; color: var(--text-muted); cursor: pointer;">Remember this lab workstation for 30 days</label>
+            </div>
+
+            <button type="submit" class="wf-btn wf-btn-primary" style="width: 100%; margin-bottom: 14px;">Sign In to Workspace</button>
+
+            <div style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; position: relative;">
+              <span style="background: var(--bg-surface); padding: 0 10px; position: relative; z-index: 1;">Or authenticate with SSO</span>
+              <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border-subtle); z-index: 0;"></div>
+            </div>
+
+            <button type="button" class="wf-btn wf-btn-secondary" style="width: 100%; margin-bottom: 16px;">
+              <span>G</span> Sign in with Google Workspace
+            </button>
+
+            <div style="font-size: 12px; text-align: center; color: var(--text-muted);">
+              Need an institutional account? <a href="#auth-register" style="color: var(--wireframe-blue); font-weight: 600; text-decoration: none;">Register Affiliation</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 2.2 REGISTRATION VIEW WIREFRAME -->
+      <div class="wf-card" id="auth-register" style="margin-bottom: 32px; border-left: 4px solid var(--wireframe-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700;">2.2 New User Registration &amp; Affiliation Onboarding Wireframe</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Captures institutional credentials, host department, role intent, and safety clearance acknowledgement.</p>
+          </div>
+          <span class="section-tag">Route: /register</span>
+        </div>
+
+        <form onsubmit="event.preventDefault(); alert('Wireframe demonstration only.');">
+          <div class="wf-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="reg-fullname">Full Name (with Title)</label>
+              <input type="text" id="reg-fullname" class="form-control" placeholder="Dr. Jane Doe" value="Dr. Elena Vance">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-email">Institutional Email Address</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="user@university.edu" value="e.vance@university.edu">
+              <div class="form-help">Must be an authorized campus email account.</div>
+            </div>
+          </div>
+
+          <div class="wf-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="reg-institution">Institution / University</label>
+              <select id="reg-institution" class="form-control">
+                <option selected>Metropolitan University of Science &amp; Technology</option>
+                <option>Affiliated National Laboratory Consortium</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-dept">Academic Department / Research Institute</label>
+              <select id="reg-dept" class="form-control">
+                <option selected>Department of Materials Science &amp; Engineering</option>
+                <option>Department of Chemistry</option>
+                <option>School of Biomedical Engineering</option>
+                <option>Department of Physics &amp; Astronomy</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Primary Requested Role</label>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px;">
+              <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="reg-role" checked> Researcher / Student (Default)
+              </label>
+              <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="reg-role"> Lab Technician (Requires Dept Verification)
+              </label>
+              <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="reg-role"> Principal Investigator / Lab Manager
+              </label>
+            </div>
+          </div>
+
+          <div class="wf-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="reg-pwd">Create Password</label>
+              <input type="password" id="reg-pwd" class="form-control" value="SecureLab2026!">
+              <div class="form-help">&check; Min 8 chars &bull; &check; Number &bull; &check; Special character</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-pwd-confirm">Confirm Password</label>
+              <input type="password" id="reg-pwd-confirm" class="form-control" value="SecureLab2026!">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 8px;">
+            <label style="font-size: 12px; color: var(--text-muted); display: flex; align-items: flex-start; gap: 8px;">
+              <input type="checkbox" checked style="margin-top: 2px;">
+              <span>I acknowledge that laboratory instrument reservations are legally bound by Institutional Research Safety SOPs and hazardous chemical disposal protocols.</span>
+            </label>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+            <a href="#auth-login" class="wf-btn wf-btn-secondary">Cancel &amp; Return to Sign In</a>
+            <button type="submit" class="wf-btn wf-btn-primary">Submit Registration Request</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2.3 & 2.4 FORGOT & RESET PASSWORD DUAL WIREFRAME -->
+      <div class="wf-grid-2">
+        <!-- 2.3 FORGOT PASSWORD -->
+        <div class="wf-card" id="auth-forgot" style="border-left: 4px solid var(--wireframe-amber);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <h4 style="font-size: 15px; font-weight: 700;">2.3 Password Recovery Request Wireframe</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Dispatches a secure time-limited token.</p>
+            </div>
+            <span class="section-tag">Route: /forgot-password</span>
+          </div>
+
+          <form onsubmit="event.preventDefault(); alert('Wireframe demonstration: Recovery email sent.');">
+            <div class="form-group">
+              <label class="form-label" for="forgot-email">Registered Institutional Email</label>
+              <input type="email" id="forgot-email" class="form-control" placeholder="user@university.edu" value="e.vance@university.edu">
+              <div class="form-help">A secure token valid for 15 minutes will be dispatched.</div>
+            </div>
+
+            <div style="background: var(--bg-subtle); border: 1px dashed var(--border-medium); padding: 10px; border-radius: var(--radius-sm); font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+              <strong>Security Protocol Notice:</strong> If an account exists with this address, you will receive an institutional verification link containing a cryptographic reset token.
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <a href="#auth-login" style="font-size: 12px; color: var(--wireframe-blue); text-decoration: none;">&larr; Back to Sign In</a>
+              <button type="submit" class="wf-btn wf-btn-primary wf-btn-sm">Send Recovery Link</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 2.4 RESET PASSWORD -->
+        <div class="wf-card" id="auth-reset" style="border-left: 4px solid var(--wireframe-green);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <h4 style="font-size: 15px; font-weight: 700;">2.4 Reset Password Confirmation Wireframe</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Token validation and credential renewal.</p>
+            </div>
+            <span class="section-tag">Route: /reset-password</span>
+          </div>
+
+          <form onsubmit="event.preventDefault(); alert('Wireframe demonstration: Password successfully updated.');">
+            <div class="form-group">
+              <label class="form-label" for="reset-token">Validation Token (from Email Link)</label>
+              <input type="text" id="reset-token" class="form-control" value="tok_sec_9941_verified" readonly style="background: #f1f5f9; font-family: monospace;">
+              <div class="form-help" style="color: var(--wireframe-green); font-weight: 600;">&check; Token validated for user: e.vance@university.edu</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reset-new-pwd">Enter New Password</label>
+              <input type="password" id="reset-new-pwd" class="form-control" value="BrandNewLabPass2026!">
+              <div class="form-help">Minimum 8 characters with at least 1 number and 1 symbol.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reset-confirm-pwd">Confirm New Password</label>
+              <input type="password" id="reset-confirm-pwd" class="form-control" value="BrandNewLabPass2026!">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+              <a href="#auth-login" style="font-size: 12px; color: var(--text-muted); text-decoration: none;">Cancel</a>
+              <button type="submit" class="wf-btn wf-btn-primary wf-btn-sm">Update Password &amp; Sign In</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 3: EQUIPMENT CATALOG WIREFRAME (Grid & Table View)
+         ======================================================================== -->
+    <section id="catalog" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">3. Equipment Catalog Wireframe <span class="section-tag">Route: /catalog</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Faceted search, multi-dimensional filters, operational status badges, and dual grid/table views.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <div class="catalog-layout">
+        <!-- Left Filter Sidebar -->
+        <aside class="catalog-sidebar" aria-label="Catalog Filters">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+            <strong style="font-size: 14px;">Filters (4 active)</strong>
+            <button class="wf-btn wf-btn-sm wf-btn-secondary" style="padding: 2px 8px;">Reset All</button>
+          </div>
+
+          <!-- Keyword Search Inside Sidebar -->
+          <div>
+            <div class="filter-group-title">Keyword Filter</div>
+            <input type="text" class="form-control" placeholder="Model, serial, or technique..." value="Microscope">
+          </div>
+
+          <!-- Category Facet -->
+          <div>
+            <div class="filter-group-title">Equipment Category</div>
+            <div class="filter-option"><label><input type="checkbox" checked> Electron Microscopy</label><span class="filter-count">18</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Spectroscopy / NMR</label><span class="filter-count">24</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Mass Spectrometry</label><span class="filter-count">14</span></div>
+            <div class="filter-option"><label><input type="checkbox"> X-Ray Diffraction</label><span class="filter-count">9</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Thermal / Mechanical</label><span class="filter-count">11</span></div>
+          </div>
+
+          <!-- Operational Status Facet -->
+          <div>
+            <div class="filter-group-title">Operational Status</div>
+            <div class="filter-option"><label><input type="checkbox" checked> Available for Booking</label><span class="filter-count">32</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Currently In-Use</label><span class="filter-count">14</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Under Maintenance</label><span class="filter-count">3</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Calibration In-Progress</label><span class="filter-count">2</span></div>
+          </div>
+
+          <!-- Department Facet -->
+          <div>
+            <div class="filter-group-title">Department / Facility</div>
+            <div class="filter-option"><label><input type="checkbox" checked> Materials Science Bay</label><span class="filter-count">22</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Chemistry Core Facility</label><span class="filter-count">19</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Bioengineering Lab</label><span class="filter-count">15</span></div>
+          </div>
+
+          <!-- Calibration Status Facet -->
+          <div>
+            <div class="filter-group-title">Calibration Validity</div>
+            <div class="filter-option"><label><input type="checkbox" checked> Certified Valid</label><span class="filter-count">44</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Due within 14 Days</label><span class="filter-count">4</span></div>
+            <div class="filter-option"><label><input type="checkbox"> Overdue / Lockdown</label><span class="filter-count">1</span></div>
+          </div>
+        </aside>
+
+        <!-- Right Main Catalog Viewport -->
+        <div>
+          <!-- Catalog Toolbar -->
+          <div class="catalog-toolbar">
+            <div style="font-size: 13px; font-weight: 600;">
+              Showing <span style="color: var(--wireframe-blue);">6 of 48</span> Matched Scientific Instruments
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <label for="cat-sort" style="font-size: 12px; color: var(--text-muted);">Sort by:</label>
+              <select id="cat-sort" class="form-control" style="width: auto; padding: 4px 10px; font-size: 12px;">
+                <option>Availability (Soonest First)</option>
+                <option>Instrument Name (A-Z)</option>
+                <option>Highest Utilization Rate</option>
+                <option>Recently Added</option>
+              </select>
+              <div style="display: flex; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); overflow: hidden;">
+                <button class="wf-btn wf-btn-sm wf-btn-primary" style="border-radius: 0;">Grid Cards</button>
+                <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border-radius: 0; border: none;">Dense Table</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equipment Cards Grid -->
+          <div class="wf-grid-3">
+            <!-- Card 1: Available -->
+            <div class="catalog-item-card">
+              <div class="card-thumb">
+                <span class="wf-badge wf-badge-green" style="position: absolute; top: 10px; left: 10px;">Available</span>
+                <span class="wf-badge wf-badge-blue" style="position: absolute; top: 10px; right: 10px;">Open Campus</span>
+                [SCHEMATIC: TEM-2100F]
+              </div>
+              <div class="card-body">
+                <h4 style="font-size: 15px; font-weight: 700;">JEOL JEM-2100F Field Emission TEM</h4>
+                <div style="font-size: 12px; color: var(--text-muted);">Asset Tag: EQ-2024-MS-004 &bull; JEOL Inc.</div>
+                <div style="font-size: 12px; color: var(--text-main); margin-top: 4px;">
+                  <strong>Location:</strong> Materials Science Center, Bay 3, Room 114
+                </div>
+                <div class="card-meta-row">
+                  <span><strong>Calibration:</strong> Valid (Nov 2026)</span>
+                  <span><strong>Rate:</strong> $45 / hr (Mock)</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#equipment-detail" class="wf-btn wf-btn-secondary wf-btn-sm">View Details</a>
+                <a href="#calendar" class="wf-btn wf-btn-primary wf-btn-sm">Book Time Slot</a>
+              </div>
+            </div>
+
+            <!-- Card 2: In-Use -->
+            <div class="catalog-item-card">
+              <div class="card-thumb">
+                <span class="wf-badge wf-badge-blue" style="position: absolute; top: 10px; left: 10px;">In Use (Until 16:30)</span>
+                <span class="wf-badge wf-badge-slate" style="position: absolute; top: 10px; right: 10px;">Dept Only</span>
+                [SCHEMATIC: NMR-600]
+              </div>
+              <div class="card-body">
+                <h4 style="font-size: 15px; font-weight: 700;">Bruker Avance III HD 600 MHz NMR</h4>
+                <div style="font-size: 12px; color: var(--text-muted);">Asset Tag: EQ-2023-CH-012 &bull; Bruker BioSpin</div>
+                <div style="font-size: 12px; color: var(--text-main); margin-top: 4px;">
+                  <strong>Location:</strong> Chemistry Spectroscopy Hall, Rm 102
+                </div>
+                <div class="card-meta-row">
+                  <span><strong>Calibration:</strong> Due in 8 Days</span>
+                  <span><strong>Rate:</strong> $60 / hr (Mock)</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#equipment-detail" class="wf-btn wf-btn-secondary wf-btn-sm">View Details</a>
+                <a href="#calendar" class="wf-btn wf-btn-secondary wf-btn-sm">View Schedule</a>
+              </div>
+            </div>
+
+            <!-- Card 3: Under Maintenance -->
+            <div class="catalog-item-card">
+              <div class="card-thumb">
+                <span class="wf-badge wf-badge-amber" style="position: absolute; top: 10px; left: 10px;">Under Maintenance</span>
+                <span class="wf-badge wf-badge-red" style="position: absolute; top: 10px; right: 10px;">Offline</span>
+                [SCHEMATIC: LC-MS 6490]
+              </div>
+              <div class="card-body">
+                <h4 style="font-size: 15px; font-weight: 700;">Agilent 6490 Triple Quadrupole LC-MS</h4>
+                <div style="font-size: 12px; color: var(--text-muted);">Asset Tag: EQ-2022-BE-009 &bull; Agilent Technologies</div>
+                <div style="font-size: 12px; color: var(--text-main); margin-top: 4px;">
+                  <strong>Location:</strong> Bioengineering Lab, Room 205
+                </div>
+                <div class="card-meta-row">
+                  <span><strong>Service:</strong> Turbo-pump overhaul</span>
+                  <span><strong>ETA:</strong> Tomorrow 10:00</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#equipment-detail" class="wf-btn wf-btn-secondary wf-btn-sm">View Details</a>
+                <button class="wf-btn wf-btn-secondary wf-btn-sm" disabled>Service Lockdown</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dense Table View Section Preview -->
+          <div style="margin-top: 32px;">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Dense Table View Layout (Alternate View)</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Asset Code</th>
+                    <th>Equipment Name &amp; Model</th>
+                    <th>Category</th>
+                    <th>Facility Location</th>
+                    <th>Operational Status</th>
+                    <th>Calibration Expiry</th>
+                    <th>Sharing Policy</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>EQ-2024-MS-004</code></td>
+                    <td><strong>JEOL JEM-2100F TEM</strong></td>
+                    <td>Electron Microscopy</td>
+                    <td>MatSci Bay 3, Rm 114</td>
+                    <td><span class="wf-badge wf-badge-green">Available</span></td>
+                    <td>15 Nov 2026 (Valid)</td>
+                    <td>Open Campus ($45/hr)</td>
+                    <td><a href="#calendar" class="wf-btn wf-btn-sm wf-btn-primary">Book</a></td>
+                  </tr>
+                  <tr>
+                    <td><code>EQ-2023-CH-012</code></td>
+                    <td><strong>Bruker Avance 600 NMR</strong></td>
+                    <td>Spectroscopy</td>
+                    <td>Chemistry Hall, Rm 102</td>
+                    <td><span class="wf-badge wf-badge-blue">In-Use</span></td>
+                    <td>28 Oct 2026 (Due Soon)</td>
+                    <td>Department Only</td>
+                    <td><a href="#calendar" class="wf-btn wf-btn-sm wf-btn-secondary">Schedule</a></td>
+                  </tr>
+                  <tr>
+                    <td><code>EQ-2022-BE-009</code></td>
+                    <td><strong>Agilent 6490 LC-MS</strong></td>
+                    <td>Mass Spectrometry</td>
+                    <td>BioEng Core, Rm 205</td>
+                    <td><span class="wf-badge wf-badge-amber">Maintenance</span></td>
+                    <td>01 Oct 2026 (Overdue)</td>
+                    <td>PI Approval Required</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary" disabled>Lockdown</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 4: EQUIPMENT DETAILS WIREFRAME
+         ======================================================================== -->
+    <section id="equipment-detail" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">4. Equipment Details Wireframe <span class="section-tag">Route: /catalog/:equipmentId</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Deep specification sheet, calibration history log, and sticky reservation checkout widget.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <!-- Breadcrumbs -->
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+        <a href="#landing" style="color: var(--wireframe-blue); text-decoration: none;">Home</a> &gt;
+        <a href="#catalog" style="color: var(--wireframe-blue); text-decoration: none;">Equipment Catalog</a> &gt;
+        <span>JEOL JEM-2100F Field Emission TEM</span>
+      </div>
+
+      <div class="detail-layout">
+        <!-- Left: Specifications & Calibration Logs -->
+        <div>
+          <!-- Title & Badges -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+              <h3 style="font-size: 22px; font-weight: 700;">JEOL JEM-2100F Field Emission TEM</h3>
+              <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                Asset ID: <code>EQ-2024-MS-004</code> &bull; Department of Materials Science &bull; Room 114
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span class="wf-badge wf-badge-green" style="font-size: 13px; padding: 6px 12px;">Operational / Available</span>
+              <span class="wf-badge wf-badge-blue" style="font-size: 13px; padding: 6px 12px;">Campus Sharing Tier 1</span>
+            </div>
+          </div>
+
+          <!-- Image & Schematic Block -->
+          <div class="wf-img-placeholder" style="height: 240px; margin-bottom: 24px;">
+            <div style="font-weight: 700; font-size: 14px;">[HIGH-RESOLUTION INSTRUMENT SCHEMATIC &amp; BAY WORKSTATION DIAGRAM]</div>
+            <div style="font-size: 12px; margin-top: 6px;">Includes Gatan CCD Camera &bull; Oxford EDS Detector &bull; Liquid Nitrogen Cold Finger</div>
+          </div>
+
+          <!-- Technical Specifications Table -->
+          <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Technical &amp; Operational Specifications</h4>
+          <div class="specs-grid" style="margin-bottom: 24px;">
+            <div class="specs-label">Acceleration Voltage</div>
+            <div>80 kV to 200 kV (Continuously variable)</div>
+
+            <div class="specs-label">Point Resolution</div>
+            <div>0.19 nm (0.23 nm lattice resolution)</div>
+
+            <div class="specs-label">Electron Gun</div>
+            <div>Schottky type Field Emission Gun (FEG)</div>
+
+            <div class="specs-label">Specimen Tilting</div>
+            <div>Dual axis &plusmn;30&deg; high-tilt beryllium holder</div>
+
+            <div class="specs-label">Vacuum System</div>
+            <div>Ion getter pump &bull; Turbo molecular auxiliary pump</div>
+
+            <div class="specs-label">Safety Clearance</div>
+            <div>Radiation Safety Cert Level 2 + Cleanroom Class 10,000 protocol</div>
+          </div>
+
+          <!-- Calibration & Service History -->
+          <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">Calibration &amp; Preventative Service Log</h4>
+          <div class="wf-table-container">
+            <table class="wf-table">
+              <thead>
+                <tr>
+                  <th>Event Date</th>
+                  <th>Service Type</th>
+                  <th>Certified Engineer</th>
+                  <th>Tolerance Verification</th>
+                  <th>Certificate Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>15 May 2026</td>
+                  <td>Quarterly Beam Alignment &amp; HT Calibration</td>
+                  <td>Mark Thorne (Lab Tech)</td>
+                  <td>Passed (&plusmn;0.02% drift)</td>
+                  <td><code>CAL-2026-05-15.pdf</code></td>
+                </tr>
+                <tr>
+                  <td>12 Feb 2026</td>
+                  <td>Annual Gun Tip Conditioning &amp; O-ring Replacement</td>
+                  <td>JEOL Service Specialist</td>
+                  <td>Certified Nominal</td>
+                  <td><code>SRV-JEOL-8841.pdf</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Sticky Booking & Availability Widget -->
+        <aside class="booking-sidebar-widget" aria-label="Reservation Summary Widget">
+          <div style="font-size: 12px; font-weight: 700; color: var(--wireframe-blue); text-transform: uppercase; margin-bottom: 6px;">
+            Booking &amp; Availability
+          </div>
+          <div style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">$45.00 <span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">/ hour (Grant Recharge - Mock)</span></div>
+          <div style="font-size: 12px; color: var(--wireframe-green); font-weight: 600; margin-bottom: 16px;">
+            &bull; Next Open Slot: Today, 14:00 &ndash; 17:00
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Select Reservation Date</label>
+            <input type="date" class="form-control" value="2026-10-21">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Available Time Windows</label>
+            <select class="form-control">
+              <option>14:00 - 17:00 (3 hours - Afternoon Slot)</option>
+              <option>17:30 - 20:30 (3 hours - Evening Run)</option>
+              <option>Overnight Run (21:00 - 08:00 - Authorized PIs only)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Grant / Project Account Code</label>
+            <input type="text" class="form-control" placeholder="e.g., NSF-MAT-2024-88">
+            <div class="form-help">Billed automatically upon session completion.</div>
+          </div>
+
+          <a href="#calendar" class="wf-btn wf-btn-primary" style="width: 100%; margin-bottom: 10px;">Proceed to Booking Wizard</a>
+          <button class="wf-btn wf-btn-secondary" style="width: 100%; margin-bottom: 16px;">Download SOP Guide (.PDF)</button>
+
+          <!-- Role Context Actions -->
+          <div style="border-top: 1px dashed var(--border-medium); padding-top: 12px; font-size: 12px;">
+            <div style="font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Privileged Operations:</div>
+            <div style="display: flex; gap: 6px;">
+              <a href="#equipment-edit" class="wf-btn wf-btn-sm wf-btn-secondary">Edit Asset</a>
+              <button class="wf-btn wf-btn-sm wf-btn-danger">Flag Maintenance</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 5: ADD / EDIT EQUIPMENT WIREFRAME MODAL
+         ======================================================================== -->
+    <section id="equipment-edit" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">5. Add / Edit Equipment Wireframe Modal <span class="section-tag">Routes: /equipment/new &bull; /equipment/:id/edit</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Tabbed administrative workflow for asset onboarding, safety rule declaration, and calibration interval setup.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <div class="modal-wireframe">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 18px; font-weight: 700;">Add New Laboratory Equipment</h3>
+            <div style="font-size: 12px; color: var(--text-muted);">Step-by-step equipment registry form for Lab Managers &amp; Technicians.</div>
+          </div>
+          <span class="wf-badge wf-badge-slate">Draft Mode</span>
+        </div>
+
+        <!-- Form Navigation Tabs -->
+        <div class="modal-tabs">
+          <div class="modal-tab active">1. Core Information</div>
+          <div class="modal-tab">2. Technical &amp; Safety</div>
+          <div class="modal-tab">3. Sharing Policies</div>
+          <div class="modal-tab">4. Calibration Interval</div>
+        </div>
+
+        <!-- Form Fields Grid -->
+        <div class="wf-grid-2">
+          <div class="form-group">
+            <label class="form-label">Equipment Commercial Name</label>
+            <input type="text" class="form-control" placeholder="e.g., JEOL JEM-2100F Field Emission TEM" value="JEOL JEM-2100F Field Emission TEM">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Manufacturer / OEM</label>
+            <input type="text" class="form-control" placeholder="e.g., JEOL Ltd." value="JEOL Ltd.">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Model Number &amp; Year</label>
+            <input type="text" class="form-control" placeholder="Model 2100F (2024)" value="2100F (2024)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Internal Serial / Inventory Code</label>
+            <input type="text" class="form-control" placeholder="EQ-2024-MS-004" value="EQ-2024-MS-004">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department / Host Facility</label>
+            <select class="form-control">
+              <option selected>Department of Materials Science &amp; Engineering</option>
+              <option>Department of Chemistry</option>
+              <option>School of Biomedical Engineering</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Room / Laboratory Bay</label>
+            <input type="text" class="form-control" placeholder="Bay 3, Room 114" value="Bay 3, Room 114">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sharing &amp; Access Policy</label>
+          <div style="display: flex; gap: 12px; margin-top: 6px;">
+            <label style="font-size: 13px;"><input type="radio" name="sharing" checked> Open to All Campus Researchers</label>
+            <label style="font-size: 13px;"><input type="radio" name="sharing"> Department Only</label>
+            <label style="font-size: 13px;"><input type="radio" name="sharing"> Supervisor Approval Required</label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-subtle); padding-top: 18px; margin-top: 12px;">
+          <button class="wf-btn wf-btn-secondary">Save Draft</button>
+          <button class="wf-btn wf-btn-secondary">Cancel</button>
+          <button class="wf-btn wf-btn-primary">Publish Equipment to Catalog</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 6: BOOKING & AVAILABILITY CALENDAR WIREFRAME
+         ======================================================================== -->
+    <section id="calendar" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">6. Booking &amp; Availability Calendar Wireframe <span class="section-tag">Route: /calendar</span></h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Time-block resource scheduler, conflict detection warning banner, and reservation confirmation modal.</p>
+        </div>
+        <span class="wireframe-watermark">[ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <div class="calendar-wireframe">
+        <!-- Calendar Control Toolbar -->
+        <div class="cal-header-bar">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="display: flex; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); overflow: hidden;">
+              <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border: none;">&lt; Previous</button>
+              <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border-radius: 0; border-top: none; border-bottom: none;">Today</button>
+              <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border: none;">Next &gt;</button>
+            </div>
+            <strong style="font-size: 15px;">October 19 &ndash; October 23, 2026</strong>
+          </div>
+
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <select class="form-control" style="width: auto; padding: 4px 8px; font-size: 12px;">
+              <option>Viewing: JEOL JEM-2100F TEM (Bay 3, Rm 114)</option>
+              <option>Bruker Avance III HD 600 MHz NMR</option>
+              <option>Agilent 6490 LC-MS</option>
+            </select>
+            <div style="display: flex; border: 1px solid var(--border-medium); border-radius: var(--radius-sm); overflow: hidden;">
+              <button class="wf-btn wf-btn-sm wf-btn-primary" style="border-radius: 0;">Week</button>
+              <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border-radius: 0; border: none;">Day</button>
+              <button class="wf-btn wf-btn-sm wf-btn-secondary" style="border-radius: 0; border: none;">Month</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Time-Grid Scheduler -->
+        <div class="cal-grid">
+          <!-- Header Row -->
+          <div class="cal-day-header">Time</div>
+          <div class="cal-day-header">Mon Oct 19</div>
+          <div class="cal-day-header">Tue Oct 20 (Today)</div>
+          <div class="cal-day-header">Wed Oct 21</div>
+          <div class="cal-day-header">Thu Oct 22</div>
+          <div class="cal-day-header">Fri Oct 23</div>
+
+          <!-- Time Row: 08:00 -->
+          <div class="cal-slot" style="font-size: 11px; color: var(--text-muted); text-align: center; line-height: 52px;">08:00</div>
+          <div class="cal-slot">
+            <div class="cal-event-block">
+              <div>Dr. Vance (Conf)</div>
+              <div style="font-size: 10px;">08:00 - 10:00</div>
+            </div>
+          </div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot">
+            <div class="cal-event-block">
+              <div>BioEng Team (Conf)</div>
+              <div style="font-size: 10px;">08:30 - 11:30</div>
+            </div>
+          </div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot"></div>
+
+          <!-- Time Row: 10:00 -->
+          <div class="cal-slot" style="font-size: 11px; color: var(--text-muted); text-align: center; line-height: 52px;">10:00</div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot">
+            <div class="cal-event-block cal-event-pending">
+              <div>Pending Mgr Review</div>
+              <div style="font-size: 10px;">10:00 - 12:00 (K. Khan)</div>
+            </div>
+          </div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot">
+            <div class="cal-event-block cal-event-maintenance">
+              <div>Tech Calibration Check</div>
+              <div style="font-size: 10px;">10:00 - 13:00</div>
+            </div>
+          </div>
+          <div class="cal-slot"></div>
+
+          <!-- Time Row: 14:00 -->
+          <div class="cal-slot" style="font-size: 11px; color: var(--text-muted); text-align: center; line-height: 52px;">14:00</div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot" style="border: 2px solid var(--wireframe-blue); background: var(--wireframe-blue-light); border-radius: 4px;">
+            <div style="color: var(--wireframe-blue); font-weight: 700; font-size: 11px; padding: 4px;">
+              [OPEN SLOT - CLICK TO BOOK]
+            </div>
+          </div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot"></div>
+          <div class="cal-slot">
+            <div class="cal-event-block">
+              <div>Ph.D. Defense Run</div>
+              <div style="font-size: 10px;">14:00 - 18:00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Embedded Booking Creation Modal Wireframe -->
+      <div class="wf-card" style="margin-top: 24px; border: 2px solid var(--wireframe-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="font-size: 15px; font-weight: 700;">Reservation Modal Wireframe (Triggered by Clicking Open Slot)</h4>
+          <span class="wf-badge wf-badge-green">&check; Conflict Check: Slot Open</span>
+        </div>
+        <div class="wf-grid-3">
+          <div class="form-group">
+            <label class="form-label">Instrument &amp; Location</label>
+            <input type="text" class="form-control" value="JEOL JEM-2100F TEM (Bay 3, Rm 114)" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Booking Time Window</label>
+            <input type="text" class="form-control" value="Tue Oct 20, 2026: 14:00 - 17:00 (3 hrs)" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Grant / Project Account Code</label>
+            <input type="text" class="form-control" placeholder="NSF-MAT-2024-88">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Specimen Preparation &amp; Chemical Safety Acknowledgement</label>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-muted);">
+            <label><input type="checkbox" checked> I certify that specimens are free from volatile biological hazards and solvents incompatible with high vacuum.</label>
+            <label><input type="checkbox" checked> I possess active Radiation Safety Level 2 certification on file with the department.</label>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button class="wf-btn wf-btn-secondary wf-btn-sm">Cancel</button>
+          <button class="wf-btn wf-btn-primary wf-btn-sm">Confirm &amp; Submit Booking Request</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 7: SEPARATE DASHBOARDS FOR ALL SIX ROLES
+         ======================================================================== -->
+    <section id="dashboards" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">7. Six Individual Role Dashboards</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Tailored workflows, operational metrics, and privileged action centers for all six platform roles.</p>
+        </div>
+        <span class="wireframe-watermark">[ALL 6 ROLES COVERED &bull; ILLUSTRATIVE WIREFRAME MOCK DATA — NOT REAL DATABASE RECORDS]</span>
+      </div>
+
+      <!-- DASHBOARD 1: RESEARCHER / STUDENT -->
+      <div class="dashboard-shell" id="dash-researcher">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-blue">Role 1: Researcher / Student</span>
+            <strong>Researcher / Student Dashboard: Elena Vance (Ph.D. Scholar)</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/researcher</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">2</div>
+              <div class="wf-stat-label">Upcoming Confirmed Bookings</div>
+              <div class="wf-stat-subtext">Next: Tomorrow 09:00 (TEM - Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">1</div>
+              <div class="wf-stat-label">Pending Approval Request</div>
+              <div class="wf-stat-subtext">Awaiting manager review (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">18.5 hrs</div>
+              <div class="wf-stat-label">Hours Utilized This Month</div>
+              <div class="wf-stat-subtext">Sample monthly usage (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">100%</div>
+              <div class="wf-stat-label">Safety Training Clearance</div>
+              <div class="wf-stat-subtext">Safety training verified (Mock)</div>
+            </div>
+          </div>
+
+          <!-- Researcher Upcoming Sessions -->
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">My Upcoming Reserved Sessions</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Reservation ID</th>
+                    <th>Equipment Name</th>
+                    <th>Facility / Room</th>
+                    <th>Date &amp; Time Window</th>
+                    <th>Digital Access Key</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>#BK-2026-9041</code></td>
+                    <td>JEOL JEM-2100F Field Emission TEM</td>
+                    <td>Bay 3, Room 114</td>
+                    <td>Tomorrow, 09:00 - 12:00</td>
+                    <td><span class="wf-badge wf-badge-blue">PIN: 4829</span></td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Reschedule</button></td>
+                  </tr>
+                  <tr>
+                    <td><code>#BK-2026-9088</code></td>
+                    <td>Bruker 600 MHz NMR Spectrometer</td>
+                    <td>Spectroscopy Hall, Rm 102</td>
+                    <td>Fri Oct 23, 14:00 - 16:00</td>
+                    <td><span class="wf-badge wf-badge-slate">Generated 1h Prior</span></td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-danger">Cancel</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD 2: LAB TECHNICIAN -->
+      <div class="dashboard-shell" id="dash-technician">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-purple">Role 2: Lab Technician</span>
+            <strong>Lab Technician Dashboard: Mark Thorne (Instrument Specialist)</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/technician</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">4</div>
+              <div class="wf-stat-label">Instruments Due for Calibration</div>
+              <div class="wf-stat-subtext" style="color: var(--wireframe-amber);">&bull; 1 due within 48h (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">2</div>
+              <div class="wf-stat-label">Open Maintenance Work Orders</div>
+              <div class="wf-stat-subtext">Scheduled service queue (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">18 / 20</div>
+              <div class="wf-stat-label">Operational Instruments</div>
+              <div class="wf-stat-subtext">Sample equipment count (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">14</div>
+              <div class="wf-stat-label">Daily Physical Check-Ins</div>
+              <div class="wf-stat-subtext">Daily inspection checklist (Mock)</div>
+            </div>
+          </div>
+
+          <!-- Calibration Queue Table -->
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Immediate Calibration &amp; Preventative Service Queue</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Asset Tag</th>
+                    <th>Equipment Name</th>
+                    <th>Due Date</th>
+                    <th>Days Remaining</th>
+                    <th>Procedure Checklist</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>EQ-2023-CH-012</code></td>
+                    <td>Bruker Avance III HD 600 MHz NMR</td>
+                    <td>Oct 28, 2026</td>
+                    <td><span class="wf-badge wf-badge-amber">8 Days Left</span></td>
+                    <td>Field homogeneity &amp; lock drift test</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-primary">Log Calibration</button></td>
+                  </tr>
+                  <tr>
+                    <td><code>EQ-2022-BE-009</code></td>
+                    <td>Agilent 6490 Triple Quad LC-MS</td>
+                    <td>Overdue</td>
+                    <td><span class="wf-badge wf-badge-red">Offline</span></td>
+                    <td>Ion optics cleaning &amp; mass tune</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-danger">Complete Work Order</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD 3: LAB MANAGER -->
+      <div class="dashboard-shell" id="dash-lab-manager">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-amber">Role 3: Lab Manager</span>
+            <strong>Lab Manager Dashboard: Dr. Robert Lang (Materials &amp; Nano Core)</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/lab-manager</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">5</div>
+              <div class="wf-stat-label">Bookings Awaiting Approval</div>
+              <div class="wf-stat-subtext" style="color: var(--wireframe-amber);">&bull; Review queue (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">82.4%</div>
+              <div class="wf-stat-label">Current Week Lab Utilization</div>
+              <div class="wf-stat-subtext">Sample weekly usage (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">22</div>
+              <div class="wf-stat-label">Total Managed Instruments</div>
+              <div class="wf-stat-subtext">Managed facility assets (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">48 hrs</div>
+              <div class="wf-stat-label">Monthly External Booking Hours</div>
+              <div class="wf-stat-subtext">Cross-department sharing (Mock)</div>
+            </div>
+          </div>
+
+          <!-- Booking Approval Queue -->
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Pending Booking Requests Awaiting Approval</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Requester</th>
+                    <th>Requested Equipment</th>
+                    <th>Date &amp; Duration</th>
+                    <th>Grant Code</th>
+                    <th>Safety Clearance</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Kaif Khan</strong> (Ph.D. Scholar)</td>
+                    <td>JEOL JEM-2100F Field Emission TEM</td>
+                    <td>Today, 10:00 - 12:00 (2 hrs)</td>
+                    <td><code>NSF-MAT-2024-88</code></td>
+                    <td><span class="wf-badge wf-badge-green">&check; Verified</span></td>
+                    <td>
+                      <button class="wf-btn wf-btn-sm wf-btn-primary">Approve</button>
+                      <button class="wf-btn wf-btn-sm wf-btn-secondary">Decline</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Sarah Lin</strong> (Postdoc, BioEng)</td>
+                    <td>Bruker 600 MHz NMR Spectrometer</td>
+                    <td>Wed Oct 21, 13:00 - 16:00 (3 hrs)</td>
+                    <td><code>NIH-R01-GM8401</code></td>
+                    <td><span class="wf-badge wf-badge-green">&check; Verified</span></td>
+                    <td>
+                      <button class="wf-btn wf-btn-sm wf-btn-primary">Approve</button>
+                      <button class="wf-btn wf-btn-sm wf-btn-secondary">Decline</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD 4: DEPARTMENT HEAD -->
+      <div class="dashboard-shell" id="dash-department-head">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-green">Role 4: Department Head</span>
+            <strong>Department Head Dashboard: Prof. A. Sterling (Materials Science)</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/department-head</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">76.8%</div>
+              <div class="wf-stat-label">Dept Equipment Utilization</div>
+              <div class="wf-stat-subtext">Department average usage (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">64 hrs</div>
+              <div class="wf-stat-label">External Sharing Hours</div>
+              <div class="wf-stat-subtext">Inter-departmental use (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">14</div>
+              <div class="wf-stat-label">Active Research Groups</div>
+              <div class="wf-stat-subtext">Active research groups (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">3</div>
+              <div class="wf-stat-label">Capacity Bottlenecks Flagged</div>
+              <div class="wf-stat-subtext">High-demand instruments (Mock)</div>
+            </div>
+          </div>
+
+          <!-- Bottlenecks & Utilization Breakdown -->
+          <div class="wf-grid-2">
+            <div class="wf-card">
+              <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Equipment Demand &amp; Bottleneck Analysis</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Instruments operating near 100% capacity requiring additional investment.</p>
+              <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                  <span>JEOL JEM-2100F TEM</span>
+                  <strong>94.2% Booked</strong>
+                </div>
+                <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                  <div style="width: 94.2%; height: 100%; background: var(--wireframe-red);"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                  <span>Rigaku SmartLab XRD</span>
+                  <strong>88.5% Booked</strong>
+                </div>
+                <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                  <div style="width: 88.5%; height: 100%; background: var(--wireframe-amber);"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wf-card">
+              <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Inter-Departmental Sharing Balance Sheet</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Net resource export hours across university schools.</p>
+              <div class="wf-table-container">
+                <table class="wf-table" style="font-size: 12px;">
+                  <thead>
+                    <tr><th>Affiliated School</th><th>Hours Shared</th><th>Revenue Credit</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>School of Bioengineering</td><td>142 hrs</td><td>Shared (Mock)</td></tr>
+                    <tr><td>Department of Chemistry</td><td>98 hrs</td><td>Shared (Mock)</td></tr>
+                    <tr><td>Department of Physics</td><td>64 hrs</td><td>Shared (Mock)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD 5: INSTITUTION ADMINISTRATOR -->
+      <div class="dashboard-shell" id="dash-institution-admin">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-red">Role 5: Institution Administrator</span>
+            <strong>Institution Administrator Dashboard: Campus Facilities &amp; Research Office</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/institution-admin</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">48</div>
+              <div class="wf-stat-label">Total Shared Instruments</div>
+              <div class="wf-stat-subtext">Across registered bays (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">68.5%</div>
+              <div class="wf-stat-label">Average Lab Utilization</div>
+              <div class="wf-stat-subtext">Weekly scheduled hours (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">8</div>
+              <div class="wf-stat-label">Active Core Laboratories</div>
+              <div class="wf-stat-subtext">Participating departments (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">142 hrs</div>
+              <div class="wf-stat-label">Cross-Facility Hours</div>
+              <div class="wf-stat-subtext">Total shared time this month (Mock)</div>
+            </div>
+          </div>
+
+          <!-- Campus Facility Comparison -->
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Campus Core Facilities Utilization Matrix</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>Facility Name</th>
+                    <th>Host Faculty</th>
+                    <th>Total Assets</th>
+                    <th>Active Utilization</th>
+                    <th>Compliance Index</th>
+                    <th>Facility Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Central Analytical Imaging Bay</strong></td>
+                    <td>Engineering</td>
+                    <td>18 Units</td>
+                    <td><span class="wf-badge wf-badge-green">84.2% (Optimal)</span></td>
+                    <td>100% Certified</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Audit Facility</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Advanced Spectroscopy Center</strong></td>
+                    <td>Natural Sciences</td>
+                    <td>24 Units</td>
+                    <td><span class="wf-badge wf-badge-blue">72.6% (Healthy)</span></td>
+                    <td>94% Certified</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Audit Facility</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Microfabrication Cleanroom</strong></td>
+                    <td>Interdisciplinary</td>
+                    <td>12 Units</td>
+                    <td><span class="wf-badge wf-badge-amber">44.1% (Under-utilized)</span></td>
+                    <td>88% Certified</td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-primary">Expand Sharing</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD 6: SYSTEM ADMINISTRATOR -->
+      <div class="dashboard-shell" id="dash-system-admin">
+        <div class="dashboard-header-bar">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="wf-badge wf-badge-slate">Role 6: System Administrator</span>
+            <strong>System Administrator Dashboard: Platform Administration</strong>
+          </div>
+          <span style="font-size: 12px; color: #cbd5e1;">Route: /dashboard/system-admin</span>
+        </div>
+        <div class="dashboard-body">
+          <div class="wf-grid-4">
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">58</div>
+              <div class="wf-stat-label">Registered User Accounts</div>
+              <div class="wf-stat-subtext">Across 6 project roles (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">Active</div>
+              <div class="wf-stat-label">Backend API Status</div>
+              <div class="wf-stat-subtext">Spring Boot services (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">Connected</div>
+              <div class="wf-stat-label">Database Connection</div>
+              <div class="wf-stat-subtext">PostgreSQL connection pool (Mock)</div>
+            </div>
+            <div class="wf-stat-card">
+              <div class="wf-stat-number">0</div>
+              <div class="wf-stat-label">Open Error Flags</div>
+              <div class="wf-stat-subtext">Service logs normal (Mock)</div>
+            </div>
+          </div>
+
+          <!-- User Identity Management Table -->
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">User Provisioning &amp; Role Management</h4>
+            <div class="wf-table-container">
+              <table class="wf-table">
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Full Name</th>
+                    <th>Email Address</th>
+                    <th>Department</th>
+                    <th>System Role</th>
+                    <th>Status</th>
+                    <th>Admin Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>USR-1082</code></td>
+                    <td>Kaif Khan</td>
+                    <td>kaif.khan@university.edu</td>
+                    <td>Materials Science</td>
+                    <td>
+                      <select class="form-control" style="width: auto; padding: 2px 6px; font-size: 12px;">
+                        <option selected>RESEARCHER_STUDENT</option>
+                        <option>LAB_TECHNICIAN</option>
+                        <option>LAB_MANAGER</option>
+                      </select>
+                    </td>
+                    <td><span class="wf-badge wf-badge-green">Active</span></td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Audit Trail</button></td>
+                  </tr>
+                  <tr>
+                    <td><code>USR-1044</code></td>
+                    <td>Dr. Robert Lang</td>
+                    <td>r.lang@university.edu</td>
+                    <td>Central Facilities</td>
+                    <td>
+                      <select class="form-control" style="width: auto; padding: 2px 6px; font-size: 12px;">
+                        <option>RESEARCHER_STUDENT</option>
+                        <option>LAB_TECHNICIAN</option>
+                        <option selected>LAB_MANAGER</option>
+                      </select>
+                    </td>
+                    <td><span class="wf-badge wf-badge-green">Active</span></td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Audit Trail</button></td>
+                  </tr>
+                  <tr>
+                    <td><code>USR-0001</code></td>
+                    <td>Prashanth Root</td>
+                    <td>admin@university.edu</td>
+                    <td>Campus Central IT</td>
+                    <td>
+                      <select class="form-control" style="width: auto; padding: 2px 6px; font-size: 12px;">
+                        <option selected>SYSTEM_ADMINISTRATOR</option>
+                      </select>
+                    </td>
+                    <td><span class="wf-badge wf-badge-green">Active</span></td>
+                    <td><button class="wf-btn wf-btn-sm wf-btn-secondary">Lock Account</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         SECTION 8: IMPORTANT UI STATES & ERROR HANDLING
+         ======================================================================== -->
+    <section id="ui-states" class="wireframe-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">8. Important Asynchronous UI States Wireframes</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Loading shimmer placeholders, empty search handling, API network error states, and permission lockdown.</p>
+        </div>
+        <span class="wireframe-watermark">[ENTERPRISE ERROR HANDLING]</span>
+      </div>
+
+      <div class="wf-grid-3">
+        <!-- State 1: Shimmer Loading Skeleton -->
+        <div class="state-box">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px;">STATE 1: SKELETON LOADING</div>
+          <div class="skeleton-bar" style="width: 40%; height: 20px;"></div>
+          <div class="skeleton-bar" style="width: 100%; height: 80px;"></div>
+          <div class="skeleton-bar" style="width: 75%;"></div>
+          <div class="skeleton-bar" style="width: 60%;"></div>
+          <div style="display: flex; gap: 8px; margin-top: 16px;">
+            <div class="skeleton-bar" style="width: 50%; height: 32px;"></div>
+            <div class="skeleton-bar" style="width: 50%; height: 32px;"></div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">Zero layout shift during API fetch</div>
+        </div>
+
+        <!-- State 2: Empty Results State -->
+        <div class="state-box">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px;">STATE 2: EMPTY SEARCH RESULTS</div>
+          <div style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;">&empty;</div>
+          <h4 style="font-size: 14px; font-weight: 700;">No Instruments Matched Criteria</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 16px 0;">
+            No equipment found matching category 'Cryo-TEM' with status 'Available Today'.
+          </p>
+          <button class="wf-btn wf-btn-sm wf-btn-secondary">Clear All Filters</button>
+        </div>
+
+        <!-- State 3: API Error State -->
+        <div class="state-box" style="border-color: #fca5a5; background: #fff5f5;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--wireframe-red); margin-bottom: 12px;">STATE 3: API SERVER ERROR (HTTP 500)</div>
+          <div style="font-size: 32px; color: var(--wireframe-red); margin-bottom: 8px;">&excl;</div>
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--wireframe-red);">Unable to Synchronize Schedule</h4>
+          <p style="font-size: 12px; color: #7f1d1d; margin: 6px 0 16px 0;">
+            Failed to connect to Laboratory Booking Service at :8000.
+          </p>
+          <div style="display: flex; gap: 8px; justify-content: center;">
+            <button class="wf-btn wf-btn-sm wf-btn-primary">Retry Request</button>
+            <button class="wf-btn wf-btn-sm wf-btn-secondary">Report Outage</button>
+          </div>
+        </div>
+
+        <!-- State 4: No Availability State -->
+        <div class="state-box">
+          <div style="font-size: 12px; font-weight: 700; color: var(--wireframe-amber); margin-bottom: 12px;">STATE 4: NO AVAILABILITY / FULLY BOOKED</div>
+          <div style="font-size: 32px; color: var(--wireframe-amber); margin-bottom: 8px;">&cross;</div>
+          <h4 style="font-size: 14px; font-weight: 700;">Fully Booked for Selected Window</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 16px 0;">
+            All reservation slots for Bruker 600 NMR are occupied this week.
+          </p>
+          <button class="wf-btn wf-btn-sm wf-btn-primary">Jump to Next Open Date (Oct 28)</button>
+        </div>
+
+        <!-- State 5: Booking Pending Approval -->
+        <div class="state-box" style="border-color: #fde68a; background: #fffbeb;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--wireframe-amber); margin-bottom: 12px;">STATE 5: BOOKING PENDING APPROVAL</div>
+          <div style="font-size: 32px; color: var(--wireframe-amber); margin-bottom: 8px;">&bull;&bull;&bull;</div>
+          <h4 style="font-size: 14px; font-weight: 700; color: #92400e;">Awaiting Lab Manager Triage</h4>
+          <p style="font-size: 12px; color: #78350f; margin: 6px 0 16px 0;">
+            Request #BK-9041 submitted to Dr. Elena Vance. Review response expected within 24h (Mock).
+          </p>
+          <button class="wf-btn wf-btn-sm wf-btn-danger">Withdraw Request</button>
+        </div>
+
+        <!-- State 6: Permission Denied (403) -->
+        <div class="state-box" style="border-color: #cbd5e1; background: #f8fafc;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px;">STATE 6: PERMISSION DENIED (HTTP 403)</div>
+          <div style="font-size: 32px; color: var(--text-muted); margin-bottom: 8px;">&lock;</div>
+          <h4 style="font-size: 14px; font-weight: 700;">Restricted Institutional Resource</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 16px 0;">
+            Role <code>RESEARCHER_STUDENT</code> is not permitted to edit asset specifications.
+          </p>
+          <a href="#dash-researcher" class="wf-btn wf-btn-sm wf-btn-primary">Return to Personal Dashboard</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       LIGHTWEIGHT CLIENT-SIDE SCRIPT FOR WIREFRAME SIMULATION
+       ========================================================================== -->
+  <script>
+    function switchRolePreview(role) {
+      console.log('Role preview switched to:', role);
+      const roleTargetMap = {
+        'RESEARCHER_STUDENT': 'dash-researcher',
+        'LAB_TECHNICIAN': 'dash-technician',
+        'LAB_MANAGER': 'dash-lab-manager',
+        'DEPARTMENT_HEAD': 'dash-department-head',
+        'INSTITUTION_ADMINISTRATOR': 'dash-institution-admin',
+        'SYSTEM_ADMINISTRATOR': 'dash-system-admin'
+      };
+
+      const targetId = roleTargetMap[role];
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+          el.style.outline = '3px solid #2563eb';
+          setTimeout(() => {
+            el.style.outline = 'none';
+          }, 2000);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

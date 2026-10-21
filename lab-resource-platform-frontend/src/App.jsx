@@ -1,12 +1,15 @@
-import './App.css'
+import { BrowserRouter } from 'react-router-dom';
+import AuthProvider from './context/AuthProvider';
+import AppRoutes from './routes/AppRoutes';
 
 function App() {
-
   return (
-    <>
-      <h1>Welcome to the Intelligent Laboratory Equipment Sharing and Resource Utilization Optimization Platform</h1>
-    </>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
 export default App;

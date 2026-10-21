@@ -1,8 +1,4 @@
-import axios from 'axios';
+import apiClient from '../api/client';
 
-const api = axios.create({
-    baseURL: 'http://localhost:8000',
-    withCredentials: true
-})
-
-export default api;
+// Re-export the shared client to keep existing imports working.
+export default apiClient;
