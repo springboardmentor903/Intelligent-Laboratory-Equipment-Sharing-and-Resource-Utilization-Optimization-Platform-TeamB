@@ -20,5 +20,5 @@ export const loginUser = async (data) => {
 // Resolves the Google OAuth authorization initiation URL if configured via environment variables.
 // Note: Backend OAuth2 endpoints are not currently implemented or mounted.
 export const getGoogleAuthUrl = () => {
-  return import.meta.env.VITE_GOOGLE_AUTH_URL || null;
+  return 'http://localhost:8080/oauth2/authorization/google';
 };
