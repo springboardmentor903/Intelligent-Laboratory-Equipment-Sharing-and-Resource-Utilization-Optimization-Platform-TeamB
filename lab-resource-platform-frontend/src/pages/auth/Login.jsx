@@ -99,6 +99,10 @@ function Login() {
           </button>
         </form>
 
+        <div className="forgot-password-link">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </div>
+
         <p className="auth-footer">
           Don't have an account? <Link to="/register">Create an account</Link>
         </p>

@@ -286,6 +286,49 @@ html, body {
   flex-shrink: 0;
 }
 
+/* Success Message Banner */
+.form-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+
+.form-success::before {
+  content: "✓";
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Forgot Password Link in Login */
+.forgot-password-link {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  text-align: right;
+}
+
+.forgot-password-link a {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.forgot-password-link a:hover {
+  color: var(--primary-darker);
+  text-decoration: underline;
+}
+
 /* Buttons */
 .primary-button {
   display: inline-flex;
@@ -350,6 +393,160 @@ html, body {
 .auth-footer a:hover {
   color: var(--primary-darker);
   text-decoration: underline;
+}
+
+/* ==========================================================================
+   Dedicated Card Layout (Forgot Password Page)
+   ========================================================================== */
+.auth-page:has(.auth-card) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  min-height: 100vh;
+}
+
+.auth-card {
+  max-width: 480px;
+  width: 100%;
+  margin: auto;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 44px 40px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+  animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.auth-card h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.auth-card > p {
+  font-size: 0.93rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-card label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #38334C;
+  margin-bottom: 6px;
+  letter-spacing: -0.005em;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--bg-input);
+  font-family: inherit;
+  font-size: 0.925rem;
+  color: var(--text-main);
+  margin-bottom: 18px;
+  transition: all var(--transition-fast);
+}
+
+.auth-card input::placeholder {
+  color: var(--text-muted);
+}
+
+.auth-card input:hover {
+  border-color: var(--border-hover);
+  background-color: #FFFFFF;
+}
+
+.auth-card input:focus {
+  outline: none;
+  background-color: #FFFFFF;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3.5px var(--primary-focus-ring);
+}
+
+.auth-card button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 13px 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-darker) 100%);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--primary-glow);
+  transition: all var(--transition-normal);
+  margin-top: 4px;
+}
+
+.auth-card button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  background: linear-gradient(135deg, #8C75D0 0%, #765CC0 100%);
+  box-shadow: 0 6px 20px var(--primary-glow);
+}
+
+.auth-card button[type="submit"]:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-card button[type="submit"]:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-card button[type="button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 20px;
+  margin-top: 14px;
+  background-color: var(--primary-subtle);
+  border: 1.5px solid var(--border-hover);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.auth-card button[type="button"]:hover {
+  background-color: rgba(178, 156, 228, 0.28);
+  border-color: var(--primary-dark);
+  color: var(--primary-darker);
+  transform: translateY(-1px);
 }
 
 /* Side decorative banner on desktop */
@@ -1074,11 +1271,13 @@ tbody tr:hover {
 }
 
 @media (max-width: 480px) {
-  .auth-panel {
+  .auth-panel,
+  .auth-card {
     padding: 32px 20px;
   }
 
-  .auth-heading h1 {
+  .auth-heading h1,
+  .auth-card h1 {
     font-size: 1.55rem;
   }
 

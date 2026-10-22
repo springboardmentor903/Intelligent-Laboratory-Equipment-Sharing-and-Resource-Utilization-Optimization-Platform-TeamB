@@ -15,6 +15,7 @@ import InstitutionAdminDashboard from "./pages/dashboards/InstitutionAdminDashbo
 import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
 
 import "./App.css";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 function DashboardRedirect() {
   const { user, loading } = useAuth();
@@ -104,6 +105,11 @@ function AppRoutes() {
           }
         />
       </Route>
+
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

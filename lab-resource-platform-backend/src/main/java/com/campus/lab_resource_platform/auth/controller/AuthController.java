@@ -1,5 +1,6 @@
 package com.campus.lab_resource_platform.auth.controller;
 
+import com.campus.lab_resource_platform.auth.dto.ForgotPasswordRequest;
 import com.campus.lab_resource_platform.auth.dto.LoginRequest;
 import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
 import com.campus.lab_resource_platform.auth.service.AuthService;
@@ -135,5 +136,20 @@ public class AuthController {
         }
 
         return null;
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        authService.resetPassword(
+                request.getEmail(),
+                request.getNewPassword(),
+                request.getConfirmPassword()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Password updated successfully"
+        ));
     }
 }

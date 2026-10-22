@@ -14,7 +14,10 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Locale;
 
 @Service
 public class AuthService {
@@ -95,5 +98,41 @@ public class AuthService {
         cookie.setMaxAge(0);
 
         response.addCookie(cookie);
+    }
+
+    @Transactional
+    public void resetPassword(
+            String email,
+            String newPassword,
+            String confirmPassword) {
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Passwords do not match"
+            );
+        }
+
+        String normalizedEmail =
+                email.trim().toLowerCase(Locale.ROOT);
+
+        User user = userRepo.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        if (!user.isActive()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account is inactive"
+            );
+        }
+
+        user.setPasswordHash(
+                encoder.encode(newPassword)
+        );
+
+        userRepo.save(user);
     }
 }
