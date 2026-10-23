@@ -1,4 +1,8 @@
-import apiClient from '../api/client';
+import axios from 'axios';
 
-// Re-export the shared client to keep existing imports working.
-export default apiClient;
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    withCredentials: true
+})
+
+export default api;
