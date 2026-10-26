@@ -1,11 +1,15 @@
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthContext, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
+import api from "./services/api";
 
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 
 import StudentDashboard from "./pages/dashboards/StudentDashboard";
 import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
@@ -15,7 +19,73 @@ import InstitutionAdminDashboard from "./pages/dashboards/InstitutionAdminDashbo
 import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
 
 import "./App.css";
-import ForgotPassword from "./pages/auth/ForgotPassword";
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await api.get("/auth/me");
+      setUser(response.data);
+      return response.data;
+    } catch {
+      setUser(null);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    api
+      .get("/auth/me")
+      .then((response) => {
+        if (!ignore) {
+          setUser(response.data);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  async function login(credentials) {
+    await api.post("/auth/mylogin", credentials);
+    return refreshUser();
+  }
+
+  async function register(details) {
+    return api.post("/auth/myregister", details);
+  }
+
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      setUser(null);
+    }
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, refreshUser }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
 function DashboardRedirect() {
   const { user, loading } = useAuth();
@@ -109,6 +179,15 @@ function AppRoutes() {
       <Route
         path="/forgot-password"
         element={<ForgotPassword />}
+      />
+
+      <Route
+        path="/oauth/callback"
+        element={<OAuthCallbackPage />}
+      />
+      <Route
+        path="/oauth2/callback"
+        element={<OAuthCallbackPage />}
       />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
