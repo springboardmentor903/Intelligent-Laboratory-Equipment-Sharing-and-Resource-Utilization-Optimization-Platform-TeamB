@@ -18,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -39,7 +38,7 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
-    @PostMapping("/myregister")
+    @PostMapping({"/register", "/myregister"})
     public ResponseEntity<?> register(
             @Valid @RequestBody RegisterRequest dto) {
 
@@ -57,16 +56,19 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/mylogin")
+    @PostMapping({"/login", "/mylogin"})
     public ResponseEntity<?> login(
-            @RequestBody LoginRequest dto,
+            @Valid @RequestBody LoginRequest dto,
             HttpServletResponse response) {
 
         try {
-            authService.login(dto, response);
+            String token = authService.login(dto, response);
 
             return ResponseEntity.ok(
-                    Map.of("message", "Login successful")
+                    Map.of(
+                            "message", "Login successful",
+                            "token", token
+                    )
             );
 
         } catch (BadCredentialsException e) {
@@ -117,12 +119,18 @@ public class AuthController {
                         "id", user.getId(),
                         "email", user.getEmail(),
                         "fullName", user.getFullName(),
-                        "role", user.getRole().name()
+                        "role", user.getRole().name(),
+                        "profileImageUrl", user.getProfileImageUrl() == null ? "" : user.getProfileImageUrl()
                 )
         );
     }
 
     private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+
         Cookie[] cookies = request.getCookies();
 
         if (cookies == null) {
