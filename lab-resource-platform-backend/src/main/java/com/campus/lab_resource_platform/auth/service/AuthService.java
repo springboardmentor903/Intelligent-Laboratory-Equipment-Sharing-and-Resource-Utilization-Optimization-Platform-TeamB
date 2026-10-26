@@ -36,7 +36,7 @@ public class AuthService {
     }
 
     public User register(RegisterRequest dto) {
-        String email = dto.getEmail().trim().toLowerCase();
+        String email = dto.getEmail().trim().toLowerCase(Locale.ROOT);
 
         if (userRepo.existsByEmail(email)) {
             throw new ResponseStatusException(
@@ -45,16 +45,35 @@ public class AuthService {
             );
         }
 
+        User.Role requestedRole;
+
+        try {
+            requestedRole = User.Role.valueOf(dto.getRole().trim());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role"
+            );
+        }
+
         User user = new User();
         user.setFullName(dto.getFullName().trim());
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
+
+        // Public registration must not grant privileged roles.
         user.setRole(User.Role.RESEARCHER_STUDENT);
+
         user.setEmailVerified(false);
         user.setActive(true);
 
-        return userRepo.save(user);
+        User savedUser = userRepo.save(user);
+
+        // The requested role is recognized, but is not granted here.
+        // Add a separate role-approval workflow for privileged roles.
+
+        return savedUser;
     }
 
     public String login(LoginRequest dto) {

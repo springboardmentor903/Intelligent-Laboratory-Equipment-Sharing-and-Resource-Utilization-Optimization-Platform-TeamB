@@ -1,27 +1,68 @@
+import { useNavigate } from "react-router-dom";
+
 function LabManagerDashboard() {
-  return (
-    <>
-      <h1>Lab Manager Dashboard</h1>
-      <p>Coordinate laboratory inventory and resource allocation.</p>
+    const navigate = useNavigate();
 
-      <section className="dashboard-cards">
-        <article className="task-card">
-          <h3>Equipment Inventory</h3>
-          <p>Manage laboratory equipment records.</p>
-        </article>
+    const dashboardItems = [
+        {
+            title: "Equipment Inventory",
+            description: "View and manage laboratory equipment records.",
+            path: "/equipment",
+            action: "Manage Equipment",
+        },
+        {
+            title: "Booking Management",
+            description: "Review booking requests and manage reservations.",
+            path: "/bookings",
+            action: "Manage Bookings",
+        },
+        {
+            title: "Resource Sharing",
+            description: "Coordinate equipment and resource sharing between laboratories.",
+            path: "/resource-sharing",
+            action: "View Resources",
+        },
+        {
+            title: "Maintenance",
+            description: "Monitor equipment maintenance and service requests.",
+            path: "/maintenance",
+            action: "View Maintenance",
+        },
+        {
+            title: "Analytics and Reports",
+            description: "Review laboratory utilization and resource reports.",
+            path: "/analytics",
+            action: "View Reports",
+        },
+    ];
 
-        <article className="task-card">
-          <h3>Booking Management</h3>
-          <p>Review and manage booking requests.</p>
-        </article>
+    return (
+        <main className="lab-manager-dashboard">
+            <header className="dashboard-header">
+                <h1>Lab Manager Dashboard</h1>
+                <p>
+                    Coordinate laboratory inventory, booking requests, maintenance,
+                    and resource allocation.
+                </p>
+            </header>
 
-        <article className="task-card">
-          <h3>Resource Sharing</h3>
-          <p>Coordinate resource sharing between laboratories.</p>
-        </article>
-      </section>
-    </>
-  );
+            <section className="dashboard-cards">
+                {dashboardItems.map((item) => (
+                    <article className="task-card" key={item.title}>
+                        <h3>{item.title}</h3>
+                        <p>{item.description}</p>
+
+                        <button
+                            type="button"
+                            onClick={() => navigate(item.path)}
+                        >
+                            {item.action}
+                        </button>
+                    </article>
+                ))}
+            </section>
+        </main>
+    );
 }
 
 export default LabManagerDashboard;

@@ -75,7 +75,9 @@ public class SecurityConfig {
                                 "/auth/register",
                                 "/auth/myregister",
                                 "/auth/forgot-password",
-                                "/auth/reset-password"
+                                "/auth/reset-password",
+                                "/api/technician-requests",
+                                "/api/technician-requests/status"
                         ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",

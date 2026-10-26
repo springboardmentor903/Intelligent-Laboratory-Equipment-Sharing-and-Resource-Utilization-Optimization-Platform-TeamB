@@ -22,7 +22,7 @@ import InstitutionAdminDashboard from "./pages/dashboards/InstitutionAdminDashbo
 import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
 
 import "./App.css";
-
+import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,7 @@ function AuthProvider({ children }) {
     let ignore = false;
 
     api
-      .get("http://localhost:8080/api/users/me")
+      .get("/api/users/me")
       .then((response) => {
         if (!ignore) {
           setUser(response.data);
@@ -119,6 +119,10 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+        <Route
+            path="/technician-access-request"
+            element={<TechnicianAccessRequest />}
+        />
 
       <Route
         path="/dashboard"
@@ -146,6 +150,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
 
         <Route
           path="lab-manager"

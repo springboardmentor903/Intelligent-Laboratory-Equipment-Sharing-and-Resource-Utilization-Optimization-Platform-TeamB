@@ -12,7 +12,9 @@ function Register() {
     fullName: "",
     email: "",
     password: "",
+    role: "RESEARCHER_STUDENT",
   });
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,12 +39,17 @@ function Register() {
     setSubmitting(true);
 
     try {
-      await register(form);
+      await register({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      });
+
       navigate("/login", {
         replace: true,
         state: { message: "Registration successful! Please sign in." },
       });
-
     } catch (err) {
       console.error("Registration failed:", err);
       console.error("Response status:", err.response?.status);
@@ -61,7 +68,8 @@ function Register() {
       } else if (err.response?.status === 400) {
         msg = "Invalid registration details. Please check your inputs.";
       } else if (!err.response) {
-        msg = "Unable to reach the registration service. Check the network connection.";
+        msg =
+          "Unable to reach the registration service. Check the network connection.";
       }
 
       setError(msg);
@@ -101,8 +109,32 @@ function Register() {
             placeholder="you@institution.edu"
             value={form.email}
             onChange={update}
+            maxLength={150}
             required
           />
+
+          <label htmlFor="role">Register as</label>
+          <select
+            id="role"
+            name="role"
+            className="role-select"
+            value={form.role}
+            onChange={update}
+            required
+          >
+            <option value="RESEARCHER_STUDENT">
+              Researcher / Student
+            </option>
+            <option value="LAB_TECHNICIAN">Lab Technician</option>
+            <option value="LAB_MANAGER">Lab Manager</option>
+            <option value="DEPARTMENT_HEAD">Department Head</option>
+            <option value="INSTITUTION_ADMINISTRATOR">
+              Institution Administrator
+            </option>
+            <option value="SYSTEM_ADMINISTRATOR">
+              System Administrator
+            </option>
+          </select>
 
           <label htmlFor="password">Password</label>
           <input
@@ -118,10 +150,18 @@ function Register() {
             required
           />
 
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
 
-          <button className="primary-button" disabled={submitting}>
-            {submitting ? "Creating account..." : "Create student account"}
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={submitting}
+          >
+            {submitting ? "Creating account..." : "Create account"}
           </button>
         </form>
 
