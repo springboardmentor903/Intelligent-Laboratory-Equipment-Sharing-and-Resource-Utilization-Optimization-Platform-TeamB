@@ -22,8 +22,7 @@ public class SecurityConfig {
 
     public SecurityConfig(
             JwtFilter jwtFilter,
-            GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler
-    ) {
+            GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler) {
         this.jwtFilter = jwtFilter;
         this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
     }
@@ -35,13 +34,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
+            HttpSecurity http) throws Exception {
 
         return http
                 .cors(cors -> cors.configurationSource(
-                        corsConfigurationSource()
-                ))
+                        corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
@@ -50,29 +47,33 @@ public class SecurityConfig {
                         .defaultAuthenticationEntryPointFor(
                                 (request, response, authException) ->
                                         response.sendError(
-                                                jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
-                        ),
-                                request -> request.getRequestURI().startsWith("/api/")
-                        )
-                )
-                // Google OAuth2 login
+                                                jakarta.servlet.http.HttpServletResponse
+                                                        .SC_UNAUTHORIZED),
+                                request -> request.getRequestURI()
+                                        .startsWith("/api/")))
+
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(googleOAuth2SuccessHandler)
-                )
+                        .successHandler(googleOAuth2SuccessHandler))
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // Public authentication and OAuth2 endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/login/oauth2/**"
                         ).permitAll()
 
+                        // All six roles can view equipment
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/equipment/**"
-                        )
-                        .hasAnyRole(
+                                "/api/equipment",
+                                "/api/equipment/**",
+                                "/api/equipment-categories",
+                                "/api/equipment-categories/**",
+                                "/api/tags",
+                                "/api/tags/**"
+                        ).hasAnyRole(
                                 "RESEARCHER_STUDENT",
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
@@ -81,24 +82,56 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // Only equipment managers can create or modify equipment-related data
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/equipment/**"
-                        )
-                        .hasAnyRole(
-                                "LAB_TECHNICIAN",
+                        ).hasAnyRole(
                                 "LAB_MANAGER",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
-                        .requestMatchers("/api/equipment/**")
-                        .hasAnyRole(
+                        // Only equipment managers can modify equipment
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/equipment/**"
+                        ).hasAnyRole(
                                 "LAB_MANAGER",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/equipment/**"
+                        ).hasAnyRole(
+                                "LAB_MANAGER",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/equipment/**"
+                        ).hasAnyRole(
+                                "LAB_MANAGER",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        // Category and tag creation
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/equipment-categories/**",
+                                "/api/tags/**"
+                        ).hasAnyRole(
+                                "LAB_MANAGER",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        // Booking APIs
                         .requestMatchers("/api/bookings/**")
                         .hasAnyRole(
                                 "RESEARCHER_STUDENT",
@@ -109,6 +142,7 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // Maintenance APIs
                         .requestMatchers("/api/maintenance/**")
                         .hasAnyRole(
                                 "LAB_TECHNICIAN",
@@ -117,27 +151,28 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // Analytics and reports
                         .requestMatchers(
                                 "/api/analytics/**",
                                 "/api/reports/**"
-                        )
-                        .hasAnyRole(
+                        ).hasAnyRole(
                                 "LAB_MANAGER",
                                 "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // System administration
                         .requestMatchers("/api/admin/**")
                         .hasRole("SYSTEM_ADMINISTRATOR")
 
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
 
                 .addFilterBefore(
                         jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                        UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
@@ -146,18 +181,17 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
-        );
+                List.of("http://localhost:5173"));
 
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
                         "POST",
                         "PUT",
+                        "PATCH",
                         "DELETE",
                         "OPTIONS"
-                )
-        );
+                ));
 
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

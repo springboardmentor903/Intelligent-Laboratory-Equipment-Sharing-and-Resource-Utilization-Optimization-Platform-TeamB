@@ -33,3 +33,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+
+# Local secrets
+.env
+
+# Postman collections and local settings
+/postman/
+/.postman/
