@@ -42,13 +42,28 @@ function Register() {
         replace: true,
         state: { message: "Registration successful! Please sign in." },
       });
+
     } catch (err) {
-      let msg = "Registration failed. Check the backend connection and try again.";
+      console.error("Registration failed:", err);
+      console.error("Response status:", err.response?.status);
+      console.error("Response data:", err.response?.data);
+
+      let msg = "Registration failed. Please try again.";
+
       if (err.response?.status === 409) {
         msg = "This email is already registered. Please sign in.";
-      } else if (err.response?.data?.detail || err.response?.data?.error) {
-        msg = err.response.data.detail || err.response.data.error;
+      } else if (err.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.status === 400) {
+        msg = "Invalid registration details. Please check your inputs.";
+      } else if (!err.response) {
+        msg = "Unable to reach the registration service. Check the network connection.";
       }
+
       setError(msg);
       toast.error(msg);
     } finally {

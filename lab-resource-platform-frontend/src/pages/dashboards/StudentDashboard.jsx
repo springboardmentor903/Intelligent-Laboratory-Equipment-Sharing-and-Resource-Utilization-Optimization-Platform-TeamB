@@ -1,27 +1,100 @@
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+
 function StudentDashboard() {
-  return (
-    <>
-      <h1>Student Dashboard</h1>
-      <p>Find equipment and manage your laboratory bookings.</p>
+    const { user } = useAuth();
 
-      <section className="dashboard-cards">
-        <article className="task-card">
-          <h3>Browse Equipment</h3>
-          <p>Explore available laboratory equipment.</p>
-        </article>
+    const firstName = user?.fullName?.trim().split(/\s+/)[0] || "Researcher";
 
-        <article className="task-card">
-          <h3>My Bookings</h3>
-          <p>View upcoming and pending bookings.</p>
-        </article>
+    return (
+        <div className="student-dashboard">
+            <section className="student-welcome">
+                <div>
+                    <p className="student-eyebrow">STUDENT WORKSPACE</p>
+                    <h1>Welcome back, {firstName}!</h1>
+                    <p>
+                        Find laboratory equipment, manage your bookings, and keep your
+                        research moving forward.
+                    </p>
+                </div>
 
-        <article className="task-card">
-          <h3>Booking History</h3>
-          <p>Review previous bookings.</p>
-        </article>
-      </section>
-    </>
-  );
+                <div className="student-welcome-icon" aria-hidden="true">
+                    🔬
+                </div>
+            </section>
+
+            <section className="student-stats" aria-label="Booking summary">
+                <article className="student-stat-card">
+                    <span className="student-stat-icon">🧪</span>
+                    <div>
+                        <p>Available Equipment</p>
+                        <h2>Explore</h2>
+                        <span>Find equipment for your research</span>
+                    </div>
+                </article>
+
+                <article className="student-stat-card">
+                    <span className="student-stat-icon">📅</span>
+                    <div>
+                        <p>My Bookings</p>
+                        <h2>Manage</h2>
+                        <span>Review your booking requests</span>
+                    </div>
+                </article>
+
+                <article className="student-stat-card">
+                    <span className="student-stat-icon">📋</span>
+                    <div>
+                        <p>Booking History</p>
+                        <h2>Review</h2>
+                        <span>Keep track of past reservations</span>
+                    </div>
+                </article>
+            </section>
+
+            <section className="student-section">
+                <div className="student-section-heading">
+                    <div>
+                        <h2>Quick access</h2>
+                        <p>Manage your account and research workspace.</p>
+                    </div>
+                </div>
+
+                <div className="student-quick-actions">
+                    <article className="student-action-card">
+                        <span className="student-action-icon">🔍</span>
+                        <h3>Browse Equipment</h3>
+                        <p>
+                            Explore laboratory resources and find equipment for your
+                            research needs.
+                        </p>
+                        <span className="student-action-note">
+              Equipment page to be connected
+            </span>
+                    </article>
+
+                    <article className="student-action-card">
+                        <span className="student-action-icon">🗓️</span>
+                        <h3>My Bookings</h3>
+                        <p>
+                            Keep track of booking requests and check their status.
+                        </p>
+                        <span className="student-action-note">
+              Booking page to be connected
+            </span>
+                    </article>
+                </div>
+            </section>
+
+            <section className="student-notice">
+                <span aria-hidden="true">ℹ️</span>
+                <p>
+                    Equipment availability, booking counts, and recent activity will
+                    appear here once the corresponding backend endpoints are connected.
+                </p>
+            </section>
+        </div>
+    );
 }
 
 export default StudentDashboard;

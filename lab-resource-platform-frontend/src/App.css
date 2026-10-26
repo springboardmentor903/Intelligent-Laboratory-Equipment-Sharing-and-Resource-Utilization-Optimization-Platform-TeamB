@@ -797,7 +797,7 @@ html, body {
 }
 
 /* Logout Button */
-.logout-button {
+.profile-logout-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -815,7 +815,7 @@ html, body {
   transition: all var(--transition-fast);
 }
 
-.logout-button:hover {
+.profile-logout-button:hover {
   background-color: var(--color-error-bg);
   border-color: var(--color-error-border);
   color: var(--color-error-text);
@@ -1128,7 +1128,7 @@ tbody tr:hover {
 }
 
 /* Outline & Secondary Buttons */
-.secondary-button {
+.profile-secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1144,7 +1144,7 @@ tbody tr:hover {
   transition: all var(--transition-fast);
 }
 
-.secondary-button:hover {
+.profile-secondary-button:hover {
   background-color: var(--bg-subtle);
   border-color: var(--border-hover);
 }
@@ -1293,5 +1293,524 @@ tbody tr:hover {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+
+.profile-page {
+  min-height: 70vh;
+  padding: 32px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 600px;
+  padding: 32px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.profile-card h1 {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 28px;
+}
+
+.profile-subtitle {
+  margin: 0 0 28px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.profile-details {
+  display: grid;
+  gap: 0;
+}
+
+.profile-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.profile-field span {
+  color: #6b7280;
+}
+
+.profile-field strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.profile-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 18px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-button:hover {
+  background: #4338ca;
+}
+
+.settings-card h1 {
+  margin-top: 8px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-actions .profile-button {
+  margin-top: 24px;
+}
+
+.secondary-button {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.secondary-button:hover {
+  background: #d1d5db;
+}
+
+.logout-button {
+  background: #dc2626;
+}
+
+.logout-button:hover {
+  background: #b91c1c;
+}
+
+.settings-note {
+  margin-top: 24px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 480px) {
+  .profile-page {
+    padding: 16px 10px;
+  }
+
+  .profile-card {
+    padding: 22px 16px;
+  }
+
+  .profile-field {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .profile-field strong {
+    text-align: left;
+  }
+}
+
+/* Student dashboard */
+.student-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px;
+    color: var(--text-color, #1f2937);
+}
+
+.student-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 32px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #e8f2ff, #f0fdfa);
+    border: 1px solid #dbeafe;
+}
+
+.student-eyebrow {
+    margin: 0 0 10px;
+    color: #2563eb;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.student-welcome h1 {
+    margin: 0 0 12px;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+    line-height: 1.2;
+}
+
+.student-welcome > div:first-child > p:last-child {
+    max-width: 650px;
+    margin: 0;
+    color: #475569;
+    line-height: 1.7;
+}
+
+.student-welcome-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 88px;
+    height: 88px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.75);
+    font-size: 2.7rem;
+}
+
+.student-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.student-stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    min-width: 0;
+    padding: 22px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 14px;
+}
+
+.student-stat-icon,
+.student-action-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #eff6ff;
+    font-size: 1.35rem;
+}
+
+.student-stat-card p {
+    margin: 0 0 8px;
+    color: var(--text-muted, #64748b);
+    font-size: 0.88rem;
+}
+
+.student-stat-card h2 {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+}
+
+.student-stat-card div > span {
+    color: var(--text-muted, #64748b);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.student-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.student-section-heading h2 {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+}
+
+.student-section-heading p {
+    margin: 0;
+    color: var(--text-muted, #64748b);
+    font-size: 0.92rem;
+}
+
+.student-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.student-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.student-action-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.student-action-card h3 {
+    margin: 16px 0 8px;
+    font-size: 1.05rem;
+}
+
+.student-action-card p {
+    margin: 0 0 16px;
+    color: var(--text-muted, #64748b);
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.student-action-link {
+    margin-top: auto;
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.student-action-link:hover {
+    text-decoration: underline;
+}
+
+.student-action-note {
+    margin-top: auto;
+    color: var(--text-muted, #64748b);
+    font-size: 0.82rem;
+}
+
+.student-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.student-notice p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.65;
+}
+
+/* Responsive layout */
+@media (max-width: 900px) {
+    .student-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .student-dashboard {
+        padding: 4px;
+        gap: 22px;
+    }
+
+    .student-welcome {
+        padding: 22px;
+    }
+
+    .student-welcome-icon {
+        display: none;
+    }
+
+    .student-quick-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .student-stat-card,
+    .student-action-card {
+        padding: 18px;
+    }
+}
+
+/* Lab Technician Dashboard */
+.technician-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px;
+  color: var(--text-color, #1f2937);
+}
+
+.technician-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e8f2ff, #f0fdfa);
+}
+
+.technician-eyebrow {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.technician-welcome h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.technician-welcome > div:first-child > p:last-child {
+  max-width: 650px;
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.technician-welcome-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 2.7rem;
+}
+
+.technician-section h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+
+.technician-section-description {
+  margin: 0 0 18px;
+  color: var(--text-muted, #64748b);
+}
+
+.technician-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.technician-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 14px;
+  background: var(--card-bg, #ffffff);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.technician-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.technician-card-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  font-size: 1.5rem;
+}
+
+.technician-card h3 {
+  margin: 18px 0 8px;
+  font-size: 1.05rem;
+}
+
+.technician-card p {
+  margin: 0 0 18px;
+  color: var(--text-muted, #64748b);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.technician-card-note {
+  margin-top: auto;
+  color: var(--text-muted, #64748b);
+  font-size: 0.82rem;
+}
+
+.technician-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.technician-notice p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  .technician-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .technician-dashboard {
+    padding: 4px;
+    gap: 22px;
+  }
+
+  .technician-welcome {
+    padding: 22px;
+  }
+
+  .technician-welcome-icon {
+    display: none;
+  }
+
+  .technician-card {
+    padding: 18px;
   }
 }

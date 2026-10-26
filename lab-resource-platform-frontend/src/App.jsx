@@ -5,11 +5,14 @@ import { ToastProvider } from "./context/ToastContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
 import api from "./services/api";
-
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
+
+import ProfilePage from "./pages/profile/ProfilePage";
+import AccountSettings from "./pages/profile/AccountSettings";
+import RoleBasedAccess from "./components/RoleBasedAccess";
 
 import StudentDashboard from "./pages/dashboards/StudentDashboard";
 import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
@@ -26,7 +29,7 @@ function AuthProvider({ children }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await api.get("/auth/me");
+      const response = await api.get("/api/users/me");
       setUser(response.data);
       return response.data;
     } catch {
@@ -39,7 +42,7 @@ function AuthProvider({ children }) {
     let ignore = false;
 
     api
-      .get("/auth/me")
+      .get("http://localhost:8080/api/users/me")
       .then((response) => {
         if (!ignore) {
           setUser(response.data);
@@ -62,23 +65,27 @@ function AuthProvider({ children }) {
   }, []);
 
   async function login(credentials) {
-    await api.post("/auth/mylogin", credentials);
+    await api.post("/api/auth/mylogin", credentials);
     return refreshUser();
   }
 
   async function register(details) {
-    return api.post("/auth/myregister", details);
+    return api.post("/api/auth/myregister", details);
   }
 
-  async function logout() {
-    try {
-      await api.post("/auth/logout");
-    } finally {
-      setUser(null);
+
+    async function logout() {
+        try {
+            await api.post("/api/auth/logout");
+        } catch (error) {
+            console.error("Logout request failed:", error);
+        } finally {
+            setUser(null);
+        }
     }
-  }
 
-  return (
+
+    return (
     <AuthContext.Provider
       value={{ user, loading, login, register, logout, refreshUser }}
     >
@@ -106,6 +113,7 @@ function DashboardRedirect() {
 }
 
 function AppRoutes() {
+    const { user } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -174,6 +182,22 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+          <Route
+              path="profile"
+              element={
+                  <ProtectedRoute>
+                      <ProfilePage />
+                  </ProtectedRoute>
+              }
+          />
+          <Route
+              path="account-settings"
+              element={
+                  <ProtectedRoute>
+                      <AccountSettings />
+                  </ProtectedRoute>
+              }
+          />
       </Route>
 
       <Route

@@ -52,7 +52,10 @@ public class SecurityConfig {
                                         response.sendError(
                                                 jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
                         ),
-                                request -> request.getRequestURI().startsWith("/api/")
+                                request -> {
+                                    String path = request.getRequestURI();
+                                    return path.startsWith("/api/") || path.startsWith("/auth/");
+                                }
                         )
                 )
                 // Google OAuth2 login
@@ -62,7 +65,18 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/myregister",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/auth/login",
+                                "/auth/register",
+                                "/auth/myregister",
+                                "/auth/forgot-password",
+                                "/auth/reset-password"
+                        ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/login/oauth2/**"
@@ -146,7 +160,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
+                List.of("http://localhost:5173," +
+                        "http://localhost:5174")
         );
 
         configuration.setAllowedMethods(

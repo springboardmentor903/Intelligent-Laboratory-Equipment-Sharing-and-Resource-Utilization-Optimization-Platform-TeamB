@@ -75,13 +75,34 @@ function DashboardLayout() {
 
         <nav className="sidebar-nav">
           <NavLink
-            to={getDashboardPath()}
-            className={({ isActive }) =>
-              `sidebar-nav-item ${isActive ? "active" : ""}`
-            }
-            onClick={() => setMobileOpen(false)}
+              to={getDashboardPath()}
+              end
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
           >
             <span className="nav-text">Overview</span>
+          </NavLink>
+
+          <NavLink
+              to="/dashboard/profile"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">Profile</span>
+          </NavLink>
+
+          <NavLink
+              to="/dashboard/account-settings"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">Account Settings</span>
           </NavLink>
         </nav>
 
