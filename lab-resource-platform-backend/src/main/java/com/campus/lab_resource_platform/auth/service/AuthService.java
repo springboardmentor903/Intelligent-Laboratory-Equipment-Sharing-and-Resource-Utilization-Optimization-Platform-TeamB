@@ -10,6 +10,8 @@ import com.campus.lab_resource_platform.user.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -31,20 +33,25 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository userRepo;
     private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
     private final PasswordResetTokenRepository tokenRepo;
+    private final EmailService emailService;
 
     public AuthService(
             UserRepository userRepo,
             BCryptPasswordEncoder encoder,
             JwtService jwtService,
-            PasswordResetTokenRepository tokenRepo) {
+            PasswordResetTokenRepository tokenRepo,
+            EmailService emailService) {
         this.userRepo = userRepo;
         this.encoder = encoder;
         this.jwtService = jwtService;
         this.tokenRepo = tokenRepo;
+        this.emailService = emailService;
     }
 
     public User register(RegisterRequest dto) {
@@ -171,20 +178,17 @@ public class AuthService {
 
     @Transactional
     public String createPasswordResetToken(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
 
-        User user = userRepo.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found"
-                ));
-
-        if (!user.isActive()) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Account is inactive"
-            );
+        java.util.Optional<User> userOpt = userRepo.findByEmail(normalizedEmail);
+        if (userOpt.isEmpty() || !userOpt.get().isActive()) {
+            return null;
         }
+
+        User user = userOpt.get();
 
         String rawToken = UUID.randomUUID().toString().replace("-", "") +
                 UUID.randomUUID().toString().replace("-", "");
@@ -197,7 +201,15 @@ public class AuthService {
 
         tokenRepo.save(resetToken);
 
-        return rawToken;
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), rawToken);
+            return rawToken;
+        } catch (Exception e) {
+            log.error("Operational diagnostic: Password reset email delivery failed; invalidating generated reset token.");
+            resetToken.setUsedAt(Instant.now());
+            tokenRepo.save(resetToken);
+            return null;
+        }
     }
 
     @Transactional

@@ -352,4 +352,122 @@ class BookingServiceTest {
         assertThrows(ForbiddenException.class,
                 () -> bookingService.getBookingsForApproval("student@campus.edu", null, pageable));
     }
+
+    @Test
+    void createBooking_exactMaxDuration_success() {
+        // Equipment max is 2 hours. User books exactly 2 hours (120 minutes). Must succeed!
+        Instant start = Instant.now().plus(2, ChronoUnit.HOURS);
+        Instant end = start.plus(2, ChronoUnit.HOURS);
+        BookingRequest request = BookingRequest.builder()
+                .equipmentId(200L)
+                .startTime(start)
+                .endTime(end)
+                .purpose("Exact 2-hour experiment")
+                .build();
+
+        when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(studentUser));
+        when(equipmentRepository.findByIdWithLock(200L)).thenReturn(Optional.of(approvalRequiredEquipment));
+        when(bookingRepository.findConflictingBookings(eq(200L), any(), any(), any())).thenReturn(Collections.emptyList());
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(i -> {
+            Booking b = i.getArgument(0);
+            b.setId(601L);
+            return b;
+        });
+
+        BookingResponse response = bookingService.createBooking(request, "student@campus.edu");
+
+        assertNotNull(response);
+        assertEquals(BookingStatus.PENDING_APPROVAL, response.getStatus());
+        verify(bookingRepository, times(1)).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_exceedsMaxDuration_byOneMinute_throwsBadRequest() {
+        // Equipment max is 2 hours. User books 2 hours + 1 minute (121 minutes). Must fail!
+        Instant start = Instant.now().plus(2, ChronoUnit.HOURS);
+        Instant end = start.plus(121, ChronoUnit.MINUTES);
+        BookingRequest request = BookingRequest.builder()
+                .equipmentId(200L)
+                .startTime(start)
+                .endTime(end)
+                .purpose("2h 1m run")
+                .build();
+
+        when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(studentUser));
+        when(equipmentRepository.findByIdWithLock(200L)).thenReturn(Optional.of(approvalRequiredEquipment));
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> bookingService.createBooking(request, "student@campus.edu"));
+
+        assertTrue(ex.getMessage().contains("exceeds the maximum allowed limit"));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_zeroDuration_throwsBadRequest() {
+        // Start time == End time. Must fail!
+        Instant start = Instant.now().plus(2, ChronoUnit.HOURS);
+        BookingRequest request = BookingRequest.builder()
+                .equipmentId(100L)
+                .startTime(start)
+                .endTime(start)
+                .purpose("Zero duration")
+                .build();
+
+        when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(studentUser));
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> bookingService.createBooking(request, "student@campus.edu"));
+
+        assertTrue(ex.getMessage().contains("after start time"));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_reversedInterval_throwsBadRequest() {
+        // End time is before Start time. Must fail!
+        Instant start = Instant.now().plus(3, ChronoUnit.HOURS);
+        Instant end = start.minus(1, ChronoUnit.HOURS);
+        BookingRequest request = BookingRequest.builder()
+                .equipmentId(100L)
+                .startTime(start)
+                .endTime(end)
+                .purpose("Reversed interval")
+                .build();
+
+        when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(studentUser));
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> bookingService.createBooking(request, "student@campus.edu"));
+
+        assertTrue(ex.getMessage().contains("after start time"));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void approveBooking_byManagerFromDifferentInstitution_throwsForbidden() {
+        // Manager belongs to Institution 10. Equipment belongs to Institution 99.
+        Equipment foreignEquipment = Equipment.builder()
+                .id(300L)
+                .name("Cross-Inst Device")
+                .status(EquipmentStatus.AVAILABLE)
+                .institutionId(99L)
+                .build();
+
+        Booking booking = Booking.builder()
+                .id(895L)
+                .user(studentUser)
+                .equipment(foreignEquipment)
+                .status(BookingStatus.PENDING_APPROVAL)
+                .build();
+
+        when(bookingRepository.findById(895L)).thenReturn(Optional.of(booking));
+        when(userRepository.findByEmail("manager@campus.edu")).thenReturn(Optional.of(managerUser));
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class,
+                () -> bookingService.approveBooking(895L, "manager@campus.edu"));
+
+        assertTrue(ex.getMessage().contains("not authorized to approve"));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
 }

@@ -9,6 +9,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -26,16 +27,26 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
-
-    @Value("${app.frontend.url:http://localhost:5173}")
-    private String defaultFrontendUrl;
+    private final String defaultFrontendUrl;
 
     public GoogleOAuth2SuccessHandler(
             UserRepository userRepository,
             JwtService jwtService
     ) {
+        this(userRepository, jwtService, "http://localhost:5173");
+    }
+
+    @Autowired
+    public GoogleOAuth2SuccessHandler(
+            UserRepository userRepository,
+            JwtService jwtService,
+            @Value("${app.frontend.url:http://localhost:5173}") String defaultFrontendUrl
+    ) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.defaultFrontendUrl = (defaultFrontendUrl != null && !defaultFrontendUrl.isBlank())
+                ? defaultFrontendUrl
+                : "http://localhost:5173";
     }
 
     @Override

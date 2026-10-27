@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
 
-  const [step, setStep] = useState(1); // 1 = Request token, 2 = Enter token & new password
+  const initialToken = searchParams.get("token")?.trim() || "";
+
+  const [step, setStep] = useState(initialToken ? 2 : 1); // 1 = Request token, 2 = Enter token & new password
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(initialToken);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -34,14 +37,9 @@ export default function ForgotPassword() {
         email: email.trim(),
       });
 
-      const returnedToken = response.data.resetToken || "";
-      if (returnedToken) {
-        setToken(returnedToken);
-      }
-
       const msg =
         response.data.message ||
-        "Password reset token generated. Please enter your new password below.";
+        "If an account exists with this email address, password reset instructions have been sent.";
       setSuccess(msg);
       toast.success(msg);
       setStep(2);
@@ -50,7 +48,7 @@ export default function ForgotPassword() {
         err.response?.data?.message ||
         err.response?.data?.detail ||
         err.response?.data?.error ||
-        "Unable to request password reset. Check that your email is registered.";
+        "Unable to request password reset. Please try again later.";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -151,6 +149,19 @@ export default function ForgotPassword() {
 
             <button type="submit" className="primary-button" disabled={loading} style={{ marginTop: 12 }}>
               {loading ? "Requesting..." : "Send Reset Token"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setStep(2);
+                setError("");
+                setSuccess("");
+              }}
+              style={{ marginTop: 8 }}
+            >
+              Already have a reset token? Enter token →
             </button>
           </form>
         ) : (

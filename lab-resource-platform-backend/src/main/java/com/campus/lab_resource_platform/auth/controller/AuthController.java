@@ -65,13 +65,10 @@ public class AuthController {
             HttpServletResponse response) {
 
         try {
-            String token = authService.login(dto, response);
+            authService.login(dto, response);
 
             return ResponseEntity.ok(
-                    Map.of(
-                            "message", "Login successful",
-                            "token", token
-                    )
+                    Map.of("message", "Login successful")
             );
 
         } catch (BadCredentialsException e) {
@@ -153,11 +150,10 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> requestPasswordReset(
             @Valid @RequestBody PasswordResetInitRequest request) {
 
-        String token = authService.createPasswordResetToken(request.getEmail());
+        authService.createPasswordResetToken(request.getEmail());
 
         return ResponseEntity.ok(Map.of(
-                "message", "Password reset token generated. Use this token to reset your password.",
-                "resetToken", token,
+                "message", "If an account exists with this email address, password reset instructions have been sent.",
                 "expiresInMinutes", "15"
         ));
     }
@@ -195,10 +191,9 @@ public class AuthController {
         // If only email is provided, generate a reset token
         if (request.getEmail() != null && !request.getEmail().trim().isEmpty() &&
                 (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty())) {
-            String token = authService.createPasswordResetToken(request.getEmail());
+            authService.createPasswordResetToken(request.getEmail());
             return ResponseEntity.ok(Map.of(
-                    "message", "Password reset token generated. Use this token to reset your password.",
-                    "resetToken", token,
+                    "message", "If an account exists with this email address, password reset instructions have been sent.",
                     "expiresInMinutes", "15"
             ));
         }

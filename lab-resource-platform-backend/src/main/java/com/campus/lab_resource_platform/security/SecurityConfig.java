@@ -158,6 +158,18 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        .requestMatchers(
+                                "/api/bookings/approvals",
+                                "/api/bookings/*/approve",
+                                "/api/bookings/*/reject"
+                        )
+                        .hasAnyRole(
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
                         .requestMatchers("/api/bookings/**")
                         .hasAnyRole(
                                 "RESEARCHER_STUDENT",
