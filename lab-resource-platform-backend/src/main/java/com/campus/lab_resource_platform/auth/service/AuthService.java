@@ -50,16 +50,18 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
-
         user.setRole(User.Role.RESEARCHER_STUDENT);
-
         user.setEmailVerified(false);
         user.setActive(true);
 
         return userRepo.save(user);
     }
 
-    public void login(LoginRequest dto, HttpServletResponse response) {
+    public String login(LoginRequest dto) {
+        return login(dto, null);
+    }
+
+    public String login(LoginRequest dto, HttpServletResponse response) {
         String email = dto.getEmail().trim().toLowerCase();
 
         User user = userRepo.findByEmail(email)
@@ -67,7 +69,9 @@ public class AuthService {
                         new BadCredentialsException(
                                 "Invalid email or password"));
 
-        if (!encoder.matches(dto.getPassword(), user.getPasswordHash())) {
+        if (user.getAuthProvider() != User.AuthProvider.LOCAL
+                || user.getPasswordHash() == null
+                || !encoder.matches(dto.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException(
                     "Invalid email or password");
         }
@@ -81,13 +85,17 @@ public class AuthService {
                 user.getRole().name()
         );
 
-        Cookie cookie = new Cookie("jwt", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(60 * 60);
+        if (response != null) {
+            Cookie cookie = new Cookie("jwt", token);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);
+            cookie.setPath("/");
+            cookie.setMaxAge(60 * 60);
 
-        response.addCookie(cookie);
+            response.addCookie(cookie);
+        }
+
+        return token;
     }
 
     public void logout(HttpServletResponse response) {
