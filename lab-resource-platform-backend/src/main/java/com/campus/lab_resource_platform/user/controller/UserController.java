@@ -39,11 +39,17 @@ public class UserController {
         String email = authentication.getName().trim().toLowerCase();
 
         User user = userRepository.findByEmail(email)
-                .filter(User::isActive)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
                         "User not found or inactive"
                 ));
+
+        if (!user.isActive()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "User not found or inactive"
+            );
+        }
 
         return Map.of(
                 "id", user.getId(),

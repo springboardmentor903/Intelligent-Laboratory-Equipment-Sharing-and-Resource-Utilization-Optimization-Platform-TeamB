@@ -69,8 +69,8 @@ public class BookingService {
             throw new BadRequestException("Equipment is currently not eligible for booking. Status: " + equipment.getStatus());
         }
 
-        long durationHours = Duration.between(request.getStartTime(), request.getEndTime()).toHours();
-        if (durationHours > equipment.getMaxBookingHours()) {
+        Duration duration = Duration.between(request.getStartTime(), request.getEndTime());
+        if (duration.getSeconds() > (long) equipment.getMaxBookingHours() * 3600L) {
             throw new BadRequestException("Booking duration exceeds the maximum allowed limit of " + equipment.getMaxBookingHours() + " hours");
         }
 
@@ -282,16 +282,36 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with ID: " + id));
     }
 
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getBookingsForApproval(String managerEmail, BookingStatus status, Pageable pageable) {
+        User manager = getUserByEmail(managerEmail);
+        if (!isManagerUser(manager)) {
+            throw new ForbiddenException("Only managers and administrators can review booking requests");
+        }
+
+        BookingStatus filterStatus = status != null ? status : BookingStatus.PENDING_APPROVAL;
+        Page<Booking> page;
+        if (manager.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
+            page = bookingRepository.findByStatus(filterStatus, pageable);
+        } else {
+            page = bookingRepository.findPendingApprovalsByInstitution(filterStatus, manager.getInstitutionId(), pageable);
+        }
+        return page.map(BookingResponse::fromEntity);
+    }
+
+    private boolean isManagerUser(User user) {
+        return user.getRole() == User.Role.SYSTEM_ADMINISTRATOR
+                || user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
+                || user.getRole() == User.Role.LAB_MANAGER
+                || user.getRole() == User.Role.DEPARTMENT_HEAD;
+    }
+
     private boolean isAuthorizedManager(User user, Equipment equipment) {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return true;
         }
 
-        boolean isManagerRole = user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                || user.getRole() == User.Role.LAB_MANAGER
-                || user.getRole() == User.Role.DEPARTMENT_HEAD;
-
-        if (!isManagerRole) {
+        if (!isManagerUser(user)) {
             return false;
         }
 

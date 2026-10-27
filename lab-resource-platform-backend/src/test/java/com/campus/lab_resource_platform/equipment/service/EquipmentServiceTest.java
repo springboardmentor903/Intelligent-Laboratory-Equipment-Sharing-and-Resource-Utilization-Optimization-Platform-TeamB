@@ -5,8 +5,6 @@ import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
 import com.campus.lab_resource_platform.equipment.repository.EquipmentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;

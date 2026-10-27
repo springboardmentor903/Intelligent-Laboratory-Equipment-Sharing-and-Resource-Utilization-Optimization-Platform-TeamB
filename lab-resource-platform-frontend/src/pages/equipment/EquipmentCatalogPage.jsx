@@ -444,6 +444,16 @@ export default function EquipmentCatalogPage() {
                   View Details →
                 </button>
 
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => navigate(`/dashboard/bookings/calendar?equipmentId=${item.id}`)}
+                  style={{ padding: "8px 12px", fontSize: "13px" }}
+                  title="Check availability and reserve slot"
+                >
+                  📅 Check Availability
+                </button>
+
                 {userCanManage && (
                   <button
                     type="button"
@@ -519,6 +529,14 @@ export default function EquipmentCatalogPage() {
                         style={{ padding: "6px 12px", fontSize: "12px" }}
                       >
                         Details
+                      </Link>
+                      <Link
+                        to={`/dashboard/bookings/calendar?equipmentId=${item.id}`}
+                        className="btn-primary"
+                        style={{ padding: "6px 10px", fontSize: "12px", textDecoration: "none" }}
+                        title="Check availability and book"
+                      >
+                        📅 Book
                       </Link>
                       {userCanManage && (
                         <Link

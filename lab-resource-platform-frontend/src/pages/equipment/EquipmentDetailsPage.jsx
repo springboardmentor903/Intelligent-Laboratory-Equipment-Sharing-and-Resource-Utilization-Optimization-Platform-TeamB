@@ -170,18 +170,32 @@ export default function EquipmentDetailsPage() {
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 <Link to="/dashboard/equipment" className="btn-secondary">
                   ← Back to Catalog
+                </Link>
+
+                <Link
+                  to={`/dashboard/bookings/calendar?equipmentId=${equipment.id}`}
+                  className="btn-secondary"
+                >
+                  📅 Availability Calendar
+                </Link>
+
+                <Link
+                  to={`/dashboard/bookings/new?equipmentId=${equipment.id}`}
+                  className="btn-primary"
+                >
+                  ⚡ Book Equipment
                 </Link>
 
                 {userCanManage && (
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="btn-outline-primary"
                     onClick={() => navigate(`/dashboard/equipment/${equipment.id}/edit`)}
                   >
-                    ✏️ Edit Equipment
+                    ✏️ Edit
                   </button>
                 )}
               </div>
@@ -305,13 +319,24 @@ export default function EquipmentDetailsPage() {
           </div>
 
           {/* Module Integration Notice */}
-          <aside className="equipment-detail-notice" role="note">
-            <span aria-hidden="true" style={{ fontSize: 20 }}>ℹ️</span>
+          <aside className="equipment-detail-notice" role="note" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span aria-hidden="true" style={{ fontSize: 24 }}>📅</span>
+              <div>
+                <strong>Equipment Scheduling & Reservations</strong>
+                <p style={{ margin: "2px 0 0", fontSize: "13px" }}>
+                  Inspect live availability slots on the interactive calendar or book a reservation.
+                </p>
+              </div>
+            </div>
             <div>
-              <strong>Equipment Scheduling & Reservations</strong>
-              <p style={{ margin: "2px 0 0", fontSize: "13px" }}>
-                Slot availability checks, reservation requests, and calendar booking are part of the Booking Module (T17).
-              </p>
+              <Link
+                to={`/dashboard/bookings/calendar?equipmentId=${equipment.id}`}
+                className="btn-primary"
+                style={{ padding: "8px 16px", fontSize: "13px" }}
+              >
+                Open Calendar →
+              </Link>
             </div>
           </aside>
         </>
