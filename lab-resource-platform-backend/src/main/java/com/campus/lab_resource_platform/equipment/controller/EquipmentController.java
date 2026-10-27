@@ -31,6 +31,11 @@ public class EquipmentController {
         return ResponseEntity.ok(equipmentService.getAllEquipment());
     }
 
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> getAllTags() {
+        return ResponseEntity.ok(equipmentService.getAllTags());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Equipment> getEquipmentById(
             @PathVariable Long id) {

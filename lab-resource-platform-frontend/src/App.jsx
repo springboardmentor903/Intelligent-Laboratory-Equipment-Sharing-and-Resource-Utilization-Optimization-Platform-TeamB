@@ -13,6 +13,11 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import ProfilePage from "./pages/profile/ProfilePage";
 import AccountSettings from "./pages/profile/AccountSettings";
 
+import EquipmentCatalogPage from "./pages/equipment/EquipmentCatalogPage";
+import EquipmentDetailsPage from "./pages/equipment/EquipmentDetailsPage";
+import AddEquipmentPage from "./pages/equipment/AddEquipmentPage";
+import EditEquipmentPage from "./pages/equipment/EditEquipmentPage";
+
 import StudentDashboard from "./pages/dashboards/StudentDashboard";
 import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
 import LabManagerDashboard from "./pages/dashboards/LabManagerDashboard";
@@ -210,7 +215,28 @@ function AppRoutes() {
                   </ProtectedRoute>
               }
           />
+
+          <Route path="equipment" element={<EquipmentCatalogPage />} />
+          <Route
+            path="equipment/new"
+            element={
+              <ProtectedRoute allowedRoles={["LAB_TECHNICIAN", "LAB_MANAGER", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
+                <AddEquipmentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="equipment/:id" element={<EquipmentDetailsPage />} />
+          <Route
+            path="equipment/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={["LAB_MANAGER", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
+                <EditEquipmentPage />
+              </ProtectedRoute>
+            }
+          />
       </Route>
+
+      <Route path="/equipment" element={<Navigate to="/dashboard/equipment" replace />} />
 
       <Route
         path="/forgot-password"

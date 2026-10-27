@@ -7,7 +7,7 @@ function LabManagerDashboard() {
         {
             title: "Equipment Inventory",
             description: "View and manage laboratory equipment records.",
-            path: "/equipment",
+            path: "/dashboard/equipment",
             action: "Manage Equipment",
         },
         {

@@ -2,6 +2,8 @@ package com.campus.lab_resource_platform.auth.controller;
 
 import com.campus.lab_resource_platform.auth.dto.ForgotPasswordRequest;
 import com.campus.lab_resource_platform.auth.dto.LoginRequest;
+import com.campus.lab_resource_platform.auth.dto.PasswordResetConfirmRequest;
+import com.campus.lab_resource_platform.auth.dto.PasswordResetInitRequest;
 import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
 import com.campus.lab_resource_platform.auth.service.AuthService;
 import com.campus.lab_resource_platform.security.JwtService;
@@ -18,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -146,18 +149,64 @@ public class AuthController {
         return null;
     }
 
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(
-            @Valid @RequestBody ForgotPasswordRequest request) {
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<Map<String, String>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetInitRequest request) {
 
-        authService.resetPassword(
-                request.getEmail(),
+        String token = authService.createPasswordResetToken(request.getEmail());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Password reset token generated. Use this token to reset your password.",
+                "resetToken", token,
+                "expiresInMinutes", "15"
+        ));
+    }
+
+    @PostMapping({"/forgot-password/confirm", "/reset-password"})
+    public ResponseEntity<Map<String, String>> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request) {
+
+        authService.resetPasswordWithToken(
+                request.getToken(),
                 request.getNewPassword(),
                 request.getConfirmPassword()
         );
 
         return ResponseEntity.ok(Map.of(
-                "message", "Password updated successfully"
+                "message", "Password has been reset successfully. Please sign in with your new password."
         ));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+
+        if (request.getToken() != null && !request.getToken().trim().isEmpty()) {
+            authService.resetPasswordWithToken(
+                    request.getToken(),
+                    request.getNewPassword(),
+                    request.getConfirmPassword()
+            );
+            return ResponseEntity.ok(Map.of(
+                    "message", "Password has been reset successfully. Please sign in with your new password."
+            ));
+        }
+
+        // If only email is provided, generate a reset token
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty() &&
+                (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty())) {
+            String token = authService.createPasswordResetToken(request.getEmail());
+            return ResponseEntity.ok(Map.of(
+                    "message", "Password reset token generated. Use this token to reset your password.",
+                    "resetToken", token,
+                    "expiresInMinutes", "15"
+            ));
+        }
+
+        // If email and passwords were provided without a token, reject the insecure attempt
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Password reset requires a valid, single-use reset token. Please request a reset token first."
+        );
     }
 }

@@ -86,6 +86,16 @@ function DashboardLayout() {
           </NavLink>
 
           <NavLink
+              to="/dashboard/equipment"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">Equipment Catalog</span>
+          </NavLink>
+
+          <NavLink
               to="/dashboard/profile"
               className={({ isActive }) =>
                   `sidebar-nav-item ${isActive ? "active" : ""}`

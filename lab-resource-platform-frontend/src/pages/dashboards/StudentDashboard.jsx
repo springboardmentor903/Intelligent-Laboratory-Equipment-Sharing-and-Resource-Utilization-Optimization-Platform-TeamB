@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 function StudentDashboard() {
@@ -67,9 +68,13 @@ function StudentDashboard() {
                             Explore laboratory resources and find equipment for your
                             research needs.
                         </p>
-                        <span className="student-action-note">
-              Equipment page to be connected
-            </span>
+                        <Link
+                            to="/dashboard/equipment"
+                            className="btn-secondary"
+                            style={{ display: "inline-block", marginTop: "10px", width: "fit-content", textDecoration: "none" }}
+                        >
+                            Open Equipment Catalog →
+                        </Link>
                     </article>
 
                     <article className="student-action-card">

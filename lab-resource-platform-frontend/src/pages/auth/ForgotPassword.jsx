@@ -7,39 +7,75 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [form, setForm] = useState({
-    email: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [step, setStep] = useState(1); // 1 = Request token, 2 = Enter token & new password
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
-  }
-
-  async function handleSubmit(event) {
+  async function handleRequestToken(event) {
     event.preventDefault();
     setError("");
     setSuccess("");
 
-    if (form.newPassword !== form.confirmPassword) {
+    if (!email.trim()) {
+      setError("Please enter your registered email address.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await api.post("/api/auth/forgot-password/request", {
+        email: email.trim(),
+      });
+
+      const returnedToken = response.data.resetToken || "";
+      if (returnedToken) {
+        setToken(returnedToken);
+      }
+
+      const msg =
+        response.data.message ||
+        "Password reset token generated. Please enter your new password below.";
+      setSuccess(msg);
+      toast.success(msg);
+      setStep(2);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        "Unable to request password reset. Check that your email is registered.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleConfirmReset(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!token.trim()) {
+      setError("Reset token is required.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
       const msg = "Passwords do not match.";
       setError(msg);
       toast.error(msg);
       return;
     }
 
-    if (
-      form.newPassword.length < 8 ||
-      form.newPassword.length > 72
-    ) {
+    if (newPassword.length < 8 || newPassword.length > 72) {
       const msg = "Password must be between 8 and 72 characters.";
       setError(msg);
       toast.warning(msg);
@@ -49,25 +85,25 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await api.post(
-        "/api/auth/forgot-password",
-        form
-      );
+      const response = await api.post("/api/auth/forgot-password/confirm", {
+        token: token.trim(),
+        newPassword,
+        confirmPassword,
+      });
 
       const msg = response.data.message || "Password updated successfully.";
       setSuccess(msg);
       toast.success(msg);
 
-      setForm({
-        email: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      setToken("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       const msg =
-        err.response?.data?.detail ||
         err.response?.data?.message ||
-        "Unable to update password. Please try again.";
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        "Unable to reset password. The reset token may be invalid or expired.";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -77,82 +113,120 @@ export default function ForgotPassword() {
 
   return (
     <main className="auth-page">
-      <section className="auth-card">
-        <h1>Forgot password?</h1>
+      <section className="auth-card" style={{ maxWidth: 440, width: "100%" }}>
+        <h1>Reset Password</h1>
         <p>
-          Enter your registered email and choose a new password.
+          {step === 1
+            ? "Enter your registered email to receive a secure password reset token."
+            : "Enter your reset token and your new password."}
         </p>
 
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="email">Registered Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="Enter your registered email"
-            value={form.email}
-            onChange={handleChange}
-            autoComplete="email"
-            maxLength={150}
-            required
-          />
-
-          <label htmlFor="newPassword">New Password</label>
-          <input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            placeholder="Enter new password"
-            value={form.newPassword}
-            onChange={handleChange}
-            autoComplete="new-password"
-            minLength={8}
-            maxLength={72}
-            required
-          />
-
-          <label htmlFor="confirmPassword">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            placeholder="Confirm new password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            autoComplete="new-password"
-            minLength={8}
-            maxLength={72}
-            required
-          />
-
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-
-          {success && (
-            <p className="form-success" role="status">
-              {success}
-            </p>
-          )}
-
-          <button type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Update Password"}
-          </button>
-        </form>
-
-        <p className="auth-footer">
-          Remember your password?{" "}
-          <Link to="/login">Back to Login</Link>
-        </p>
+        {error && (
+          <p className="form-error" role="alert" style={{ marginBottom: 16 }}>
+            {error}
+          </p>
+        )}
 
         {success && (
+          <p className="form-success" role="status" style={{ marginBottom: 16 }}>
+            {success}
+          </p>
+        )}
+
+        {step === 1 ? (
+          <form onSubmit={handleRequestToken} className="auth-form">
+            <label htmlFor="email">Registered Email Address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@institution.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              maxLength={150}
+              disabled={loading}
+              required
+            />
+
+            <button type="submit" className="primary-button" disabled={loading} style={{ marginTop: 12 }}>
+              {loading ? "Requesting..." : "Send Reset Token"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleConfirmReset} className="auth-form">
+            <label htmlFor="token">Password Reset Token</label>
+            <input
+              id="token"
+              name="token"
+              type="text"
+              placeholder="Paste reset token here"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              maxLength={64}
+              disabled={loading}
+              required
+            />
+
+            <label htmlFor="newPassword">New Password</label>
+            <input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              placeholder="At least 8 characters"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={72}
+              disabled={loading}
+              required
+            />
+
+            <label htmlFor="confirmPassword">Confirm New Password</label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={72}
+              disabled={loading}
+              required
+            />
+
+            <button type="submit" className="primary-button" disabled={loading} style={{ marginTop: 12 }}>
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setStep(1);
+                setError("");
+                setSuccess("");
+              }}
+              style={{ marginTop: 8 }}
+            >
+              ← Back to Email Request
+            </button>
+          </form>
+        )}
+
+        <p className="auth-footer" style={{ marginTop: 20 }}>
+          Remember your password? <Link to="/login">Back to Login</Link>
+        </p>
+
+        {success && step === 2 && !token && (
           <button
             type="button"
+            className="primary-button"
             onClick={() => navigate("/login")}
+            style={{ marginTop: 12 }}
           >
             Go to Login
           </button>

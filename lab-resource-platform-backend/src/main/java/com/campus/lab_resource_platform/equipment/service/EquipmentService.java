@@ -33,6 +33,9 @@ public class EquipmentService {
     @Transactional
     public Equipment createEquipment(Equipment equipment) {
         equipment.setId(null);
+        if (equipment.getTags() == null) {
+            equipment.setTags(new java.util.HashSet<>());
+        }
         return equipmentRepository.save(equipment);
     }
 
@@ -49,8 +52,16 @@ public class EquipmentService {
         existing.setDepartmentId(updated.getDepartmentId());
         existing.setRequiresApproval(updated.isRequiresApproval());
         existing.setMaxBookingHours(updated.getMaxBookingHours());
+        if (updated.getTags() != null) {
+            existing.setTags(new java.util.HashSet<>(updated.getTags()));
+        }
 
         return equipmentRepository.save(existing);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllTags() {
+        return equipmentRepository.findAllDistinctTags();
     }
 
     @Transactional

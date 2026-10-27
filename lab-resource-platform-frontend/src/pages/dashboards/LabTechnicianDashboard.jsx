@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 function LabTechnicianDashboard() {
@@ -36,9 +37,13 @@ function LabTechnicianDashboard() {
                             Review equipment condition and availability to help
                             keep laboratory resources ready for use.
                         </p>
-                        <span className="technician-card-note">
-              Equipment data to be connected
-            </span>
+                        <Link
+                            to="/dashboard/equipment"
+                            className="btn-secondary"
+                            style={{ display: "inline-block", marginTop: "10px", width: "fit-content", textDecoration: "none" }}
+                        >
+                            Open Equipment Catalog →
+                        </Link>
                     </article>
 
                     <article className="technician-card">

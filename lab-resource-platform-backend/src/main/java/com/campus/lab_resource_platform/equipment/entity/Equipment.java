@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "equipments")
@@ -23,6 +25,12 @@ public class Equipment {
 
     @Column(length = 100)
     private String category;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "equipment_tags", joinColumns = @JoinColumn(name = "equipment_id"))
+    @Column(name = "tag", length = 50)
+    @Builder.Default
+    private Set<String> tags = new HashSet<>();
 
     @Column(length = 100)
     private String model;
