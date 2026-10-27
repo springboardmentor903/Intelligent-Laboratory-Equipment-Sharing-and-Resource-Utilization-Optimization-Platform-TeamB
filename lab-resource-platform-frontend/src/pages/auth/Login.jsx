@@ -9,6 +9,10 @@ function Login() {
   const location = useLocation();
   const toast = useToast();
 
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+  const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, "");
+  const googleOAuthUrl = `${backendBaseUrl}/oauth2/authorization/google`;
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -64,9 +68,13 @@ function Login() {
       let msg = "Unable to reach the server. Check that the backend is running.";
 
       if (err.response?.status === 401) {
-        msg = "Invalid email or password.";
+        msg = err.response.data?.error || err.response.data?.message || "Invalid email or password.";
       } else if (err.response?.status === 403) {
-        msg = "Your account is inactive or access is denied.";
+        msg = err.response.data?.error || err.response.data?.message || "Your account is inactive or access is denied.";
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
       }
 
       setError(msg);
@@ -126,8 +134,11 @@ function Login() {
           </div>
 
           <a
-            href="http://localhost:8080/oauth2/authorization/google"
+            href={googleOAuthUrl}
             className="google-button"
+            onClick={() => {
+              document.cookie = `app_frontend_url=${window.location.origin}; path=/; max-age=300; SameSite=Lax`;
+            }}
           >
             <svg
               className="google-icon"

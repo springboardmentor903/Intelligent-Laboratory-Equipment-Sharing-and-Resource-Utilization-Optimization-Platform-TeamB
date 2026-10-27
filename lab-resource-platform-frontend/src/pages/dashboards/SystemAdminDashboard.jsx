@@ -12,14 +12,13 @@ function SystemAdminDashboard() {
     const [loadError, setLoadError] = useState("");
 
     const loadRequests = useCallback(async () => {
-        setLoading(true);
-        setLoadError("");
-
         try {
             const response = await api.get(
                 "/api/admin/technician-requests/pending"
             );
+
             setRequests(response.data);
+            setLoadError("");
         } catch (error) {
             setLoadError(
                 error.response?.status === 403
@@ -32,8 +31,40 @@ function SystemAdminDashboard() {
     }, []);
 
     useEffect(() => {
-        loadRequests();
-    }, [loadRequests]);
+        let cancelled = false;
+
+        api.get("/api/admin/technician-requests/pending")
+            .then((response) => {
+                if (!cancelled) {
+                    setRequests(response.data);
+                    setLoadError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setLoadError(
+                        error.response?.status === 403
+                            ? "You need System Administrator access to view these requests."
+                            : "Could not load technician requests. Please try again."
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    function handleRefresh() {
+        setLoading(true);
+        setLoadError("");
+        void loadRequests();
+    }
 
     async function handleReview(requestId, action) {
         const actionName = action === "approve" ? "approve" : "reject";
@@ -105,7 +136,7 @@ function SystemAdminDashboard() {
                     <button
                         type="button"
                         className="requests-refresh-button"
-                        onClick={loadRequests}
+                        onClick={handleRefresh}
                         disabled={loading || processingId !== null}
                     >
                         Refresh
@@ -123,7 +154,7 @@ function SystemAdminDashboard() {
                 {!loading && loadError && (
                     <div className="requests-error">
                         <p>{loadError}</p>
-                        <button type="button" onClick={loadRequests}>
+                        <button type="button" onClick={handleRefresh}>
                             Try again
                         </button>
                     </div>

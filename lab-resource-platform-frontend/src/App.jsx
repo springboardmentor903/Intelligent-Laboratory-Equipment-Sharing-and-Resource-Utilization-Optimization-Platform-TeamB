@@ -12,7 +12,6 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 
 import ProfilePage from "./pages/profile/ProfilePage";
 import AccountSettings from "./pages/profile/AccountSettings";
-import RoleBasedAccess from "./components/RoleBasedAccess";
 
 import StudentDashboard from "./pages/dashboards/StudentDashboard";
 import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
@@ -59,8 +58,17 @@ function AuthProvider({ children }) {
         }
       });
 
+    const handleSessionExpired = () => {
+      if (!ignore) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+
     return () => {
       ignore = true;
+      window.removeEventListener("auth:session-expired", handleSessionExpired);
     };
   }, []);
 
@@ -113,7 +121,6 @@ function DashboardRedirect() {
 }
 
 function AppRoutes() {
-    const { user } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

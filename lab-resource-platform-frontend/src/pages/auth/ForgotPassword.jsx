@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-//import api from "../../services/api";
+import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
 export default function ForgotPassword() {
@@ -50,7 +50,7 @@ export default function ForgotPassword() {
 
     try {
       const response = await api.post(
-        "/auth/forgot-password",
+        "/api/auth/forgot-password",
         form
       );
 

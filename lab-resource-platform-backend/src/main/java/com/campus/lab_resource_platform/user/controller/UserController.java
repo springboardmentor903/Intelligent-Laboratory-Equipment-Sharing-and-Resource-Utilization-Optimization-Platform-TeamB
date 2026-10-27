@@ -28,20 +28,22 @@ public class UserController {
             Authentication authentication
     ) {
         if (authentication == null
-                || !authentication.isAuthenticated()) {
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Not authenticated"
             );
         }
 
-        User user = userRepository.findByEmail(
-                authentication.getName()
-        ).filter(User::isActive)
-         .orElseThrow(() -> new ResponseStatusException(
-                 HttpStatus.NOT_FOUND,
-                 "User not found or inactive"
-         ));
+        String email = authentication.getName().trim().toLowerCase();
+
+        User user = userRepository.findByEmail(email)
+                .filter(User::isActive)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "User not found or inactive"
+                ));
 
         return Map.of(
                 "id", user.getId(),
