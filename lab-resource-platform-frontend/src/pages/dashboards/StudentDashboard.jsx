@@ -24,32 +24,38 @@ function StudentDashboard() {
             </section>
 
             <section className="student-stats" aria-label="Booking summary">
-                <article className="student-stat-card">
-                    <span className="student-stat-icon">🧪</span>
-                    <div>
-                        <p>Available Equipment</p>
-                        <h2>Explore</h2>
-                        <span>Find equipment for your research</span>
-                    </div>
-                </article>
+                <Link to="/dashboard/equipment" style={{ textDecoration: "none", color: "inherit" }}>
+                    <article className="student-stat-card">
+                        <span className="student-stat-icon">🧪</span>
+                        <div>
+                            <p>Available Equipment</p>
+                            <h2>Explore</h2>
+                            <span>Find equipment for your research</span>
+                        </div>
+                    </article>
+                </Link>
 
-                <article className="student-stat-card">
-                    <span className="student-stat-icon">📅</span>
-                    <div>
-                        <p>My Bookings</p>
-                        <h2>Manage</h2>
-                        <span>Review your booking requests</span>
-                    </div>
-                </article>
+                <Link to="/dashboard/bookings/my" style={{ textDecoration: "none", color: "inherit" }}>
+                    <article className="student-stat-card">
+                        <span className="student-stat-icon">📅</span>
+                        <div>
+                            <p>My Bookings</p>
+                            <h2>Manage</h2>
+                            <span>Review your booking requests</span>
+                        </div>
+                    </article>
+                </Link>
 
-                <article className="student-stat-card">
-                    <span className="student-stat-icon">📋</span>
-                    <div>
-                        <p>Booking History</p>
-                        <h2>Review</h2>
-                        <span>Keep track of past reservations</span>
-                    </div>
-                </article>
+                <Link to="/dashboard/bookings/calendar" style={{ textDecoration: "none", color: "inherit" }}>
+                    <article className="student-stat-card">
+                        <span className="student-stat-icon">📋</span>
+                        <div>
+                            <p>Booking Calendar</p>
+                            <h2>Schedule</h2>
+                            <span>Inspect time slot availability</span>
+                        </div>
+                    </article>
+                </Link>
             </section>
 
             <section className="student-section">
@@ -83,9 +89,13 @@ function StudentDashboard() {
                         <p>
                             Keep track of booking requests and check their status.
                         </p>
-                        <span className="student-action-note">
-              Booking page to be connected
-            </span>
+                        <Link
+                            to="/dashboard/bookings/my"
+                            className="btn-secondary"
+                            style={{ display: "inline-block", marginTop: "10px", width: "fit-content", textDecoration: "none" }}
+                        >
+                            View My Reservations →
+                        </Link>
                     </article>
                 </div>
             </section>

@@ -109,6 +109,42 @@ class EquipmentServiceTest {
     }
 
     @Test
+    void createEquipment_throwsBadRequestWhenNameMissing() {
+        Equipment equipment = Equipment.builder()
+                .name("")
+                .build();
+
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
+                equipmentService.createEquipment(equipment));
+
+        Equipment nullNameEquipment = Equipment.builder()
+                .name(null)
+                .build();
+
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
+                equipmentService.createEquipment(nullNameEquipment));
+    }
+
+    @Test
+    void createEquipment_appliesDefaultStatusAndMaxHours() {
+        Equipment equipment = Equipment.builder()
+                .name("Standard Centrifuge")
+                .status(null)
+                .maxBookingHours(0)
+                .tags(null)
+                .build();
+
+        when(equipmentRepository.save(any(Equipment.class))).thenAnswer(i -> i.getArgument(0));
+
+        Equipment created = equipmentService.createEquipment(equipment);
+
+        assertEquals("Standard Centrifuge", created.getName());
+        assertEquals(EquipmentStatus.AVAILABLE, created.getStatus());
+        assertEquals(8, created.getMaxBookingHours());
+        assertNotNull(created.getTags());
+    }
+
+    @Test
     void getAllTags_delegatesToRepository() {
         when(equipmentRepository.findAllDistinctTags()).thenReturn(List.of("Centrifuge", "Microscopy", "Optics"));
 

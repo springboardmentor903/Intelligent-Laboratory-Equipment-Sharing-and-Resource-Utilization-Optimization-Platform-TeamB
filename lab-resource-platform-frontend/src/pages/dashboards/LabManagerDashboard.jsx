@@ -5,6 +5,12 @@ function LabManagerDashboard() {
 
     const dashboardItems = [
         {
+            title: "Booking Approvals",
+            description: "Review pending reservation requests submitted by researchers.",
+            path: "/dashboard/bookings/approvals",
+            action: "Review Requests",
+        },
+        {
             title: "Equipment Inventory",
             description: "View and manage laboratory equipment records.",
             path: "/dashboard/equipment",
