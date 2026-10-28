@@ -40,4 +40,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByUserId(Long userId, Pageable pageable);
 
     Page<Booking> findByUserIdAndStatus(Long userId, BookingStatus status, Pageable pageable);
+
+    Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
+
+    @Query("SELECT b FROM Booking b WHERE b.status = :status AND " +
+           "(:institutionId IS NULL OR b.equipment.institutionId IS NULL OR b.equipment.institutionId = :institutionId)")
+    Page<Booking> findPendingApprovalsByInstitution(
+            @Param("status") BookingStatus status,
+            @Param("institutionId") Long institutionId,
+            Pageable pageable
+    );
 }

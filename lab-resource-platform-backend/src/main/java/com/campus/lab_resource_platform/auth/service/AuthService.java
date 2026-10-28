@@ -2,14 +2,19 @@ package com.campus.lab_resource_platform.auth.service;
 
 import com.campus.lab_resource_platform.auth.dto.LoginRequest;
 import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
+import com.campus.lab_resource_platform.auth.entity.PasswordResetToken;
+import com.campus.lab_resource_platform.auth.repository.PasswordResetTokenRepository;
 import com.campus.lab_resource_platform.security.JwtService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,22 +22,36 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository userRepo;
     private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
+    private final PasswordResetTokenRepository tokenRepo;
+    private final EmailService emailService;
 
     public AuthService(
             UserRepository userRepo,
             BCryptPasswordEncoder encoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            PasswordResetTokenRepository tokenRepo,
+            EmailService emailService) {
         this.userRepo = userRepo;
         this.encoder = encoder;
         this.jwtService = jwtService;
+        this.tokenRepo = tokenRepo;
+        this.emailService = emailService;
     }
 
     public User register(RegisterRequest dto) {
@@ -46,13 +65,21 @@ public class AuthService {
         }
 
         User.Role requestedRole;
-
         try {
             requestedRole = User.Role.valueOf(dto.getRole().trim());
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Invalid role"
+            );
+        }
+
+        // Public self-registration only permits RESEARCHER_STUDENT.
+        // Privileged roles (ADMIN, MANAGER, TECHNICIAN, etc.) require administrative provisioning or approval workflows.
+        if (requestedRole != User.Role.RESEARCHER_STUDENT) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Self-registration is restricted to Researcher / Student accounts. Privileged access requires administrative approval."
             );
         }
 
@@ -105,33 +132,98 @@ public class AuthService {
         );
 
         if (response != null) {
-            Cookie cookie = new Cookie("jwt", token);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(false);
-            cookie.setPath("/");
-            cookie.setMaxAge(60 * 60);
+            ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                    .httpOnly(true)
+                    .secure(false) // Local HTTP development
+                    .path("/")
+                    .maxAge(Duration.ofHours(1))
+                    .sameSite("Lax")
+                    .build();
 
-            response.addCookie(cookie);
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         }
 
         return token;
     }
 
     public void logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("jwt", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
+        if (response != null) {
+            ResponseCookie cookie = ResponseCookie.from("jwt", "")
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(0)
+                    .sameSite("Lax")
+                    .build();
 
-        response.addCookie(cookie);
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        }
+    }
+
+    private String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 
     @Transactional
-    public void resetPassword(
-            String email,
+    public String createPasswordResetToken(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+
+        java.util.Optional<User> userOpt = userRepo.findByEmail(normalizedEmail);
+        if (userOpt.isEmpty() || !userOpt.get().isActive()) {
+            return null;
+        }
+
+        User user = userOpt.get();
+
+        String rawToken = UUID.randomUUID().toString().replace("-", "") +
+                UUID.randomUUID().toString().replace("-", "");
+        String tokenHash = hashToken(rawToken);
+
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setUser(user);
+        resetToken.setTokenHash(tokenHash);
+        resetToken.setExpiresAt(Instant.now().plus(Duration.ofMinutes(15)));
+
+        tokenRepo.save(resetToken);
+
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), rawToken);
+            return rawToken;
+        } catch (Exception e) {
+            log.error("Operational diagnostic: Password reset email delivery failed; invalidating generated reset token.");
+            resetToken.setUsedAt(Instant.now());
+            tokenRepo.save(resetToken);
+            return null;
+        }
+    }
+
+    @Transactional
+    public void resetPasswordWithToken(
+            String rawToken,
             String newPassword,
             String confirmPassword) {
+
+        if (rawToken == null || rawToken.trim().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Reset token is required"
+            );
+        }
 
         if (!newPassword.equals(confirmPassword)) {
             throw new ResponseStatusException(
@@ -140,15 +232,36 @@ public class AuthService {
             );
         }
 
-        String normalizedEmail =
-                email.trim().toLowerCase(Locale.ROOT);
+        if (newPassword.length() < 8 || newPassword.length() > 72) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Password must be between 8 and 72 characters"
+            );
+        }
 
-        User user = userRepo.findByEmail(normalizedEmail)
+        String tokenHash = hashToken(rawToken.trim());
+
+        PasswordResetToken resetToken = tokenRepo.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found"
+                        HttpStatus.BAD_REQUEST,
+                        "Invalid or expired password reset token"
                 ));
 
+        if (resetToken.getUsedAt() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Password reset token has already been used"
+            );
+        }
+
+        if (Instant.now().isAfter(resetToken.getExpiresAt())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Password reset token has expired"
+            );
+        }
+
+        User user = resetToken.getUser();
         if (!user.isActive()) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -156,10 +269,21 @@ public class AuthService {
             );
         }
 
-        user.setPasswordHash(
-                encoder.encode(newPassword)
-        );
+        user.setPasswordHash(encoder.encode(newPassword));
+        resetToken.setUsedAt(Instant.now());
 
         userRepo.save(user);
+        tokenRepo.save(resetToken);
+    }
+
+    @Transactional
+    public void resetPassword(
+            String email,
+            String newPassword,
+            String confirmPassword) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Password reset requires a valid, single-use reset token. Please request a reset token first."
+        );
     }
 }

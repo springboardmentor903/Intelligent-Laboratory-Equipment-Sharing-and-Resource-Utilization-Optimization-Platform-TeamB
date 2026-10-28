@@ -1,4 +1,5 @@
 
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 function DepartmentHeadDashboard() {
@@ -9,7 +10,8 @@ function DepartmentHeadDashboard() {
             title: "Department Overview",
             description:
                 "Review laboratory equipment and resources assigned to your department.",
-            status: "Ready for integration",
+            link: "/dashboard/equipment",
+            action: "Open Equipment Catalog →",
         },
         {
             title: "Resource Utilization",
@@ -65,9 +67,19 @@ function DepartmentHeadDashboard() {
                         <article className="task-card" key={section.title}>
                             <h3>{section.title}</h3>
                             <p>{section.description}</p>
-                            <span className="department-head-status">
-                {section.status}
-              </span>
+                            {section.link ? (
+                                <Link
+                                    to={section.link}
+                                    className="btn-secondary"
+                                    style={{ display: "inline-block", marginTop: "10px", width: "fit-content", textDecoration: "none" }}
+                                >
+                                    {section.action}
+                                </Link>
+                            ) : (
+                                <span className="department-head-status">
+                                    {section.status}
+                                </span>
+                            )}
                         </article>
                     ))}
                 </div>

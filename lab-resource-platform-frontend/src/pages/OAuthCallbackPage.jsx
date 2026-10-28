@@ -21,10 +21,14 @@ export default function OAuthCallbackPage() {
       if (error) {
         if (!cancelled) {
           setFailed(true);
-          const msg =
-            error === "access_denied"
-              ? "Google sign-in was cancelled."
-              : "Google sign-in could not be completed.";
+          let msg = "Google sign-in could not be completed.";
+          if (error === "access_denied") {
+            msg = "Google sign-in was cancelled.";
+          } else if (error === "account_inactive") {
+            msg = "Your account is inactive. Please contact your laboratory administrator.";
+          } else if (error === "unverified_google_account") {
+            msg = "Your Google account email is not verified or incomplete.";
+          }
           setMessage(msg);
           toast.error(msg);
         }

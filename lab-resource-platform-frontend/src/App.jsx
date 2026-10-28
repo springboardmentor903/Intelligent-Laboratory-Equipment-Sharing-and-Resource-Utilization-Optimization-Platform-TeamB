@@ -12,7 +12,17 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 
 import ProfilePage from "./pages/profile/ProfilePage";
 import AccountSettings from "./pages/profile/AccountSettings";
-import RoleBasedAccess from "./components/RoleBasedAccess";
+
+import EquipmentCatalogPage from "./pages/equipment/EquipmentCatalogPage";
+import EquipmentDetailsPage from "./pages/equipment/EquipmentDetailsPage";
+import AddEquipmentPage from "./pages/equipment/AddEquipmentPage";
+import EditEquipmentPage from "./pages/equipment/EditEquipmentPage";
+
+import BookingCalendarPage from "./pages/booking/BookingCalendarPage";
+import BookingCreatePage from "./pages/booking/BookingCreatePage";
+import MyBookingsPage from "./pages/booking/MyBookingsPage";
+import BookingDetailsPage from "./pages/booking/BookingDetailsPage";
+import BookingApprovalsPage from "./pages/booking/BookingApprovalsPage";
 
 import StudentDashboard from "./pages/dashboards/StudentDashboard";
 import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
@@ -59,8 +69,17 @@ function AuthProvider({ children }) {
         }
       });
 
+    const handleSessionExpired = () => {
+      if (!ignore) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+
     return () => {
       ignore = true;
+      window.removeEventListener("auth:session-expired", handleSessionExpired);
     };
   }, []);
 
@@ -113,7 +132,6 @@ function DashboardRedirect() {
 }
 
 function AppRoutes() {
-    const { user } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -203,7 +221,42 @@ function AppRoutes() {
                   </ProtectedRoute>
               }
           />
+
+          <Route path="equipment" element={<EquipmentCatalogPage />} />
+          <Route
+            path="equipment/new"
+            element={
+              <ProtectedRoute allowedRoles={["LAB_TECHNICIAN", "LAB_MANAGER", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
+                <AddEquipmentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="equipment/:id" element={<EquipmentDetailsPage />} />
+          <Route
+            path="equipment/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={["LAB_MANAGER", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
+                <EditEquipmentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="bookings/calendar" element={<BookingCalendarPage />} />
+          <Route path="bookings/new" element={<BookingCreatePage />} />
+          <Route path="bookings/my" element={<MyBookingsPage />} />
+          <Route path="bookings/:id" element={<BookingDetailsPage />} />
+          <Route
+            path="bookings/approvals"
+            element={
+              <ProtectedRoute allowedRoles={["LAB_MANAGER", "DEPARTMENT_HEAD", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
+                <BookingApprovalsPage />
+              </ProtectedRoute>
+            }
+          />
       </Route>
+
+      <Route path="/equipment" element={<Navigate to="/dashboard/equipment" replace />} />
+      <Route path="/bookings" element={<Navigate to="/dashboard/bookings/calendar" replace />} />
 
       <Route
         path="/forgot-password"

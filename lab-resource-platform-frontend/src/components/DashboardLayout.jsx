@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { canApproveBookings } from "../services/bookingService";
 
 function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -84,6 +85,48 @@ function DashboardLayout() {
           >
             <span className="nav-text">Overview</span>
           </NavLink>
+
+          <NavLink
+              to="/dashboard/equipment"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">Equipment Catalog</span>
+          </NavLink>
+
+          <NavLink
+              to="/dashboard/bookings/calendar"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">Availability Calendar</span>
+          </NavLink>
+
+          <NavLink
+              to="/dashboard/bookings/my"
+              className={({ isActive }) =>
+                  `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+              onClick={() => setMobileOpen(false)}
+          >
+            <span className="nav-text">My Reservations</span>
+          </NavLink>
+
+          {canApproveBookings(user?.role) && (
+            <NavLink
+                to="/dashboard/bookings/approvals"
+                className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                }
+                onClick={() => setMobileOpen(false)}
+            >
+              <span className="nav-text">Booking Approvals</span>
+            </NavLink>
+          )}
 
           <NavLink
               to="/dashboard/profile"

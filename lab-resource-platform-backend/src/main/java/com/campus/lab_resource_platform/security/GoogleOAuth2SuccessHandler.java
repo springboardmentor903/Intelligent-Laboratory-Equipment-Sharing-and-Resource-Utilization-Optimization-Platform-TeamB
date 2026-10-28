@@ -5,15 +5,21 @@ import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 
 @Component
@@ -21,13 +27,26 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final String defaultFrontendUrl;
 
     public GoogleOAuth2SuccessHandler(
             UserRepository userRepository,
             JwtService jwtService
     ) {
+        this(userRepository, jwtService, "http://localhost:5173");
+    }
+
+    @Autowired
+    public GoogleOAuth2SuccessHandler(
+            UserRepository userRepository,
+            JwtService jwtService,
+            @Value("${app.frontend.url:http://localhost:5173}") String defaultFrontendUrl
+    ) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.defaultFrontendUrl = (defaultFrontendUrl != null && !defaultFrontendUrl.isBlank())
+                ? defaultFrontendUrl
+                : "http://localhost:5173";
     }
 
     @Override
@@ -36,6 +55,29 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
+
+        // Resolve frontend redirect target dynamically if the frontend provided its origin
+        String targetFrontendUrl = defaultFrontendUrl;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie c : cookies) {
+                if ("app_frontend_url".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
+                    String candidate = c.getValue().trim();
+                    if (candidate.startsWith("http://localhost:") || candidate.startsWith("http://127.0.0.1:")) {
+                        targetFrontendUrl = candidate;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Clear the transient app_frontend_url cookie
+        ResponseCookie clearOriginCookie = ResponseCookie.from("app_frontend_url", "")
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, clearOriginCookie.toString());
 
         OAuth2User googleUser = (OAuth2User) authentication.getPrincipal();
 
@@ -46,10 +88,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         if (googleId == null || email == null || name == null
                 || !Boolean.TRUE.equals(googleUser.getAttribute("email_verified"))) {
-            response.sendError(
-                    HttpServletResponse.SC_UNAUTHORIZED,
-                    "Google account information is incomplete or unverified"
-            );
+            response.sendRedirect(targetFrontendUrl + "/oauth/callback?error=unverified_google_account");
             return;
         }
 
@@ -81,10 +120,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                 });
 
         if (!user.isActive()) {
-            response.sendError(
-                    HttpServletResponse.SC_FORBIDDEN,
-                    "This account is disabled"
-            );
+            response.sendRedirect(targetFrontendUrl + "/oauth/callback?error=account_inactive");
             return;
         }
 
@@ -96,16 +132,23 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                 user.getRole().name()
         );
 
-        jakarta.servlet.http.Cookie jwtCookie =
-        new jakarta.servlet.http.Cookie("jwt", token);
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(Duration.ofHours(1))
+                .secure(false) // Local HTTP development only
+                .sameSite("Lax")
+                .build();
 
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(60 * 60);
-        jwtCookie.setSecure(false); // Local HTTP development only
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
-        response.addCookie(jwtCookie);
+        // Invalidate transient OAuth2 session so subsequent API requests use stateless JWT authentication
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
 
-        response.sendRedirect("http://localhost:5173/oauth/callback");
+        response.sendRedirect(targetFrontendUrl + "/oauth/callback");
     }
 }

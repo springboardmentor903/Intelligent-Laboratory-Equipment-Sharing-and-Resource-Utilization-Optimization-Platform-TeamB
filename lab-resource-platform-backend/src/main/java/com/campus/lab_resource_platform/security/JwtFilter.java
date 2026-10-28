@@ -40,20 +40,22 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             }
         }
-        if(token != null && jwtService.validateToken(token)){
+        if (token != null && jwtService.validateToken(token)) {
             String email = jwtService.extractEmailByToken(token);
             String role = jwtService.extractRoleByToken(token);
 
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    email,
-                    null,
-                    List.of(
-                            new SimpleGrantedAuthority(
-                                    "ROLE_" + role
-                            )
-                    )
-            );
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (email != null && role != null) {
+                String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        email.trim().toLowerCase(),
+                        null,
+                        List.of(
+                                new SimpleGrantedAuthority(authority)
+                        )
+                );
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         filterChain.doFilter(req, res);
     }

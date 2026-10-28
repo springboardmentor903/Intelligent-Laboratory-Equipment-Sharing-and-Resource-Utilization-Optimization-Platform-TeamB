@@ -33,6 +33,20 @@ public class EquipmentService {
     @Transactional
     public Equipment createEquipment(Equipment equipment) {
         equipment.setId(null);
+        if (equipment.getName() == null || equipment.getName().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment name is required");
+        }
+        equipment.setName(equipment.getName().trim());
+
+        if (equipment.getStatus() == null) {
+            equipment.setStatus(com.campus.lab_resource_platform.equipment.entity.EquipmentStatus.AVAILABLE);
+        }
+        if (equipment.getMaxBookingHours() <= 0) {
+            equipment.setMaxBookingHours(8);
+        }
+        if (equipment.getTags() == null) {
+            equipment.setTags(new java.util.HashSet<>());
+        }
         return equipmentRepository.save(equipment);
     }
 
@@ -40,17 +54,37 @@ public class EquipmentService {
     public Equipment updateEquipment(Long id, Equipment updated) {
         Equipment existing = getEquipmentById(id);
 
-        existing.setName(updated.getName());
-        existing.setCategory(updated.getCategory());
-        existing.setModel(updated.getModel());
-        existing.setManufacturer(updated.getManufacturer());
-        existing.setStatus(updated.getStatus());
+        if (updated.getName() != null && !updated.getName().trim().isEmpty()) {
+            existing.setName(updated.getName().trim());
+        }
+        if (updated.getCategory() != null) {
+            existing.setCategory(updated.getCategory().trim().isEmpty() ? null : updated.getCategory().trim());
+        }
+        if (updated.getModel() != null) {
+            existing.setModel(updated.getModel().trim().isEmpty() ? null : updated.getModel().trim());
+        }
+        if (updated.getManufacturer() != null) {
+            existing.setManufacturer(updated.getManufacturer().trim().isEmpty() ? null : updated.getManufacturer().trim());
+        }
+        if (updated.getStatus() != null) {
+            existing.setStatus(updated.getStatus());
+        }
         existing.setInstitutionId(updated.getInstitutionId());
         existing.setDepartmentId(updated.getDepartmentId());
         existing.setRequiresApproval(updated.isRequiresApproval());
-        existing.setMaxBookingHours(updated.getMaxBookingHours());
+        if (updated.getMaxBookingHours() > 0) {
+            existing.setMaxBookingHours(updated.getMaxBookingHours());
+        }
+        if (updated.getTags() != null) {
+            existing.setTags(new java.util.HashSet<>(updated.getTags()));
+        }
 
         return equipmentRepository.save(existing);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllTags() {
+        return equipmentRepository.findAllDistinctTags();
     }
 
     @Transactional

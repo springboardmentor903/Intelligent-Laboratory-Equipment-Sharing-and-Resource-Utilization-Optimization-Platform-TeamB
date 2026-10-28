@@ -10,7 +10,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +46,21 @@ public class BookingController {
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<BookingResponse> response = bookingService.getMyBookings(authentication.getName(), status, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/approvals")
+    public ResponseEntity<Page<BookingResponse>> getBookingsForApproval(
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            Authentication authentication
+    ) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<BookingResponse> response = bookingService.getBookingsForApproval(authentication.getName(), status, pageable);
         return ResponseEntity.ok(response);
     }
 

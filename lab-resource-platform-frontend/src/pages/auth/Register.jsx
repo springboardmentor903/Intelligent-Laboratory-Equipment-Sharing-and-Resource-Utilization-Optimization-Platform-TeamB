@@ -63,6 +63,7 @@ function Register() {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
+        role: form.role,
       });
       navigate("/login", {
         replace: true,
@@ -131,28 +132,16 @@ function Register() {
             required
           />
 
-          <label htmlFor="role">Register as</label>
-          <select
-            id="role"
-            name="role"
-            className="role-select"
-            value={form.role}
-            onChange={update}
-            required
-          >
-            <option value="RESEARCHER_STUDENT">
-              Researcher / Student
-            </option>
-            <option value="LAB_TECHNICIAN">Lab Technician</option>
-            <option value="LAB_MANAGER">Lab Manager</option>
-            <option value="DEPARTMENT_HEAD">Department Head</option>
-            <option value="INSTITUTION_ADMINISTRATOR">
-              Institution Administrator
-            </option>
-            <option value="SYSTEM_ADMINISTRATOR">
-              System Administrator
-            </option>
-          </select>
+          <div className="account-role-info" style={{ margin: "4px 0 12px", padding: "10px 12px", background: "var(--bg-main)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)" }}>
+            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", display: "block" }}>Account Type</span>
+            <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>🎓 Researcher / Student</strong>
+            <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+              Need elevated technician privileges?{" "}
+              <Link to="/technician-access-request" style={{ color: "var(--brand-primary)", textDecoration: "underline" }}>
+                Request technician access
+              </Link>.
+            </p>
+          </div>
 
           <label htmlFor="password">Password</label>
           <input
@@ -179,7 +168,7 @@ function Register() {
             className="primary-button"
             disabled={submitting}
           >
-            {submitting ? "Creating account..." : "Create student account"}
+            {submitting ? "Creating account..." : "Create Account"}
           </button>
         </form>
 

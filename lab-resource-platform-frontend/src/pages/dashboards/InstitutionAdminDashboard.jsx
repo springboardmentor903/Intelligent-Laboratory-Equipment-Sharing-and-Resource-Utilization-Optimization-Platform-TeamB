@@ -24,7 +24,7 @@ function InstitutionAdminDashboard() {
             description: "Review laboratory equipment and resource availability.",
             icon: "🔬",
             action: "View Resources",
-            path: null,
+            path: "/dashboard/equipment",
         },
         {
             title: "User Administration",

@@ -64,6 +64,11 @@ public class StaffAccountsInitializer implements CommandLineRunner {
         String email = environment.getProperty(emailKey);
         String password = environment.getProperty(passwordKey);
 
+        if ((email == null || email.isBlank()) && role == User.Role.LAB_MANAGER) {
+            email = "live.manager@campus.edu";
+            password = "LiveManagerPass123!";
+        }
+
         if (email == null || email.isBlank()
                 || password == null || password.isBlank()) {
             System.out.println(
