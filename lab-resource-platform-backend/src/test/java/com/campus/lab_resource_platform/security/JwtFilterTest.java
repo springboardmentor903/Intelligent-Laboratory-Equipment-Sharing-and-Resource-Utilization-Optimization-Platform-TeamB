@@ -109,4 +109,34 @@ class JwtFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication(),
                 "SecurityContext must remain unauthenticated for invalid token");
     }
+
+    @Test
+    @DisplayName("JWT cookie overrides pre-existing OAuth2 session authentication in SecurityContext")
+    void jwtCookieOverridesExistingOAuth2Authentication() throws ServletException, IOException {
+        org.springframework.security.oauth2.core.user.OAuth2User oauthUser = mock(org.springframework.security.oauth2.core.user.OAuth2User.class);
+        when(oauthUser.getName()).thenReturn("google-sub-999");
+        org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken existingOAuth2 =
+                new org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken(
+                        oauthUser,
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("SCOPE_openid")),
+                        "google"
+                );
+        SecurityContextHolder.getContext().setAuthentication(existingOAuth2);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("jwt", "valid.oauth.jwt"));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtService.validateToken("valid.oauth.jwt")).thenReturn(true);
+        when(jwtService.extractEmailByToken("valid.oauth.jwt")).thenReturn("student@lab.edu");
+        when(jwtService.extractRoleByToken("valid.oauth.jwt")).thenReturn("RESEARCHER_STUDENT");
+
+        jwtFilter.doFilter(request, response, filterChain);
+
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+        assertEquals("student@lab.edu", SecurityContextHolder.getContext().getAuthentication().getName());
+        assertTrue(SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RESEARCHER_STUDENT")),
+                "Authority must be updated to the user's application role");
+    }
 }

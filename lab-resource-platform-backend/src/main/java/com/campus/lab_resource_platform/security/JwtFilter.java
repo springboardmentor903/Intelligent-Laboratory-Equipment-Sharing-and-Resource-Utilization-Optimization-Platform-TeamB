@@ -40,7 +40,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             }
         }
-        if (token != null && jwtService.validateToken(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null && jwtService.validateToken(token)) {
             String email = jwtService.extractEmailByToken(token);
             String role = jwtService.extractRoleByToken(token);
 

@@ -36,9 +36,32 @@ public class UserController {
             );
         }
 
-        String email = authentication.getName().trim().toLowerCase();
+        String email = null;
+        if (authentication.getPrincipal() instanceof org.springframework.security.oauth2.core.user.OAuth2User oauth2User) {
+            email = oauth2User.getAttribute("email");
+        }
+        if (email == null || email.isBlank()) {
+            email = authentication.getName();
+        }
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Not authenticated"
+            );
+        }
+        email = email.trim().toLowerCase();
 
-        User user = userRepository.findByEmail(email)
+        String lookupKey = email;
+        User user = userRepository.findByEmail(lookupKey)
+                .or(() -> {
+                    if (authentication.getPrincipal() instanceof org.springframework.security.oauth2.core.user.OAuth2User oauth2User) {
+                        String googleId = oauth2User.getAttribute("sub");
+                        if (googleId != null && !googleId.isBlank()) {
+                            return userRepository.findByGoogleId(googleId);
+                        }
+                    }
+                    return userRepository.findByGoogleId(lookupKey);
+                })
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
                         "User not found or inactive"

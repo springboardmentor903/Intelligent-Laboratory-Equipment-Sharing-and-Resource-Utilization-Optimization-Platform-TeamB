@@ -142,6 +142,13 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
+        // Invalidate transient OAuth2 session so subsequent API requests use stateless JWT authentication
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+
         response.sendRedirect(targetFrontendUrl + "/oauth/callback");
     }
 }
