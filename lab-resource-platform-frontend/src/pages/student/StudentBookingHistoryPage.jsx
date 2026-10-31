@@ -15,11 +15,13 @@ function formatDateTime(isoString) {
   if (!isoString) return "—";
   try {
     return new Date(isoString).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
       day: "2-digit",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true,
     });
   } catch {
     return isoString;
@@ -38,12 +40,16 @@ function formatDuration(start, end) {
 
 function StudentBookingHistoryPage() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "waitlist"
+
   const [bookings, setBookings] = useState([]);
+  const [waitlist, setWaitlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [leavingWaitlistId, setLeavingWaitlistId] = useState(null);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -52,7 +58,6 @@ function StudentBookingHistoryPage() {
       const res = await api.get(
         "/api/bookings/my?page=0&size=100&sortBy=createdAt&direction=desc"
       );
-      // Support both paginated and array responses
       const data = res.data;
       const list = Array.isArray(data)
         ? data
@@ -67,9 +72,19 @@ function StudentBookingHistoryPage() {
     }
   }, []);
 
+  const fetchWaitlist = useCallback(async () => {
+    try {
+      const res = await api.get("/api/waitlist/my");
+      setWaitlist(res.data || []);
+    } catch {
+      console.error("Failed to load waitlist entries.");
+    }
+  }, []);
+
   useEffect(() => {
     fetchBookings();
-  }, [fetchBookings]);
+    fetchWaitlist();
+  }, [fetchBookings, fetchWaitlist]);
 
   async function handleCancel(bookingId) {
     if (!window.confirm("Are you sure you want to cancel this booking?"))
@@ -89,6 +104,19 @@ function StudentBookingHistoryPage() {
     }
   }
 
+  async function handleLeaveWaitlist(id) {
+    if (!window.confirm("Are you sure you want to leave this waitlist?")) return;
+    setLeavingWaitlistId(id);
+    try {
+      await api.delete(`/api/waitlist/${id}`);
+      setWaitlist((prev) => prev.filter((w) => w.id !== id));
+    } catch {
+      alert("Failed to leave waitlist.");
+    } finally {
+      setLeavingWaitlistId(null);
+    }
+  }
+
   // Compute stats
   const stats = {
     total: bookings.length,
@@ -98,7 +126,7 @@ function StudentBookingHistoryPage() {
     ).length,
     completed: bookings.filter((b) => b.status === "COMPLETED").length,
     cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
-    noShow: bookings.filter((b) => b.status === "NO_SHOW").length,
+    waitlistCount: waitlist.filter((w) => w.status === "WAITING").length,
   };
 
   const filtered =
@@ -121,9 +149,9 @@ function StudentBookingHistoryPage() {
     <div className="bh-container">
       <div className="bh-header">
         <div>
-          <h1 className="bh-title">My Booking History</h1>
+          <h1 className="bh-title">My Bookings &amp; Waitlists</h1>
           <p className="bh-subtitle">
-            Track all your equipment reservation requests and their statuses.
+            Track all your reservations, recurring sessions, and equipment waitlist queue positions.
           </p>
         </div>
         <button
@@ -135,191 +163,272 @@ function StudentBookingHistoryPage() {
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="bh-stats-grid">
-        <div className="bh-stat-card bh-stat-total">
-          <span className="bh-stat-num">{stats.total}</span>
-          <span className="bh-stat-label">Total Bookings</span>
-        </div>
-        <div className="bh-stat-card bh-stat-pending">
-          <span className="bh-stat-num">{stats.pending}</span>
-          <span className="bh-stat-label">Pending Approval</span>
-        </div>
-        <div className="bh-stat-card bh-stat-confirmed">
-          <span className="bh-stat-num">{stats.confirmed}</span>
-          <span className="bh-stat-label">Confirmed / In Use</span>
-        </div>
-        <div className="bh-stat-card bh-stat-completed">
-          <span className="bh-stat-num">{stats.completed}</span>
-          <span className="bh-stat-label">Completed</span>
-        </div>
-        <div className="bh-stat-card bh-stat-cancelled">
-          <span className="bh-stat-num">{stats.cancelled}</span>
-          <span className="bh-stat-label">Cancelled</span>
-        </div>
-        <div className="bh-stat-card bh-stat-noshow">
-          <span className="bh-stat-num">{stats.noShow}</span>
-          <span className="bh-stat-label">No Show</span>
-        </div>
+      {/* Tabs */}
+      <div className="bh-nav-tabs">
+        <button
+          type="button"
+          className={`bh-nav-tab ${activeTab === "bookings" ? "active" : ""}`}
+          onClick={() => setActiveTab("bookings")}
+        >
+          📋 Reservations ({stats.total})
+        </button>
+        <button
+          type="button"
+          className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
+          onClick={() => setActiveTab("waitlist")}
+        >
+          ⏳ Active Waitlists ({stats.waitlistCount})
+        </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bh-filter-bar">
-        <span className="bh-filter-label">Filter by status:</span>
-        <div className="bh-filter-pills">
-          {["ALL", "PENDING_APPROVAL", "CONFIRMED", "IN_USE", "COMPLETED", "CANCELLED", "NO_SHOW"].map(
-            (s) => (
+      {activeTab === "bookings" ? (
+        <>
+          {/* Stats Grid */}
+          <div className="bh-stats-grid">
+            <div className="bh-stat-card bh-stat-total">
+              <span className="bh-stat-num">{stats.total}</span>
+              <span className="bh-stat-label">Total Bookings</span>
+            </div>
+            <div className="bh-stat-card bh-stat-pending">
+              <span className="bh-stat-num">{stats.pending}</span>
+              <span className="bh-stat-label">Pending Approval</span>
+            </div>
+            <div className="bh-stat-card bh-stat-confirmed">
+              <span className="bh-stat-num">{stats.confirmed}</span>
+              <span className="bh-stat-label">Confirmed / In Use</span>
+            </div>
+            <div className="bh-stat-card bh-stat-completed">
+              <span className="bh-stat-num">{stats.completed}</span>
+              <span className="bh-stat-label">Completed</span>
+            </div>
+            <div className="bh-stat-card bh-stat-cancelled">
+              <span className="bh-stat-num">{stats.cancelled}</span>
+              <span className="bh-stat-label">Cancelled</span>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bh-filter-bar">
+            <span className="bh-filter-label">Filter by status:</span>
+            <div className="bh-filter-pills">
+              {["ALL", "PENDING_APPROVAL", "CONFIRMED", "IN_USE", "COMPLETED", "CANCELLED"].map(
+                (s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`bh-filter-pill ${statusFilter === s ? "active" : ""}`}
+                    onClick={() => setStatusFilter(s)}
+                  >
+                    {s === "ALL" ? "All" : STATUS_META[s]?.label || s}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          {cancelError && (
+            <div className="booking-form-error" role="alert">
+              ⚠️ {cancelError}
+            </div>
+          )}
+
+          {error && (
+            <div className="booking-form-error" role="alert">
+              ⚠️ {error}
               <button
-                key={s}
                 type="button"
-                className={`bh-filter-pill ${statusFilter === s ? "active" : ""}`}
-                onClick={() => setStatusFilter(s)}
+                className="bh-retry-btn"
+                onClick={fetchBookings}
               >
-                {s === "ALL" ? "All" : STATUS_META[s]?.label || s}
+                Retry
               </button>
-            )
+            </div>
           )}
-        </div>
-      </div>
 
-      {cancelError && (
-        <div className="booking-form-error" role="alert">
-          ⚠️ {cancelError}
-        </div>
-      )}
+          {/* Bookings List */}
+          {filtered.length === 0 ? (
+            <div className="bh-empty">
+              <div className="bh-empty-icon">📋</div>
+              <h3>
+                {statusFilter === "ALL"
+                  ? "No bookings yet"
+                  : `No ${STATUS_META[statusFilter]?.label || statusFilter} bookings`}
+              </h3>
+              <p>
+                {statusFilter === "ALL"
+                  ? "Start by browsing available equipment and making your first booking."
+                  : "Try selecting a different status filter."}
+              </p>
+              {statusFilter === "ALL" && (
+                <button
+                  type="button"
+                  className="bh-browse-btn"
+                  onClick={() => navigate("/dashboard/student/equipments")}
+                >
+                  Browse Equipment
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bh-list">
+              {filtered.map((booking) => {
+                const meta = STATUS_META[booking.status] || {
+                  label: booking.status,
+                  color: "status-pending",
+                };
+                const canCancel =
+                  booking.status === "PENDING_APPROVAL" ||
+                  booking.status === "CONFIRMED";
+                const duration = formatDuration(booking.startTime, booking.endTime);
 
-      {error && (
-        <div className="booking-form-error" role="alert">
-          ⚠️ {error}
-          <button
-            type="button"
-            className="bh-retry-btn"
-            onClick={fetchBookings}
-          >
-            Retry
-          </button>
-        </div>
-      )}
+                return (
+                  <div key={booking.id} className="bh-card">
+                    <div className="bh-card-header">
+                      <div className="bh-card-title-area">
+                        <h3 className="bh-equipment-name">
+                          {booking.equipmentName || `Equipment #${booking.equipmentId}`}
+                        </h3>
+                        {booking.collegeName && (
+                          <span className="bh-college-tag">{booking.collegeName}</span>
+                        )}
+                        {booking.isRecurring && (
+                          <span className="bh-recurring-tag">
+                            🔁 Recurring ({booking.recurrenceType || "Weekly"})
+                          </span>
+                        )}
+                      </div>
+                      <span className={`bh-status-pill ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                    </div>
 
-      {/* Bookings List */}
-      {filtered.length === 0 ? (
-        <div className="bh-empty">
-          <div className="bh-empty-icon">📋</div>
-          <h3>
-            {statusFilter === "ALL"
-              ? "No bookings yet"
-              : `No ${STATUS_META[statusFilter]?.label || statusFilter} bookings`}
-          </h3>
-          <p>
-            {statusFilter === "ALL"
-              ? "Start by browsing available equipment and making your first booking."
-              : "Try selecting a different status filter."}
-          </p>
-          {statusFilter === "ALL" && (
-            <button
-              type="button"
-              className="bh-browse-btn"
-              onClick={() => navigate("/dashboard/student/equipments")}
-            >
-              Browse Equipment
-            </button>
+                    <div className="bh-card-body">
+                      <div className="bh-time-block">
+                        <div className="bh-time-item">
+                          <span className="bh-time-label">Start (IST)</span>
+                          <span className="bh-time-value">
+                            {formatDateTime(booking.startTime)}
+                          </span>
+                        </div>
+                        <div className="bh-time-arrow">→</div>
+                        <div className="bh-time-item">
+                          <span className="bh-time-label">End (IST)</span>
+                          <span className="bh-time-value">
+                            {formatDateTime(booking.endTime)}
+                          </span>
+                        </div>
+                        {duration && (
+                          <div className="bh-duration-badge">{duration}</div>
+                        )}
+                      </div>
+
+                      {booking.purpose && (
+                        <p className="bh-purpose">
+                          <span className="bh-purpose-label">Purpose:</span>{" "}
+                          {booking.purpose}
+                        </p>
+                      )}
+
+                      {booking.rejectionReason && (
+                        <div className="bh-rejection-notice">
+                          <span className="bh-rejection-icon">❌</span>
+                          <div>
+                            <strong>Cancellation/Rejection Reason:</strong>
+                            <p>{booking.rejectionReason}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {canCancel && (
+                      <div className="bh-card-footer">
+                        <button
+                          type="button"
+                          className="bh-cancel-btn"
+                          disabled={cancellingId === booking.id}
+                          onClick={() => handleCancel(booking.id)}
+                        >
+                          {cancellingId === booking.id
+                            ? "Cancelling…"
+                            : "Cancel Booking"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
-        </div>
+        </>
       ) : (
-        <div className="bh-list">
-          {filtered.map((booking) => {
-            const meta = STATUS_META[booking.status] || {
-              label: booking.status,
-              color: "status-pending",
-            };
-            const canCancel =
-              booking.status === "PENDING_APPROVAL" ||
-              booking.status === "CONFIRMED";
-            const duration = formatDuration(booking.startTime, booking.endTime);
-
-            return (
-              <div key={booking.id} className="bh-card">
-                <div className="bh-card-header">
-                  <div className="bh-card-title-area">
-                    <h3 className="bh-equipment-name">
-                      {booking.equipmentName || `Equipment #${booking.equipmentId}`}
-                    </h3>
-                    {booking.collegeName && (
-                      <span className="bh-college-tag">{booking.collegeName}</span>
-                    )}
-                  </div>
-                  <span className={`bh-status-pill ${meta.color}`}>
-                    {meta.label}
-                  </span>
-                </div>
-
-                <div className="bh-card-body">
-                  <div className="bh-time-block">
-                    <div className="bh-time-item">
-                      <span className="bh-time-label">Start</span>
-                      <span className="bh-time-value">
-                        {formatDateTime(booking.startTime)}
+        /* Waitlist Tab */
+        <div className="bh-waitlist-section">
+          {waitlist.length === 0 ? (
+            <div className="bh-empty">
+              <div className="bh-empty-icon">⏳</div>
+              <h3>No Active Waitlists</h3>
+              <p>
+                When a desired equipment slot is busy, you can join the waitlist from the booking page. You will automatically receive the slot if it opens!
+              </p>
+            </div>
+          ) : (
+            <div className="bh-list">
+              {waitlist.map((item) => (
+                <div key={item.id} className="bh-card bh-waitlist-card">
+                  <div className="bh-card-header">
+                    <div className="bh-card-title-area">
+                      <h3 className="bh-equipment-name">{item.equipmentName}</h3>
+                      <span className="bh-queue-pill">
+                        🎯 Position #{item.queuePosition || 1} in line
                       </span>
                     </div>
-                    <div className="bh-time-arrow">→</div>
-                    <div className="bh-time-item">
-                      <span className="bh-time-label">End</span>
-                      <span className="bh-time-value">
-                        {formatDateTime(booking.endTime)}
-                      </span>
+                    <span className="bh-status-pill status-pending">
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <div className="bh-card-body">
+                    <div className="bh-time-block">
+                      <div className="bh-time-item">
+                        <span className="bh-time-label">Desired Start</span>
+                        <span className="bh-time-value">{formatDateTime(item.desiredStartTime)}</span>
+                      </div>
+                      <div className="bh-time-arrow">→</div>
+                      <div className="bh-time-item">
+                        <span className="bh-time-label">Desired End</span>
+                        <span className="bh-time-value">{formatDateTime(item.desiredEndTime)}</span>
+                      </div>
                     </div>
-                    {duration && (
-                      <div className="bh-duration-badge">{duration}</div>
+
+                    {item.purpose && (
+                      <p className="bh-purpose">
+                        <span className="bh-purpose-label">Requested for:</span> {item.purpose}
+                      </p>
+                    )}
+
+                    {item.status === "WAITING" && (
+                      <div className="bh-waitlist-status-note">
+                        ℹ️ You are in the priority waitlist. If any conflicting reservation is cancelled, you will be automatically promoted!
+                      </div>
                     )}
                   </div>
 
-                  {booking.purpose && (
-                    <p className="bh-purpose">
-                      <span className="bh-purpose-label">Purpose:</span>{" "}
-                      {booking.purpose}
-                    </p>
-                  )}
-
-                  {booking.rejectionReason && (
-                    <div className="bh-rejection-notice">
-                      <span className="bh-rejection-icon">❌</span>
-                      <div>
-                        <strong>Rejection Reason:</strong>
-                        <p>{booking.rejectionReason}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {booking.adminNotes && (
-                    <div className="bh-admin-notes">
-                      <span>📝</span>
-                      <div>
-                        <strong>Admin Note:</strong>
-                        <p>{booking.adminNotes}</p>
-                      </div>
+                  {item.status === "WAITING" && (
+                    <div className="bh-card-footer">
+                      <button
+                        type="button"
+                        className="bh-cancel-btn"
+                        disabled={leavingWaitlistId === item.id}
+                        onClick={() => handleLeaveWaitlist(item.id)}
+                      >
+                        {leavingWaitlistId === item.id ? "Leaving…" : "Leave Waitlist"}
+                      </button>
                     </div>
                   )}
                 </div>
-
-                <div className="bh-card-footer">
-                  <span className="bh-booking-id">
-                    Booking #{booking.id} · Submitted{" "}
-                    {formatDateTime(booking.createdAt)}
-                  </span>
-                  {canCancel && (
-                    <button
-                      type="button"
-                      className="bh-cancel-btn"
-                      onClick={() => handleCancel(booking.id)}
-                      disabled={cancellingId === booking.id}
-                    >
-                      {cancellingId === booking.id ? "Cancelling…" : "Cancel"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -327,4 +436,3 @@ function StudentBookingHistoryPage() {
 }
 
 export default StudentBookingHistoryPage;
-

@@ -76,156 +76,199 @@ public class BookingController {
             String rejectionReason,
             Instant cancelledAt,
             String cancellationReason,
+            Boolean isRecurring,
+            String recurrenceGroupId,
+            String recurrenceType,
             Instant createdAt
     ) {}
 
-    public record UpdateStatusRequest(
-            String status,
-            String reason
-    ) {}
-
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return null;
-        }
-        return userRepository.findByEmail(authentication.getName()).orElse(null);
-    }
-
-    /** Staff/admin endpoint: get bookings strictly filtered by college for staff */
     @GetMapping
     public ResponseEntity<List<BookingListItemDto>> getAllBookings(
             @RequestParam(required = false) Long collegeId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
             Authentication authentication
     ) {
-        // Run lifecycle check right away so returned list is 100% current to this exact moment
+        // Enforce automatic IST cancellation/completion on fetch
         try {
             bookingAutoScheduler.processBookingLifecycle();
         } catch (Exception e) {
-            // Ignore to allow query to proceed
+            // Ignore
         }
 
-        User currentUser = getAuthenticatedUser(authentication);
-        final Long enforcedCollegeId;
+        User currentUser = null;
+        if (authentication != null && authentication.getName() != null) {
+            currentUser = userRepository.findByEmail(authentication.getName()).orElse(null);
+        }
 
+        final Long targetCollegeId;
         if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            enforcedCollegeId = currentUser.getCollegeId() != null ? currentUser.getCollegeId() : currentUser.getInstitutionId();
-            if (enforcedCollegeId == null) {
-                // Staff member without assigned college cannot see any bookings
+            Long staffCollegeId = currentUser.getCollegeId() != null ? currentUser.getCollegeId() : currentUser.getInstitutionId();
+            if (staffCollegeId == null) {
                 return ResponseEntity.ok(List.of());
             }
+            targetCollegeId = staffCollegeId;
         } else {
-            // SYSTEM_ADMINISTRATOR: allow custom collegeId filtering or null for all
-            enforcedCollegeId = collegeId;
+            targetCollegeId = collegeId;
         }
+
+        List<Booking> list = bookingRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Map<Long, College> collegeMap = collegeRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(College::getId, Function.identity(), (a, b) -> a));
 
-        List<Booking> bookings = bookingRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (targetCollegeId != null) {
+            list = list.stream().filter(b -> {
+                if (b.getEquipment() == null) return false;
+                Long eqCol = b.getEquipment().getCollegeId() != null
+                        ? b.getEquipment().getCollegeId()
+                        : b.getEquipment().getInstitutionId();
+                return targetCollegeId.equals(eqCol);
+            }).toList();
+        }
 
-        List<BookingListItemDto> dtos = bookings.stream()
-                .filter(b -> {
-                    if (enforcedCollegeId == null) return true;
-                    Long equipCollegeId = b.getEquipment() != null ? b.getEquipment().getCollegeId() : null;
-                    if (equipCollegeId == null && b.getEquipment() != null) {
-                        equipCollegeId = b.getEquipment().getInstitutionId();
-                    }
-                    if (equipCollegeId == null && b.getUser() != null) {
-                        equipCollegeId = b.getUser().getCollegeId();
-                    }
-                    return enforcedCollegeId.equals(equipCollegeId);
-                })
-                .filter(b -> {
-                    if (status == null || status.isBlank() || status.equalsIgnoreCase("ALL")) return true;
-                    return b.getStatus() != null && b.getStatus().name().equalsIgnoreCase(status.trim());
-                })
-                .map(b -> {
-                    Long cId = b.getEquipment() != null ? b.getEquipment().getCollegeId() : null;
-                    if (cId == null && b.getEquipment() != null) {
-                        cId = b.getEquipment().getInstitutionId();
-                    }
-                    if (cId == null && b.getUser() != null) {
-                        cId = b.getUser().getCollegeId();
-                    }
-                    String collegeName = (cId != null && collegeMap.containsKey(cId))
-                            ? collegeMap.get(cId).getName()
-                            : "General";
+        if (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL")) {
+            try {
+                BookingStatus bs = BookingStatus.valueOf(status.trim().toUpperCase());
+                list = list.stream().filter(b -> b.getStatus() == bs).toList();
+            } catch (IllegalArgumentException ignored) {}
+        }
 
-                    return new BookingListItemDto(
-                            b.getId(),
-                            b.getEquipment() != null ? b.getEquipment().getId() : null,
-                            b.getEquipment() != null ? b.getEquipment().getName() : null,
-                            cId,
-                            collegeName,
-                            b.getUser() != null ? b.getUser().getId() : null,
-                            b.getUser() != null ? b.getUser().getFullName() : null,
-                            b.getUser() != null ? b.getUser().getEmail() : null,
-                            b.getStartTime(),
-                            b.getEndTime(),
-                            b.getPurpose(),
-                            b.getStatus() != null ? b.getStatus().name() : null,
-                            b.getApprovedAt(),
-                            b.getRejectionReason(),
-                            b.getCancelledAt(),
-                            b.getCancellationReason(),
-                            b.getCreatedAt()
-                    );
-                })
-                .toList();
+        if (search != null && !search.isBlank()) {
+            String q = search.trim().toLowerCase();
+            list = list.stream().filter(b -> {
+                boolean matchEq = b.getEquipment() != null && b.getEquipment().getName() != null
+                        && b.getEquipment().getName().toLowerCase().contains(q);
+                boolean matchUser = b.getUser() != null && (
+                        (b.getUser().getFullName() != null && b.getUser().getFullName().toLowerCase().contains(q))
+                                || (b.getUser().getEmail() != null && b.getUser().getEmail().toLowerCase().contains(q))
+                );
+                boolean matchPurpose = b.getPurpose() != null && b.getPurpose().toLowerCase().contains(q);
+                return matchEq || matchUser || matchPurpose;
+            }).toList();
+        }
+
+        List<BookingListItemDto> dtos = list.stream().map(b -> {
+            Long eqColId = null;
+            String eqColName = "Affiliated College";
+            if (b.getEquipment() != null) {
+                eqColId = b.getEquipment().getCollegeId() != null
+                        ? b.getEquipment().getCollegeId()
+                        : b.getEquipment().getInstitutionId();
+                if (eqColId != null && collegeMap.containsKey(eqColId)) {
+                    eqColName = collegeMap.get(eqColId).getName();
+                }
+            }
+            return new BookingListItemDto(
+                    b.getId(),
+                    b.getEquipment() != null ? b.getEquipment().getId() : null,
+                    b.getEquipment() != null ? b.getEquipment().getName() : "Unknown Instrument",
+                    eqColId,
+                    eqColName,
+                    b.getUser() != null ? b.getUser().getId() : null,
+                    b.getUser() != null ? b.getUser().getFullName() : "Unknown Student",
+                    b.getUser() != null ? b.getUser().getEmail() : "",
+                    b.getStartTime(),
+                    b.getEndTime(),
+                    b.getPurpose(),
+                    b.getStatus() != null ? b.getStatus().name() : "PENDING_APPROVAL",
+                    b.getApprovedAt(),
+                    b.getRejectionReason(),
+                    b.getCancelledAt(),
+                    b.getCancellationReason(),
+                    b.getIsRecurring(),
+                    b.getRecurrenceGroupId(),
+                    b.getRecurrenceType(),
+                    b.getCreatedAt()
+            );
+        }).toList();
 
         return ResponseEntity.ok(dtos);
     }
 
-    /** Directly update booking status (for staff roles) with college boundary check */
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> updateBookingStatus(
+    public ResponseEntity<BookingListItemDto> updateBookingStatus(
             @PathVariable Long id,
-            @RequestBody UpdateStatusRequest body,
+            @RequestBody Map<String, String> body,
             Authentication authentication
     ) {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
-
-        if (body == null || body.status() == null || body.status().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
+        String newStatusStr = body != null ? body.get("status") : null;
+        if (newStatusStr == null || newStatusStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status field is required");
         }
 
-        User currentUser = getAuthenticatedUser(authentication);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found with ID: " + id));
+
+        User currentUser = null;
+        if (authentication != null && authentication.getName() != null) {
+            currentUser = userRepository.findByEmail(authentication.getName()).orElse(null);
+        }
+
         if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
             Long staffCollegeId = currentUser.getCollegeId() != null ? currentUser.getCollegeId() : currentUser.getInstitutionId();
-            Long bookingCollegeId = booking.getEquipment() != null ? booking.getEquipment().getCollegeId() : null;
-            if (bookingCollegeId == null && booking.getEquipment() != null) {
-                bookingCollegeId = booking.getEquipment().getInstitutionId();
-            }
-            if (staffCollegeId == null || !staffCollegeId.equals(bookingCollegeId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only manage booking requests for your college's equipment.");
+            Long eqCollegeId = booking.getEquipment() != null
+                    ? (booking.getEquipment().getCollegeId() != null ? booking.getEquipment().getCollegeId() : booking.getEquipment().getInstitutionId())
+                    : null;
+            if (staffCollegeId == null || !staffCollegeId.equals(eqCollegeId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only manage bookings for your college's equipment.");
             }
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         BookingStatus newStatus;
         try {
-            newStatus = BookingStatus.valueOf(body.status().trim().toUpperCase());
+            newStatus = BookingStatus.valueOf(newStatusStr.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid booking status: " + body.status());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status: " + newStatusStr);
         }
 
         booking.setStatus(newStatus);
-
-        if (newStatus == BookingStatus.CONFIRMED) {
+        if (newStatus == BookingStatus.CONFIRMED && previousStatus == BookingStatus.PENDING_APPROVAL) {
             booking.setApprover(currentUser);
             booking.setApprovedAt(Instant.now());
         } else if (newStatus == BookingStatus.CANCELLED) {
             booking.setCancelledAt(Instant.now());
-            if (body.reason() != null && !body.reason().isBlank()) {
-                booking.setCancellationReason(body.reason().trim());
-                booking.setRejectionReason(body.reason().trim());
-            }
+            booking.setCancellationReason(body.getOrDefault("reason", "Cancelled via status dropdown"));
         }
 
         bookingRepository.save(booking);
-        return ResponseEntity.noContent().build();
+
+        Long eqColId = null;
+        String eqColName = "Affiliated College";
+        if (booking.getEquipment() != null) {
+            eqColId = booking.getEquipment().getCollegeId() != null
+                    ? booking.getEquipment().getCollegeId()
+                    : booking.getEquipment().getInstitutionId();
+            if (eqColId != null) {
+                College col = collegeRepository.findById(eqColId).orElse(null);
+                if (col != null) eqColName = col.getName();
+            }
+        }
+
+        return ResponseEntity.ok(new BookingListItemDto(
+                booking.getId(),
+                booking.getEquipment() != null ? booking.getEquipment().getId() : null,
+                booking.getEquipment() != null ? booking.getEquipment().getName() : "Unknown Instrument",
+                eqColId,
+                eqColName,
+                booking.getUser() != null ? booking.getUser().getId() : null,
+                booking.getUser() != null ? booking.getUser().getFullName() : "Unknown Student",
+                booking.getUser() != null ? booking.getUser().getEmail() : "",
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getPurpose(),
+                booking.getStatus().name(),
+                booking.getApprovedAt(),
+                booking.getRejectionReason(),
+                booking.getCancelledAt(),
+                booking.getCancellationReason(),
+                booking.getIsRecurring(),
+                booking.getRecurrenceGroupId(),
+                booking.getRecurrenceType(),
+                booking.getCreatedAt()
+        ));
     }
 
     @PostMapping
@@ -235,6 +278,37 @@ public class BookingController {
     ) {
         BookingResponse response = bookingService.createBooking(request, authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Recurring Booking creation endpoint (Milestone 2 - Task T4)
+     */
+    @PostMapping("/recurring")
+    public ResponseEntity<RecurringBookingResponse> createRecurringBooking(
+            @Valid @RequestBody RecurringBookingRequest request,
+            Authentication authentication
+    ) {
+        RecurringBookingResponse response = bookingService.createRecurringBooking(request, authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/series/{recurrenceGroupId}")
+    public ResponseEntity<List<BookingResponse>> getRecurringSeries(
+            @PathVariable String recurrenceGroupId,
+            Authentication authentication
+    ) {
+        List<BookingResponse> series = bookingService.getRecurringSeries(recurrenceGroupId, authentication.getName());
+        return ResponseEntity.ok(series);
+    }
+
+    @DeleteMapping("/series/{recurrenceGroupId}")
+    public ResponseEntity<List<BookingResponse>> cancelRecurringSeries(
+            @PathVariable String recurrenceGroupId,
+            @RequestParam(required = false, defaultValue = "Recurring series cancelled") String reason,
+            Authentication authentication
+    ) {
+        List<BookingResponse> cancelled = bookingService.cancelRecurringSeries(recurrenceGroupId, reason, authentication.getName());
+        return ResponseEntity.ok(cancelled);
     }
 
     /** Student/researcher: get their own bookings, enriched with college name */
@@ -247,7 +321,6 @@ public class BookingController {
             @RequestParam(defaultValue = "desc") String direction,
             Authentication authentication
     ) {
-        // Run lifecycle check right away so returned list is 100% current to this exact moment
         try {
             bookingAutoScheduler.processBookingLifecycle();
         } catch (Exception e) {
@@ -258,7 +331,6 @@ public class BookingController {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<BookingResponse> responsePage = bookingService.getMyBookings(authentication.getName(), status, pageable);
 
-        // Enrich with college name
         Map<Long, String> collegeNameMap = collegeRepository.findAll()
                 .stream()
                 .collect(Collectors.toMap(College::getId, College::getName, (a, b) -> a));

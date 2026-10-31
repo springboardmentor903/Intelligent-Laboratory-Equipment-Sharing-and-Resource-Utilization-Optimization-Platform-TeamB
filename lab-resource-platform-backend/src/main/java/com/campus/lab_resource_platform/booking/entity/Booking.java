@@ -57,6 +57,17 @@ public class Booking {
     @Column(name = "cancellation_reason", length = 1000)
     private String cancellationReason;
 
+    // Recurring booking support
+    @Column(name = "is_recurring")
+    @Builder.Default
+    private Boolean isRecurring = false;
+
+    @Column(name = "recurrence_group_id", length = 64)
+    private String recurrenceGroupId;
+
+    @Column(name = "recurrence_type", length = 32)
+    private String recurrenceType;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -68,6 +79,9 @@ public class Booking {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
+        if (isRecurring == null) {
+            isRecurring = false;
+        }
     }
 
     @PreUpdate

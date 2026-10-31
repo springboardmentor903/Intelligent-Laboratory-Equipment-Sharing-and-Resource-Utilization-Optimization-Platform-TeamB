@@ -58,7 +58,7 @@ export default function StaffBookingsPage() {
       const res = await api.get("/api/bookings");
       setBookings(res.data || []);
     } catch (err) {
-      toast.error("Could not load bookings list. Please try again.");
+      toast.error("Could not load bookings list.");
     } finally {
       setLoading(false);
     }
@@ -67,53 +67,49 @@ export default function StaffBookingsPage() {
   useEffect(() => {
     loadColleges();
     loadBookings();
-
-    // Poll periodically every 15 seconds to reflect auto-scheduler updates (e.g., auto cancellation / auto completion)
-    const interval = setInterval(() => {
-      api.get("/api/bookings").then((res) => {
-        if (Array.isArray(res.data)) {
-          setBookings(res.data);
-        }
-      }).catch(() => {});
-    }, 15000);
-
-    return () => clearInterval(interval);
   }, [loadColleges, loadBookings]);
 
-  async function handleDirectStatusChange(booking, newStatus) {
+  async function handleStatusChange(booking, newStatus) {
     if (!newStatus || newStatus === booking.status) return;
-
-    let reason = undefined;
-    if (newStatus === "CANCELLED" || newStatus === "NO_SHOW") {
-      const enteredReason = window.prompt(`Optional reason for setting status to ${STATUS_CONFIG[newStatus]?.label || newStatus}:`);
-      if (enteredReason === null) return; // User cancelled prompt
-      reason = enteredReason.trim() || undefined;
-    }
-
     setUpdatingId(booking.id);
     try {
-      await api.patch(`/api/bookings/${booking.id}/status`, {
-        status: newStatus,
-        reason: reason,
-      });
-
+      await api.patch(`/api/bookings/${booking.id}/status`, { status: newStatus });
       setBookings((prev) =>
-        prev.map((b) =>
-          b.id === booking.id
-            ? {
-                ...b,
-                status: newStatus,
-                rejectionReason: newStatus === "CANCELLED" ? reason : b.rejectionReason,
-              }
-            : b
-        )
+        prev.map((b) => (b.id === booking.id ? { ...b, status: newStatus } : b))
       );
-      toast.success(`Booking #${booking.id} status changed to ${STATUS_CONFIG[newStatus]?.label || newStatus}.`);
+      toast.success(`Booking #${booking.id} status updated to ${STATUS_CONFIG[newStatus]?.label || newStatus}.`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update booking status.");
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  function formatSchedule(start, end) {
+    if (!start) return "—";
+    const opts = {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "Asia/Kolkata",
+    };
+    const s = new Date(start).toLocaleString("en-IN", opts);
+    const e = end ? new Date(end).toLocaleString("en-IN", opts) : "";
+    return (
+      <div style={{ fontSize: "0.85rem", lineHeight: 1.45 }}>
+        <div>
+          <strong>From:</strong> {s}
+        </div>
+        {e && (
+          <div>
+            <strong>To:</strong> {e}
+          </div>
+        )}
+      </div>
+    );
   }
 
   const collegeMap = Object.fromEntries(colleges.map((c) => [c.id, c.name]));
@@ -123,7 +119,6 @@ export default function StaffBookingsPage() {
     ? collegeMap[selectedCollegeId] || "Selected College"
     : "All Colleges";
 
-  // Filter bookings by selected college (for System Admin), status, and search query
   const filteredBookings = bookings.filter((b) => {
     if (!isStaff && selectedCollegeId) {
       if (String(b.collegeId) !== String(selectedCollegeId)) {
@@ -136,10 +131,9 @@ export default function StaffBookingsPage() {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       const matchEquip = b.equipmentName?.toLowerCase().includes(q);
-      const matchUser = b.userName?.toLowerCase().includes(q);
-      const matchEmail = b.userEmail?.toLowerCase().includes(q);
+      const matchUser = b.userName?.toLowerCase().includes(q) || b.userEmail?.toLowerCase().includes(q);
       const matchPurpose = b.purpose?.toLowerCase().includes(q);
-      if (!matchEquip && !matchUser && !matchEmail && !matchPurpose) {
+      if (!matchEquip && !matchUser && !matchPurpose) {
         return false;
       }
     }
@@ -157,22 +151,21 @@ export default function StaffBookingsPage() {
           </h1>
           <p className="admin-subtitle">
             {isStaff
-              ? `Review and manage student reservation requests for ${currentCollegeName}. Requests arrive in Pending Approval by default. Unused confirmed bookings auto-cancel after 1 minute past start time in IST.`
-              : "Student reservation requests arrive in Pending Approval by default. System Administrator has oversight across all colleges. Change status directly from the dropdown."}
+              ? `Manage student equipment bookings for ${currentCollegeName}. Change status directly from the dropdown. Unused confirmed bookings auto-cancel after 1 minute past start time in IST.`
+              : "Review and manage laboratory equipment bookings across all colleges. Change status directly from the dropdown. Auto-scheduler cancels unconfirmed bookings after 1 minute in IST."}
           </p>
         </div>
       </div>
 
       {/* Filter Toolbar */}
       <div className="admin-filter-bar">
-        {/* Only System Admin sees the College Filter Dropdown */}
         {!isStaff && (
           <div className="admin-filter-group">
-            <label htmlFor="staffCollegeSelect" className="admin-filter-label">
+            <label htmlFor="staffBookingCollegeSelect" className="admin-filter-label">
               Filter by College:
             </label>
             <select
-              id="staffCollegeSelect"
+              id="staffBookingCollegeSelect"
               className="admin-select admin-college-select"
               value={selectedCollegeId}
               onChange={(e) => setSelectedCollegeId(e.target.value)}
@@ -188,22 +181,21 @@ export default function StaffBookingsPage() {
         )}
 
         <div className="admin-filter-group">
-          <label htmlFor="staffStatusSelect" className="admin-filter-label">
+          <label htmlFor="staffBookingStatusSelect" className="admin-filter-label">
             Filter by Status:
           </label>
           <select
-            id="staffStatusSelect"
+            id="staffBookingStatusSelect"
             className="admin-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All Statuses</option>
-            <option value="PENDING_APPROVAL">Pending Approval (Default)</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="IN_USE">In Use</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="CANCELLED">Cancelled</option>
-            <option value="NO_SHOW">No Show</option>
+            {ALL_STATUSES.map((st) => (
+              <option key={st} value={st}>
+                {STATUS_CONFIG[st]?.label || st}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -275,8 +267,13 @@ export default function StaffBookingsPage() {
                         {b.equipmentName || `Equipment #${b.equipmentId}`}
                       </strong>
                       {b.purpose && (
-                        <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                        <span style={{ fontSize: "0.8rem", color: "#6b7280", display: "block" }}>
                           Purpose: {b.purpose}
+                        </span>
+                      )}
+                      {b.isRecurring && (
+                        <span className="staff-recurring-badge">
+                          🔁 Recurring ({b.recurrenceType || "Weekly"})
                         </span>
                       )}
                     </td>
@@ -288,35 +285,24 @@ export default function StaffBookingsPage() {
                     <td>
                       <div style={{ lineHeight: 1.3 }}>
                         <strong>{b.userName || "Unknown Student"}</strong>
-                        <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                        <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
                           {b.userEmail}
                         </div>
                       </div>
                     </td>
+                    <td>{formatSchedule(b.startTime, b.endTime)}</td>
                     <td>
-                      <div style={{ fontSize: "0.85rem", lineHeight: 1.4 }}>
-                        <div>
-                          <strong>From:</strong>{" "}
-                          {b.startTime ? new Date(b.startTime).toLocaleString("en-IN") : "N/A"}
-                        </div>
-                        <div>
-                          <strong>To:</strong>{" "}
-                          {b.endTime ? new Date(b.endTime).toLocaleString("en-IN") : "N/A"}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="booking-status-dropdown-wrapper">
+                      <div className="booking-status-inline-container">
                         <select
                           className="booking-status-inline-select"
+                          value={b.status}
+                          disabled={isUpdating}
                           style={{
                             backgroundColor: statusConf.bg,
                             color: statusConf.text,
                             borderColor: statusConf.text,
                           }}
-                          value={b.status}
-                          disabled={isUpdating}
-                          onChange={(e) => handleDirectStatusChange(b, e.target.value)}
+                          onChange={(e) => handleStatusChange(b, e.target.value)}
                         >
                           {ALL_STATUSES.map((st) => (
                             <option key={st} value={st}>
@@ -324,20 +310,6 @@ export default function StaffBookingsPage() {
                             </option>
                           ))}
                         </select>
-                        {isUpdating && <span className="status-saving-spinner">⏳</span>}
-                        {b.rejectionReason && (
-                          <div
-                            style={{
-                              fontSize: "0.74rem",
-                              color: "#dc2626",
-                              marginTop: 4,
-                              maxWidth: 180,
-                              lineHeight: 1.25,
-                            }}
-                          >
-                            Note: {b.rejectionReason}
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
