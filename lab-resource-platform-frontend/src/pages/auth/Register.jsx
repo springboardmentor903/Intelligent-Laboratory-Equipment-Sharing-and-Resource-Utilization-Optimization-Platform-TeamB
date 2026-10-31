@@ -12,20 +12,42 @@ function Register() {
     fullName: "",
     email: "",
     password: "",
+    role: "RESEARCHER_STUDENT",
   });
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  if (loading) return <div className="page-loading">Loading...</div>;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (loading) {
+    return <div className="page-loading">Loading...</div>;
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   function update(event) {
-    setForm({ ...form, [event.target.name]: event.target.value });
+    const { name, value } = event.target;
+
+    setForm((previousForm) => ({
+      ...previousForm,
+      [name]: value,
+    }));
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+
+    const fullName = form.fullName.trim();
+    const email = form.email.trim();
+
+    if (!fullName || !email || !form.password) {
+      const msg = "Please fill in all required fields.";
+      setError(msg);
+      toast.warning(msg);
+      return;
+    }
 
     if (form.password.length < 8) {
       const msg = "Password must contain at least 8 characters.";
@@ -37,18 +59,37 @@ function Register() {
     setSubmitting(true);
 
     try {
-      await register(form);
+      await register({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
       navigate("/login", {
         replace: true,
-        state: { message: "Registration successful! Please sign in." },
+        state: {
+          message: "Registration successful! Please sign in.",
+        },
       });
     } catch (err) {
-      let msg = "Registration failed. Check the backend connection and try again.";
+      console.error("Registration failed:", err);
+
+      let msg = "Registration failed. Please try again.";
+
       if (err.response?.status === 409) {
         msg = "This email is already registered. Please sign in.";
-      } else if (err.response?.data?.detail || err.response?.data?.error) {
-        msg = err.response.data.detail || err.response.data.error;
+      } else if (err.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.status === 400) {
+        msg = "Invalid registration details. Please check your inputs.";
+      } else if (!err.response) {
+        msg =
+          "Unable to reach the registration service. Check your network connection.";
       }
+
       setError(msg);
       toast.error(msg);
     } finally {
@@ -86,6 +127,7 @@ function Register() {
             placeholder="you@institution.edu"
             value={form.email}
             onChange={update}
+            maxLength={150}
             required
           />
 
@@ -103,9 +145,17 @@ function Register() {
             required
           />
 
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
 
-          <button className="primary-button" disabled={submitting}>
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={submitting}
+          >
             {submitting ? "Creating account..." : "Create student account"}
           </button>
         </form>
@@ -123,6 +173,7 @@ function Register() {
             Keep equipment access and resource booking organized in one place.
           </p>
         </div>
+
         <span className="aside-caption">Simple. Organized. Connected.</span>
       </aside>
     </main>

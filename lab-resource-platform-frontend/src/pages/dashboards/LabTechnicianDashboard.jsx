@@ -1,27 +1,12 @@
-function LabTechnicianDashboard() {
+import EmptyRoleDashboard from "../staff/EmptyRoleDashboard";
+
+export default function LabTechnicianDashboard() {
   return (
-    <>
-      <h1>Lab Technician Dashboard</h1>
-      <p>Manage equipment status and laboratory maintenance.</p>
-
-      <section className="dashboard-cards">
-        <article className="task-card">
-          <h3>Equipment Status</h3>
-          <p>Monitor equipment condition and availability.</p>
-        </article>
-
-        <article className="task-card">
-          <h3>Bookings</h3>
-          <p>Review laboratory booking activity.</p>
-        </article>
-
-        <article className="task-card">
-          <h3>Maintenance</h3>
-          <p>Track equipment maintenance tasks.</p>
-        </article>
-      </section>
-    </>
+    <EmptyRoleDashboard
+      roleTitle="Lab Technician"
+      roleSubtitle="Manage lab equipment, register instruments, and track student reservation lifecycles."
+      equipmentsPath="/dashboard/technician/equipments"
+      bookingsPath="/dashboard/technician/bookings"
+    />
   );
 }
-
-export default LabTechnicianDashboard;

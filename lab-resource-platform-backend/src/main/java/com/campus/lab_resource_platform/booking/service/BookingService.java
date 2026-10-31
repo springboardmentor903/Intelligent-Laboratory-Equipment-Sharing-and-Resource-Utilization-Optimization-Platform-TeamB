@@ -86,9 +86,8 @@ public class BookingService {
             throw new BookingConflictException("The requested slot overlaps with an active booking for this equipment");
         }
 
-        BookingStatus initialStatus = equipment.isRequiresApproval()
-                ? BookingStatus.PENDING_APPROVAL
-                : BookingStatus.CONFIRMED;
+        // Student bookings ALWAYS default to PENDING_APPROVAL — no auto-confirm
+        BookingStatus initialStatus = BookingStatus.PENDING_APPROVAL;
 
         Booking booking = Booking.builder()
                 .equipment(equipment)
@@ -106,9 +105,7 @@ public class BookingService {
                 null,
                 initialStatus,
                 user,
-                initialStatus == BookingStatus.PENDING_APPROVAL
-                        ? "Booking created, pending manager approval"
-                        : "Booking created and automatically confirmed"
+                "Booking created, pending approval"
         );
 
         return BookingResponse.fromEntity(savedBooking);
@@ -155,14 +152,16 @@ public class BookingService {
             throw new BadRequestException("Cannot cancel a booking that is already " + booking.getStatus());
         }
 
-        if (booking.getStartTime().isBefore(Instant.now())) {
-            throw new BadRequestException("Cannot cancel a booking that has already started");
+        // Allow cancellation of PENDING_APPROVAL and CONFIRMED bookings at any time
+        // (IN_USE bookings cannot be cancelled - they must be completed)
+        if (booking.getStatus() == BookingStatus.IN_USE) {
+            throw new BadRequestException("Cannot cancel a booking that is currently IN USE. Please mark it as completed instead.");
         }
 
         BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(Instant.now());
-        booking.setCancellationReason(reason);
+        booking.setCancellationReason(reason != null ? reason : "Cancelled by user");
 
         Booking saved = bookingRepository.save(booking);
         recordHistory(saved, previousStatus, BookingStatus.CANCELLED, user, "Booking cancelled: " + reason);
@@ -289,14 +288,19 @@ public class BookingService {
 
         boolean isManagerRole = user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
                 || user.getRole() == User.Role.LAB_MANAGER
-                || user.getRole() == User.Role.DEPARTMENT_HEAD;
+                || user.getRole() == User.Role.DEPARTMENT_HEAD
+                || user.getRole() == User.Role.LAB_TECHNICIAN;
 
         if (!isManagerRole) {
             return false;
         }
 
-        // Institutional boundary check
-        return equipment.getInstitutionId() == null
-                || (user.getInstitutionId() != null && user.getInstitutionId().equals(equipment.getInstitutionId()));
+        Long userColId = user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
+        Long eqColId = equipment.getCollegeId() != null ? equipment.getCollegeId() : equipment.getInstitutionId();
+
+        if (userColId == null || eqColId == null) {
+            return false;
+        }
+        return userColId.equals(eqColId);
     }
 }

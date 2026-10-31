@@ -5,6 +5,7 @@ import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
 import com.campus.lab_resource_platform.security.JwtService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import com.campus.lab_resource_platform.user.service.TechnicianAccessRequestService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,23 +26,44 @@ public class AuthService {
     private final UserRepository userRepo;
     private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
+    private final TechnicianAccessRequestService accessRequestService;
 
     public AuthService(
             UserRepository userRepo,
             BCryptPasswordEncoder encoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            TechnicianAccessRequestService accessRequestService) {
         this.userRepo = userRepo;
         this.encoder = encoder;
         this.jwtService = jwtService;
+        this.accessRequestService = accessRequestService;
     }
 
+    @Transactional
     public User register(RegisterRequest dto) {
-        String email = dto.getEmail().trim().toLowerCase();
+        String email = dto.getEmail().trim().toLowerCase(Locale.ROOT);
 
         if (userRepo.existsByEmail(email)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Email is already registered"
+            );
+        }
+
+        User.Role requestedRole;
+        try {
+            requestedRole = User.Role.valueOf(dto.getRole().trim());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role"
+            );
+        }
+
+        if (requestedRole == User.Role.SYSTEM_ADMINISTRATOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "System Administrator cannot be requested via public registration"
             );
         }
 
@@ -51,15 +73,35 @@ public class AuthService {
         user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
 
+        // Public registration assigns default unprivileged role only.
         user.setRole(User.Role.RESEARCHER_STUDENT);
-
         user.setEmailVerified(false);
         user.setActive(true);
 
-        return userRepo.save(user);
+        User savedUser = userRepo.save(user);
+
+        // If the applicant requested a privileged role, record a pending access request
+        // for System Administrator review and approval.
+        if (requestedRole != User.Role.RESEARCHER_STUDENT) {
+            accessRequestService.submitRequest(
+                    dto.getFullName(),
+                    email,
+                    dto.getPassword(),
+                    dto.getInstitution(),
+                    dto.getDepartment(),
+                    requestedRole,
+                    dto.getReason() != null ? dto.getReason() : "Requested during registration"
+            );
+        }
+
+        return savedUser;
     }
 
-    public void login(LoginRequest dto, HttpServletResponse response) {
+    public String login(LoginRequest dto) {
+        return login(dto, null);
+    }
+
+    public String login(LoginRequest dto, HttpServletResponse response) {
         String email = dto.getEmail().trim().toLowerCase();
 
         User user = userRepo.findByEmail(email)
@@ -67,7 +109,9 @@ public class AuthService {
                         new BadCredentialsException(
                                 "Invalid email or password"));
 
-        if (!encoder.matches(dto.getPassword(), user.getPasswordHash())) {
+        if (user.getAuthProvider() != User.AuthProvider.LOCAL
+                || user.getPasswordHash() == null
+                || !encoder.matches(dto.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException(
                     "Invalid email or password");
         }
@@ -81,13 +125,17 @@ public class AuthService {
                 user.getRole().name()
         );
 
-        Cookie cookie = new Cookie("jwt", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(60 * 60);
+        if (response != null) {
+            Cookie cookie = new Cookie("jwt", token);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);
+            cookie.setPath("/");
+            cookie.setMaxAge(60 * 60);
 
-        response.addCookie(cookie);
+            response.addCookie(cookie);
+        }
+
+        return token;
     }
 
     public void logout(HttpServletResponse response) {

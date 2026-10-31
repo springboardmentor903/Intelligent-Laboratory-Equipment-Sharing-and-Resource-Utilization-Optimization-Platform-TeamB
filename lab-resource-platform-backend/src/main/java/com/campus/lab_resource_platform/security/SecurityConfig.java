@@ -1,6 +1,5 @@
 package com.campus.lab_resource_platform.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,16 +16,27 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Autowired
-    private JwtFilter jwtFilter;
+    private final JwtFilter jwtFilter;
+    private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
+
+    public SecurityConfig(
+            JwtFilter jwtFilter,
+            GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler
+    ) {
+        this.jwtFilter = jwtFilter;
+        this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
+    }
 
     @Bean
-    public BCryptPasswordEncoder encoder(){
+    public BCryptPasswordEncoder encoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         return http
                 .cors(cors -> cors.configurationSource(
                         corsConfigurationSource()
@@ -34,11 +44,54 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
+
+                .exceptionHandling(exception -> exception
+                        .defaultAuthenticationEntryPointFor(
+                                (request, response, authException) ->
+                                        response.sendError(
+                                                jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
+                                        ),
+                                request -> {
+                                    String path = request.getRequestURI();
+                                    return path.startsWith("/api/")
+                                            || path.startsWith("/auth/");
+                                }
+                        )
+                )
+                // Google OAuth2 login
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(googleOAuth2SuccessHandler)
+                )
+
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/mylogin",
+                                "/api/auth/register",
+                                "/api/auth/myregister",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/auth/login",
+                                "/auth/register",
+                                "/auth/myregister",
+                                "/auth/forgot-password",
+                                "/auth/reset-password",
+                                "/api/technician-requests",
+                                "/api/technician-requests/**",
+                                "/api/access-requests",
+                                "/api/access-requests/**",
+                                "/api/colleges"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        ).permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/equipment/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/equipment/**"
+                        )
                         .hasAnyRole(
                                 "RESEARCHER_STUDENT",
                                 "LAB_TECHNICIAN",
@@ -47,16 +100,24 @@ public class SecurityConfig {
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
-                        .requestMatchers(HttpMethod.POST, "/api/equipment/**")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/equipment/**"
+                        )
                         .hasAnyRole(
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
+
                         .requestMatchers("/api/equipment/**")
                         .hasAnyRole(
+                                "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
@@ -79,7 +140,10 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
-                        .requestMatchers("/api/analytics/**", "/api/reports/**")
+                        .requestMatchers(
+                                "/api/analytics/**",
+                                "/api/reports/**"
+                        )
                         .hasAnyRole(
                                 "LAB_MANAGER",
                                 "DEPARTMENT_HEAD",
@@ -92,6 +156,7 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -100,29 +165,33 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(){
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
                 List.of(
-                        "http://localhost:5173"
+                        "http://localhost:5173",
+                        "http://localhost:5174"
                 )
         );
+
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
                         "POST",
                         "PUT",
+                        "PATCH",
                         "DELETE",
                         "OPTIONS"
                 )
         );
-        configuration.setAllowedHeaders(
-                List.of("*")
-        );
+
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
 
         return source;

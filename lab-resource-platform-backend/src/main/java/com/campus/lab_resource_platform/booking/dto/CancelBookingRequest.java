@@ -1,6 +1,5 @@
 package com.campus.lab_resource_platform.booking.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Getter
@@ -9,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 public class CancelBookingRequest {
 
-    @NotBlank(message = "Cancellation reason is required")
+    // reason is optional - student may cancel without providing a reason
     private String reason;
 }
