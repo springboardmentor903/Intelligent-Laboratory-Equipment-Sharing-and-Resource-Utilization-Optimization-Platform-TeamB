@@ -26,8 +26,17 @@ public class RegisterRequest {
 
     @NotBlank(message = "Role is required")
     @Pattern(
-            regexp = "RESEARCHER_STUDENT|LAB_TECHNICIAN|LAB_MANAGER|DEPARTMENT_HEAD|INSTITUTION_ADMINISTRATOR|SYSTEM_ADMINISTRATOR",
+            regexp = "RESEARCHER_STUDENT|LAB_TECHNICIAN|LAB_MANAGER|DEPARTMENT_HEAD|INSTITUTION_ADMINISTRATOR",
             message = "Invalid role"
     )
     private String role = "RESEARCHER_STUDENT";
+
+    @Size(max = 150)
+    private String institution;
+
+    @Size(max = 150)
+    private String department;
+
+    @Size(max = 1000)
+    private String reason;
 }

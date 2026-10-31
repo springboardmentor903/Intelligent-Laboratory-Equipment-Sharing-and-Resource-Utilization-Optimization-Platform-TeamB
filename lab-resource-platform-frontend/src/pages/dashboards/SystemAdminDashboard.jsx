@@ -1,210 +1,148 @@
-
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../../services/api";
-import { useToast } from "../../context/ToastContext";
 
-function SystemAdminDashboard() {
-    const toast = useToast();
+export default function SystemAdminDashboard() {
+  const [stats, setStats] = useState({
+    collegesCount: 0,
+    equipmentsCount: 0,
+    pendingRequestsCount: 0,
+    bookingsCount: 0,
+    usersCount: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-    const [requests, setRequests] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [processingId, setProcessingId] = useState(null);
-    const [loadError, setLoadError] = useState("");
+  const loadStats = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [collegesRes, equipRes, reqRes, bookingsRes, usersRes] = await Promise.allSettled([
+        api.get("/api/colleges"),
+        api.get("/api/equipment"),
+        api.get("/api/admin/technician-requests/pending"),
+        api.get("/api/admin/bookings"),
+        api.get("/api/admin/users"),
+      ]);
 
-    const loadRequests = useCallback(async () => {
-        setLoading(true);
-        setLoadError("");
-
-        try {
-            const response = await api.get(
-                "/api/admin/technician-requests/pending"
-            );
-            setRequests(response.data);
-        } catch (error) {
-            setLoadError(
-                error.response?.status === 403
-                    ? "You need System Administrator access to view these requests."
-                    : "Could not load technician requests. Please try again."
-            );
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadRequests();
-    }, [loadRequests]);
-
-    async function handleReview(requestId, action) {
-        const actionName = action === "approve" ? "approve" : "reject";
-
-        setProcessingId(requestId);
-
-        try {
-            await api.post(
-                `/api/admin/technician-requests/${requestId}/${actionName}`
-            );
-
-            setRequests((current) =>
-                current.filter((request) => request.id !== requestId)
-            );
-
-            toast.success(
-                action === "approve"
-                    ? "Technician request approved."
-                    : "Technician request rejected."
-            );
-        } catch (error) {
-            toast.error(
-                error.response?.data?.detail ||
-                error.response?.data?.message ||
-                `Could not ${actionName} this request. Please try again.`
-            );
-        } finally {
-            setProcessingId(null);
-        }
+      setStats({
+        collegesCount: collegesRes.status === "fulfilled" ? collegesRes.value.data.length : 0,
+        equipmentsCount: equipRes.status === "fulfilled" ? equipRes.value.data.length : 0,
+        pendingRequestsCount: reqRes.status === "fulfilled" ? reqRes.value.data.length : 0,
+        bookingsCount: bookingsRes.status === "fulfilled" ? bookingsRes.value.data.length : 0,
+        usersCount: usersRes.status === "fulfilled" ? usersRes.value.data.length : 0,
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard metrics", err);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return (
-        <div className="system-admin-dashboard">
-            <header className="admin-welcome">
-                <p className="admin-eyebrow">PLATFORM ADMINISTRATION</p>
-                <h1>System Administrator Dashboard</h1>
-                <p>
-                    Manage platform operations, institutions, users, and technician
-                    access requests.
-                </p>
-            </header>
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
-            <section className="dashboard-cards">
-                <article className="task-card">
-                    <h3>Platform Overview</h3>
-                    <p>Review platform-level information.</p>
-                </article>
+  return (
+    <div className="admin-page-container">
+      <header className="admin-welcome">
+        <p className="admin-eyebrow">PLATFORM ADMINISTRATION</p>
+        <h1 className="admin-title">System Administrator Dashboard</h1>
+        <p className="admin-subtitle">
+          Central platform control hub for managing cross-institutional equipment, role access approvals, bookings, and user accounts.
+        </p>
+      </header>
 
-                <article className="task-card">
-                    <h3>Institutions</h3>
-                    <p>Manage institutions on the platform.</p>
-                </article>
+      {/* Metrics Cards Grid */}
+      <section className="dashboard-cards" style={{ marginTop: "1.5rem" }}>
+        <article className="task-card">
+          <div className="admin-stat-icon">🏛️</div>
+          <h3>Affiliated Colleges</h3>
+          <p className="admin-stat-number">{loading ? "..." : stats.collegesCount}</p>
+          <p className="admin-stat-sub">Colleges and institutions onboarded</p>
+          <Link to="/dashboard/admin/equipments" className="admin-card-link">
+            View College Equipment →
+          </Link>
+        </article>
 
-                <article className="task-card">
-                    <h3>User Management</h3>
-                    <p>Manage platform accounts and access.</p>
-                </article>
-            </section>
+        <article className="task-card">
+          <div className="admin-stat-icon">🔬</div>
+          <h3>Equipments</h3>
+          <p className="admin-stat-number">{loading ? "..." : stats.equipmentsCount}</p>
+          <p className="admin-stat-sub">Total lab instruments across colleges</p>
+          <Link to="/dashboard/admin/equipments" className="admin-card-link">
+            Manage Equipment →
+          </Link>
+        </article>
 
-            <section className="technician-requests-panel">
-                <div className="requests-heading">
-                    <div>
-                        <h2>Technician Access Requests</h2>
-                        <p>
-                            Review requests before granting laboratory technician access.
-                        </p>
-                    </div>
+        <article className="task-card">
+          <div className="admin-stat-icon">📋</div>
+          <h3>Pending Requests</h3>
+          <p className="admin-stat-number" style={{ color: stats.pendingRequestsCount > 0 ? "#b45309" : "inherit" }}>
+            {loading ? "..." : stats.pendingRequestsCount}
+          </p>
+          <p className="admin-stat-sub">Role &amp; college access applications</p>
+          <Link to="/dashboard/admin/role-requests" className="admin-card-link">
+            Review Requests →
+          </Link>
+        </article>
 
-                    <button
-                        type="button"
-                        className="requests-refresh-button"
-                        onClick={loadRequests}
-                        disabled={loading || processingId !== null}
-                    >
-                        Refresh
-                    </button>
-                </div>
+        <article className="task-card">
+          <div className="admin-stat-icon">📅</div>
+          <h3>Bookings</h3>
+          <p className="admin-stat-number">{loading ? "..." : stats.bookingsCount}</p>
+          <p className="admin-stat-sub">Cross-college reservations logged</p>
+          <Link to="/dashboard/admin/bookings" className="admin-card-link">
+            Manage Bookings →
+          </Link>
+        </article>
 
-                <div className="requests-count">
-                    Pending requests: {requests.length}
-                </div>
+        <article className="task-card">
+          <div className="admin-stat-icon">👥</div>
+          <h3>User Accounts</h3>
+          <p className="admin-stat-number">{loading ? "..." : stats.usersCount}</p>
+          <p className="admin-stat-sub">Platform registered accounts</p>
+          <Link to="/dashboard/admin/accounts" className="admin-card-link">
+            Manage Accounts →
+          </Link>
+        </article>
+      </section>
 
-                {loading && (
-                    <p className="requests-message">Loading requests...</p>
-                )}
+      {/* Quick Navigation Panel */}
+      <section className="admin-quick-links-section" style={{ marginTop: "2rem" }}>
+        <h2>Administrator Quick Actions</h2>
+        <div className="admin-action-tiles-grid">
+          <Link to="/dashboard/admin/equipments" className="admin-action-tile">
+            <span className="tile-icon">🔬</span>
+            <div className="tile-content">
+              <strong>College Equipments</strong>
+              <p>Filter, add, and monitor instruments by college dropdown.</p>
+            </div>
+          </Link>
 
-                {!loading && loadError && (
-                    <div className="requests-error">
-                        <p>{loadError}</p>
-                        <button type="button" onClick={loadRequests}>
-                            Try again
-                        </button>
-                    </div>
-                )}
+          <Link to="/dashboard/admin/role-requests" className="admin-action-tile">
+            <span className="tile-icon">🛡️</span>
+            <div className="tile-content">
+              <strong>Role Access Requests &amp; History</strong>
+              <p>Approve or reject role requests with college history tracking.</p>
+            </div>
+          </Link>
 
-                {!loading && !loadError && requests.length === 0 && (
-                    <div className="requests-empty">
-                        <h3>No pending requests</h3>
-                        <p>New technician access requests will appear here.</p>
-                    </div>
-                )}
+          <Link to="/dashboard/admin/bookings" className="admin-action-tile">
+            <span className="tile-icon">📆</span>
+            <div className="tile-content">
+              <strong>All Colleges Bookings</strong>
+              <p>View reservations across institutions with college filter.</p>
+            </div>
+          </Link>
 
-                {!loading && !loadError && requests.length > 0 && (
-                    <div className="technician-request-list">
-                        {requests.map((request) => (
-                            <article
-                                className="technician-request-card"
-                                key={request.id}
-                            >
-                                <div className="request-details">
-                                    <div className="request-person">
-                                        <div className="request-avatar" aria-hidden="true">
-                                            {request.fullName?.charAt(0)?.toUpperCase() || "T"}
-                                        </div>
-
-                                        <div>
-                                            <h3>{request.fullName}</h3>
-                                            <p>{request.email}</p>
-                                        </div>
-                                    </div>
-
-                                    {request.institution && (
-                                        <p>
-                                            <strong>Institution:</strong> {request.institution}
-                                        </p>
-                                    )}
-
-                                    {request.reason && (
-                                        <p className="request-reason">
-                                            <strong>Reason:</strong> {request.reason}
-                                        </p>
-                                    )}
-
-                                    <p className="request-date">
-                                        Submitted:{" "}
-                                        {request.createdAt
-                                            ? new Date(request.createdAt).toLocaleString()
-                                            : "Date unavailable"}
-                                    </p>
-
-                                    <span className="request-pending-label">PENDING</span>
-                                </div>
-
-                                <div className="request-actions">
-                                    <button
-                                        type="button"
-                                        className="request-approve-button"
-                                        disabled={processingId !== null}
-                                        onClick={() => handleReview(request.id, "approve")}
-                                    >
-                                        {processingId === request.id
-                                            ? "Processing..."
-                                            : "Approve"}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="request-reject-button"
-                                        disabled={processingId !== null}
-                                        onClick={() => handleReview(request.id, "reject")}
-                                    >
-                                        Reject
-                                    </button>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
-                )}
-            </section>
+          <Link to="/dashboard/admin/accounts" className="admin-action-tile">
+            <span className="tile-icon">👤</span>
+            <div className="tile-content">
+              <strong>Accounts Management (CRUD)</strong>
+              <p>Create, update, toggle status, and delete user accounts.</p>
+            </div>
+          </Link>
         </div>
-    );
+      </section>
+    </div>
+  );
 }
-
-export default SystemAdminDashboard;

@@ -31,20 +31,31 @@ public class BookingHistory {
     @Column(name = "new_status", nullable = false, length = 40)
     private BookingStatus newStatus;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "changed_by_user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "changed_by_id", nullable = true)
     private User changedBy;
 
-    @Column(nullable = false, updatable = false)
-    private Instant timestamp;
+    @Column(name = "timestamp", nullable = false)
+    @Builder.Default
+    private Instant timestamp = Instant.now();
 
     @Column(length = 1000)
     private String remarks;
 
+    @Column(name = "changed_at", nullable = true)
+    @Builder.Default
+    private Instant changedAt = Instant.now();
+
     @PrePersist
     protected void onCreate() {
+        Instant now = Instant.now();
+
         if (timestamp == null) {
-            timestamp = Instant.now();
+            timestamp = now;
+        }
+
+        if (changedAt == null) {
+            changedAt = now;
         }
     }
 }

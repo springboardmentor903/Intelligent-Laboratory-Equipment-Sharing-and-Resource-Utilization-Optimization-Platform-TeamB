@@ -16,6 +16,8 @@ public class BookingResponse {
     private Long id;
     private Long equipmentId;
     private String equipmentName;
+    private Long collegeId;
+    private String collegeName;
     private Long userId;
     private String userName;
     private String userEmail;
@@ -32,10 +34,19 @@ public class BookingResponse {
     private Instant createdAt;
 
     public static BookingResponse fromEntity(Booking b) {
+        Long cId = null;
+        if (b.getEquipment() != null) {
+            cId = b.getEquipment().getCollegeId() != null
+                    ? b.getEquipment().getCollegeId()
+                    : b.getEquipment().getInstitutionId();
+        }
+
         return BookingResponse.builder()
                 .id(b.getId())
                 .equipmentId(b.getEquipment() != null ? b.getEquipment().getId() : null)
                 .equipmentName(b.getEquipment() != null ? b.getEquipment().getName() : null)
+                .collegeId(cId)
+                .collegeName(null) // Populated by controller when needed
                 .userId(b.getUser() != null ? b.getUser().getId() : null)
                 .userName(b.getUser() != null ? b.getUser().getFullName() : null)
                 .userEmail(b.getUser() != null ? b.getUser().getEmail() : null)

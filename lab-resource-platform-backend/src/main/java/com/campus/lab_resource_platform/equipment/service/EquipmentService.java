@@ -33,6 +33,8 @@ public class EquipmentService {
     @Transactional
     public Equipment createEquipment(Equipment equipment) {
         equipment.setId(null);
+        // All equipment always requires approval (no checkbox, always true)
+        equipment.setRequiresApproval(true);
         return equipmentRepository.save(equipment);
     }
 
@@ -41,14 +43,25 @@ public class EquipmentService {
         Equipment existing = getEquipmentById(id);
 
         existing.setName(updated.getName());
+        existing.setDescription(updated.getDescription());
         existing.setCategory(updated.getCategory());
         existing.setModel(updated.getModel());
         existing.setManufacturer(updated.getManufacturer());
+        existing.setSerialNumber(updated.getSerialNumber());
+        existing.setLocation(updated.getLocation());
+        existing.setSpecifications(updated.getSpecifications());
+        existing.setDocumentationUrl(updated.getDocumentationUrl());
+        existing.setTags(updated.getTags());
         existing.setStatus(updated.getStatus());
         existing.setInstitutionId(updated.getInstitutionId());
+        existing.setCollegeId(updated.getCollegeId());
         existing.setDepartmentId(updated.getDepartmentId());
-        existing.setRequiresApproval(updated.isRequiresApproval());
+        existing.setCalibrationDate(updated.getCalibrationDate());
+        existing.setCertificationInfo(updated.getCertificationInfo());
         existing.setMaxBookingHours(updated.getMaxBookingHours());
+        existing.setActive(updated.isActive());
+        // Always keep requiresApproval = true regardless of what was sent
+        existing.setRequiresApproval(true);
 
         return equipmentRepository.save(existing);
     }

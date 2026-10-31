@@ -164,7 +164,7 @@ function Login() {
         </p>
 
         <p className="technician-access">
-          Need technician access?{" "}
+          Need role or institution access?{" "}
           <Link to="/technician-access-request">Request access</Link>
         </p>
       </section>

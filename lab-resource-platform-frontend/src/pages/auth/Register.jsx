@@ -131,29 +131,6 @@ function Register() {
             required
           />
 
-          <label htmlFor="role">Register as</label>
-          <select
-            id="role"
-            name="role"
-            className="role-select"
-            value={form.role}
-            onChange={update}
-            required
-          >
-            <option value="RESEARCHER_STUDENT">
-              Researcher / Student
-            </option>
-            <option value="LAB_TECHNICIAN">Lab Technician</option>
-            <option value="LAB_MANAGER">Lab Manager</option>
-            <option value="DEPARTMENT_HEAD">Department Head</option>
-            <option value="INSTITUTION_ADMINISTRATOR">
-              Institution Administrator
-            </option>
-            <option value="SYSTEM_ADMINISTRATOR">
-              System Administrator
-            </option>
-          </select>
-
           <label htmlFor="password">Password</label>
           <input
             id="password"

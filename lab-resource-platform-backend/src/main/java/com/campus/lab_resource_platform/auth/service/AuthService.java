@@ -5,6 +5,7 @@ import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
 import com.campus.lab_resource_platform.security.JwtService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import com.campus.lab_resource_platform.user.service.TechnicianAccessRequestService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,16 +26,20 @@ public class AuthService {
     private final UserRepository userRepo;
     private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
+    private final TechnicianAccessRequestService accessRequestService;
 
     public AuthService(
             UserRepository userRepo,
             BCryptPasswordEncoder encoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            TechnicianAccessRequestService accessRequestService) {
         this.userRepo = userRepo;
         this.encoder = encoder;
         this.jwtService = jwtService;
+        this.accessRequestService = accessRequestService;
     }
 
+    @Transactional
     public User register(RegisterRequest dto) {
         String email = dto.getEmail().trim().toLowerCase(Locale.ROOT);
 
@@ -46,7 +51,6 @@ public class AuthService {
         }
 
         User.Role requestedRole;
-
         try {
             requestedRole = User.Role.valueOf(dto.getRole().trim());
         } catch (IllegalArgumentException | NullPointerException ex) {
@@ -56,22 +60,39 @@ public class AuthService {
             );
         }
 
+        if (requestedRole == User.Role.SYSTEM_ADMINISTRATOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "System Administrator cannot be requested via public registration"
+            );
+        }
+
         User user = new User();
         user.setFullName(dto.getFullName().trim());
         user.setEmail(email);
         user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
 
-        // Public registration must not grant privileged roles.
+        // Public registration assigns default unprivileged role only.
         user.setRole(User.Role.RESEARCHER_STUDENT);
-
         user.setEmailVerified(false);
         user.setActive(true);
 
         User savedUser = userRepo.save(user);
 
-        // The requested role is recognized, but is not granted here.
-        // Add a separate role-approval workflow for privileged roles.
+        // If the applicant requested a privileged role, record a pending access request
+        // for System Administrator review and approval.
+        if (requestedRole != User.Role.RESEARCHER_STUDENT) {
+            accessRequestService.submitRequest(
+                    dto.getFullName(),
+                    email,
+                    dto.getPassword(),
+                    dto.getInstitution(),
+                    dto.getDepartment(),
+                    requestedRole,
+                    dto.getReason() != null ? dto.getReason() : "Requested during registration"
+            );
+        }
 
         return savedUser;
     }

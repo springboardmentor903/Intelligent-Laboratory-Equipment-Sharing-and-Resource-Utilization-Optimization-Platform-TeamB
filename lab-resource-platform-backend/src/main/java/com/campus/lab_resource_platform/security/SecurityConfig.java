@@ -1,4 +1,3 @@
-
 package com.campus.lab_resource_platform.security;
 
 import org.springframework.context.annotation.Bean;
@@ -51,10 +50,11 @@ public class SecurityConfig {
                                 (request, response, authException) ->
                                         response.sendError(
                                                 jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
-                        ),
+                                        ),
                                 request -> {
                                     String path = request.getRequestURI();
-                                    return path.startsWith("/api/") || path.startsWith("/auth/");
+                                    return path.startsWith("/api/")
+                                            || path.startsWith("/auth/");
                                 }
                         )
                 )
@@ -67,6 +67,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/auth/login",
+                                "/api/auth/mylogin",
                                 "/api/auth/register",
                                 "/api/auth/myregister",
                                 "/api/auth/forgot-password",
@@ -77,7 +78,10 @@ public class SecurityConfig {
                                 "/auth/forgot-password",
                                 "/auth/reset-password",
                                 "/api/technician-requests",
-                                "/api/technician-requests/status"
+                                "/api/technician-requests/**",
+                                "/api/access-requests",
+                                "/api/access-requests/**",
+                                "/api/colleges"
                         ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",
@@ -104,13 +108,16 @@ public class SecurityConfig {
                         .hasAnyRole(
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
                         .requestMatchers("/api/equipment/**")
                         .hasAnyRole(
+                                "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
@@ -162,8 +169,10 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173," +
-                        "http://localhost:5174")
+                List.of(
+                        "http://localhost:5173",
+                        "http://localhost:5174"
+                )
         );
 
         configuration.setAllowedMethods(
@@ -171,6 +180,7 @@ public class SecurityConfig {
                         "GET",
                         "POST",
                         "PUT",
+                        "PATCH",
                         "DELETE",
                         "OPTIONS"
                 )
