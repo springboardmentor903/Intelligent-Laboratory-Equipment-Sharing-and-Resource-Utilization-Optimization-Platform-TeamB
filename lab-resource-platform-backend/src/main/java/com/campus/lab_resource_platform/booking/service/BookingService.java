@@ -15,6 +15,7 @@ import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
 import com.campus.lab_resource_platform.equipment.repository.EquipmentRepository;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class BookingService {
@@ -37,17 +41,20 @@ public class BookingService {
     private final BookingHistoryRepository bookingHistoryRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
+    private final WaitlistService waitlistService;
 
     public BookingService(
             BookingRepository bookingRepository,
             BookingHistoryRepository bookingHistoryRepository,
             EquipmentRepository equipmentRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            @Lazy WaitlistService waitlistService
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingHistoryRepository = bookingHistoryRepository;
         this.equipmentRepository = equipmentRepository;
         this.userRepository = userRepository;
+        this.waitlistService = waitlistService;
     }
 
     @Transactional
@@ -96,6 +103,7 @@ public class BookingService {
                 .endTime(request.getEndTime())
                 .purpose(request.getPurpose())
                 .status(initialStatus)
+                .isRecurring(false)
                 .build();
 
         Booking savedBooking = bookingRepository.save(booking);
@@ -109,6 +117,133 @@ public class BookingService {
         );
 
         return BookingResponse.fromEntity(savedBooking);
+    }
+
+    /**
+     * Recurring Booking Creation (Milestone 2 - Task T4)
+     * Creates a series of bookings across days/weeks, linking them with recurrenceGroupId
+     */
+    @Transactional
+    public RecurringBookingResponse createRecurringBooking(RecurringBookingRequest request, String userEmail) {
+        User user = getUserByEmail(userEmail);
+
+        if (request.getStartTime().isBefore(Instant.now())) {
+            throw new BadRequestException("First booking start time must be in the future");
+        }
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BadRequestException("Booking end time must be after start time");
+        }
+
+        Equipment equipment = equipmentRepository.findByIdWithLock(request.getEquipmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Equipment not found with ID: " + request.getEquipmentId()));
+
+        if (equipment.getStatus() != EquipmentStatus.AVAILABLE) {
+            throw new BadRequestException("Equipment is currently not eligible for booking. Status: " + equipment.getStatus());
+        }
+
+        long durationHours = Duration.between(request.getStartTime(), request.getEndTime()).toHours();
+        if (durationHours > equipment.getMaxBookingHours()) {
+            throw new BadRequestException("Booking duration exceeds maximum allowed limit of " + equipment.getMaxBookingHours() + " hours");
+        }
+
+        int occurrences = (request.getOccurrences() != null && request.getOccurrences() > 0)
+                ? Math.min(request.getOccurrences(), 16) : 4;
+        String recurrenceType = (request.getRecurrenceType() != null && request.getRecurrenceType().equalsIgnoreCase("DAILY"))
+                ? "DAILY" : "WEEKLY";
+
+        String recurrenceGroupId = UUID.randomUUID().toString();
+        List<BookingResponse> successful = new ArrayList<>();
+        List<RecurringBookingResponse.RecurringConflictDto> conflicts = new ArrayList<>();
+
+        Duration slotLength = Duration.between(request.getStartTime(), request.getEndTime());
+
+        for (int i = 0; i < occurrences; i++) {
+            Instant occStart;
+            if ("DAILY".equals(recurrenceType)) {
+                occStart = request.getStartTime().plus(i, ChronoUnit.DAYS);
+            } else {
+                occStart = request.getStartTime().plus(i * 7L, ChronoUnit.DAYS);
+            }
+            Instant occEnd = occStart.plus(slotLength);
+
+            // Check conflicts for this occurrence
+            List<Booking> occConflicts = bookingRepository.findConflictingBookings(
+                    equipment.getId(), occStart, occEnd, BLOCKING_STATUSES
+            );
+
+            if (!occConflicts.isEmpty()) {
+                conflicts.add(RecurringBookingResponse.RecurringConflictDto.builder()
+                        .occurrenceIndex(i + 1)
+                        .requestedStart(occStart)
+                        .requestedEnd(occEnd)
+                        .conflictReason("Slot already reserved by another booking")
+                        .build());
+            } else {
+                Booking booking = Booking.builder()
+                        .equipment(equipment)
+                        .user(user)
+                        .startTime(occStart)
+                        .endTime(occEnd)
+                        .purpose((request.getPurpose() != null ? request.getPurpose() : "Recurring Session") + " (Session #" + (i + 1) + ")")
+                        .status(BookingStatus.PENDING_APPROVAL)
+                        .isRecurring(true)
+                        .recurrenceGroupId(recurrenceGroupId)
+                        .recurrenceType(recurrenceType)
+                        .build();
+
+                Booking saved = bookingRepository.save(booking);
+                recordHistory(saved, null, BookingStatus.PENDING_APPROVAL, user,
+                        "Recurring booking session #" + (i + 1) + " created, pending approval");
+                successful.add(BookingResponse.fromEntity(saved));
+            }
+        }
+
+        return RecurringBookingResponse.builder()
+                .recurrenceGroupId(recurrenceGroupId)
+                .recurrenceType(recurrenceType)
+                .totalRequested(occurrences)
+                .totalBooked(successful.size())
+                .totalConflicted(conflicts.size())
+                .successfulBookings(successful)
+                .conflicts(conflicts)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getRecurringSeries(String recurrenceGroupId, String userEmail) {
+        return bookingRepository.findByRecurrenceGroupId(recurrenceGroupId)
+                .stream()
+                .map(BookingResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public List<BookingResponse> cancelRecurringSeries(String recurrenceGroupId, String reason, String currentUserEmail) {
+        List<Booking> series = bookingRepository.findByRecurrenceGroupId(recurrenceGroupId);
+        if (series.isEmpty()) {
+            throw new ResourceNotFoundException("No recurring bookings found for group: " + recurrenceGroupId);
+        }
+
+        User user = getUserByEmail(currentUserEmail);
+        List<BookingResponse> cancelled = new ArrayList<>();
+
+        for (Booking b : series) {
+            if (b.getStatus() == BookingStatus.PENDING_APPROVAL || b.getStatus() == BookingStatus.CONFIRMED) {
+                BookingStatus prev = b.getStatus();
+                b.setStatus(BookingStatus.CANCELLED);
+                b.setCancelledAt(Instant.now());
+                b.setCancellationReason(reason != null ? reason : "Recurring series cancelled");
+                Booking saved = bookingRepository.save(b);
+                recordHistory(saved, prev, BookingStatus.CANCELLED, user, "Recurring series cancellation: " + reason);
+                cancelled.add(BookingResponse.fromEntity(saved));
+
+                // Notify waitlist on freed slot
+                if (b.getEquipment() != null) {
+                    waitlistService.checkAndPromoteWaitlistedCandidate(b.getEquipment().getId(), b.getStartTime(), b.getEndTime());
+                }
+            }
+        }
+        return cancelled;
     }
 
     @Transactional(readOnly = true)
@@ -152,8 +287,6 @@ public class BookingService {
             throw new BadRequestException("Cannot cancel a booking that is already " + booking.getStatus());
         }
 
-        // Allow cancellation of PENDING_APPROVAL and CONFIRMED bookings at any time
-        // (IN_USE bookings cannot be cancelled - they must be completed)
         if (booking.getStatus() == BookingStatus.IN_USE) {
             throw new BadRequestException("Cannot cancel a booking that is currently IN USE. Please mark it as completed instead.");
         }
@@ -165,6 +298,15 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
         recordHistory(saved, previousStatus, BookingStatus.CANCELLED, user, "Booking cancelled: " + reason);
+
+        // Auto-promote any waiting student for this newly released slot!
+        if (saved.getEquipment() != null) {
+            waitlistService.checkAndPromoteWaitlistedCandidate(
+                    saved.getEquipment().getId(),
+                    saved.getStartTime(),
+                    saved.getEndTime()
+            );
+        }
 
         return BookingResponse.fromEntity(saved);
     }
@@ -206,7 +348,6 @@ public class BookingService {
             throw new BadRequestException("Only bookings in PENDING_APPROVAL status can be rejected. Current status: " + booking.getStatus());
         }
 
-        // Per requirements: Store status as CANCELLED and store rejection reason separately
         BookingStatus previousStatus = booking.getStatus();
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setApprover(approver);
@@ -215,6 +356,15 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
         recordHistory(saved, previousStatus, BookingStatus.CANCELLED, approver, "Rejected by manager: " + reason);
+
+        // Auto-promote waitlist candidate for rejected slot
+        if (saved.getEquipment() != null) {
+            waitlistService.checkAndPromoteWaitlistedCandidate(
+                    saved.getEquipment().getId(),
+                    saved.getStartTime(),
+                    saved.getEndTime()
+            );
+        }
 
         return BookingResponse.fromEntity(saved);
     }
@@ -247,7 +397,6 @@ public class BookingService {
             throw new BadRequestException("End date must be after start date");
         }
 
-        // Privacy: Return only time slots and status without user identities
         return bookingRepository.findOccupiedSlots(equipmentId, startDate, endDate, BLOCKING_STATUSES)
                 .stream()
                 .map(b -> AvailabilitySlotResponse.builder()

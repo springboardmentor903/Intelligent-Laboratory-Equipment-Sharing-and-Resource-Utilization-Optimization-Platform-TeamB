@@ -3,6 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
+function toISTTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function StudentBookingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,6 +30,21 @@ function StudentBookingPage() {
   const [endTime, setEndTime] = useState("");
   const [purpose, setPurpose] = useState("");
   const [formError, setFormError] = useState(null);
+
+  // Milestone 2 - T4: Recurring Booking state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState("WEEKLY");
+  const [occurrences, setOccurrences] = useState(4);
+  const [recurringResult, setRecurringResult] = useState(null);
+
+  // Milestone 2 - T4: Slot Recommendation state
+  const [recommendations, setRecommendations] = useState([]);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+  const [showRecs, setShowRecs] = useState(false);
+
+  // Milestone 2 - T4: Waitlist fallback state
+  const [showWaitlistOption, setShowWaitlistOption] = useState(false);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   useEffect(() => {
     setLoadingEquipment(true);
@@ -56,9 +81,75 @@ function StudentBookingPage() {
     return null;
   }
 
+  async function handleFetchRecommendations() {
+    setLoadingRecs(true);
+    try {
+      const qDate = startDate || new Date().toISOString().split("T")[0];
+      const res = await api.get(`/api/equipment/${id}/recommend-slots`, {
+        params: {
+          date: qDate,
+          durationMinutes: 120,
+        },
+      });
+      setRecommendations(res.data?.recommendations || []);
+      setShowRecs(true);
+      if ((res.data?.recommendations || []).length === 0) {
+        toast.info("No free slots remaining on this date. You can join the waitlist or pick another date.");
+      }
+    } catch {
+      toast.error("Could not fetch slot recommendations.");
+    } finally {
+      setLoadingRecs(false);
+    }
+  }
+
+  function applyRecommendedSlot(slot) {
+    const sDate = new Date(slot.startTime);
+    const eDate = new Date(slot.endTime);
+
+    // Format local values in YYYY-MM-DD and HH:MM
+    const pad = (n) => String(n).padStart(2, "0");
+    const sDateStr = `${sDate.getFullYear()}-${pad(sDate.getMonth() + 1)}-${pad(sDate.getDate())}`;
+    const sTimeStr = `${pad(sDate.getHours())}:${pad(sDate.getMinutes())}`;
+    const eDateStr = `${eDate.getFullYear()}-${pad(eDate.getMonth() + 1)}-${pad(eDate.getDate())}`;
+    const eTimeStr = `${pad(eDate.getHours())}:${pad(eDate.getMinutes())}`;
+
+    setStartDate(sDateStr);
+    setStartTime(sTimeStr);
+    setEndDate(eDateStr);
+    setEndTime(eTimeStr);
+    setShowRecs(false);
+    setShowWaitlistOption(false);
+    setFormError(null);
+    toast.success("Applied recommended conflict-free slot!");
+  }
+
+  async function handleJoinWaitlist() {
+    setJoiningWaitlist(true);
+    try {
+      const res = await api.post("/api/waitlist", {
+        equipmentId: Number(id),
+        desiredStartTime: toISOInstant(startDate, startTime),
+        desiredEndTime: toISOInstant(endDate, endTime),
+        purpose: purpose.trim() || "Waitlist reservation",
+      });
+      toast.success(
+        `Added to waitlist at position #${res.data?.queuePosition || 1}! You'll be automatically promoted if the slot frees up.`
+      );
+      navigate("/dashboard/student/bookings");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to join waitlist.");
+    } finally {
+      setJoiningWaitlist(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError(null);
+    setShowWaitlistOption(false);
+    setRecurringResult(null);
+
     const err = validate();
     if (err) {
       setFormError(err);
@@ -67,20 +158,54 @@ function StudentBookingPage() {
 
     setSubmitting(true);
     try {
-      await api.post("/api/bookings", {
-        equipmentId: Number(id),
-        startTime: toISOInstant(startDate, startTime),
-        endTime: toISOInstant(endDate, endTime),
-        purpose: purpose.trim(),
-      });
-      toast.success("Booking request submitted successfully!");
-      navigate("/dashboard/student/bookings");
+      if (isRecurring) {
+        // Milestone 2 - T4: Recurring Booking Submission
+        const res = await api.post("/api/bookings/recurring", {
+          equipmentId: Number(id),
+          startTime: toISOInstant(startDate, startTime),
+          endTime: toISOInstant(endDate, endTime),
+          purpose: purpose.trim(),
+          recurrenceType,
+          occurrences: Number(occurrences),
+        });
+
+        const data = res.data;
+        setRecurringResult(data);
+        if (data.totalConflicted > 0) {
+          toast.info(
+            `Booked ${data.totalBooked} session(s). ${data.totalConflicted} session(s) had schedule conflicts.`
+          );
+        } else {
+          toast.success(`All ${data.totalBooked} recurring sessions submitted successfully!`);
+          navigate("/dashboard/student/bookings");
+        }
+      } else {
+        // Normal One-off Booking
+        await api.post("/api/bookings", {
+          equipmentId: Number(id),
+          startTime: toISOInstant(startDate, startTime),
+          endTime: toISOInstant(endDate, endTime),
+          purpose: purpose.trim(),
+        });
+        toast.success("Booking request submitted in Pending Approval status!");
+        navigate("/dashboard/student/bookings");
+      }
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
         err?.response?.data ||
         "Failed to submit booking. Please try again.";
-      setFormError(typeof msg === "string" ? msg : "Booking failed.");
+      const errorStr = typeof msg === "string" ? msg : "Booking failed.";
+      setFormError(errorStr);
+
+      // Offer waitlist if conflict occurred
+      if (
+        err?.response?.status === 409 ||
+        errorStr.toLowerCase().includes("overlap") ||
+        errorStr.toLowerCase().includes("conflict")
+      ) {
+        setShowWaitlistOption(true);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +268,66 @@ function StudentBookingPage() {
         ← Back to Equipments
       </button>
 
-      <h1 className="booking-page-title">Book Equipment</h1>
+      <div className="booking-title-row">
+        <div>
+          <h1 className="booking-page-title">Book Equipment</h1>
+          <p className="booking-page-subtitle">
+            Reserve time on scientific instruments with smart slot recommendations and waitlist protection.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="booking-recommend-btn"
+          onClick={handleFetchRecommendations}
+          disabled={loadingRecs}
+          title="Analyze lab usage and suggest best conflict-free slots"
+        >
+          {loadingRecs ? "Analyzing Slots…" : "💡 Suggest Best Slots"}
+        </button>
+      </div>
+
+      {/* Recommendations Banner / Modal */}
+      {showRecs && (
+        <div className="booking-recommendations-box">
+          <div className="booking-rec-header">
+            <div>
+              <h3>💡 Conflict-Free Slot Recommendations (IST)</h3>
+              <p>Rule-based optimization to minimize lab idle time and peak contention.</p>
+            </div>
+            <button
+              type="button"
+              className="booking-rec-close"
+              onClick={() => setShowRecs(false)}
+            >
+              ✕
+            </button>
+          </div>
+
+          {recommendations.length === 0 ? (
+            <p className="booking-rec-empty">No free slots found on this date. Try another date or join the waitlist.</p>
+          ) : (
+            <div className="booking-rec-grid">
+              {recommendations.map((rec, i) => (
+                <div key={i} className="booking-rec-card">
+                  <div className="booking-rec-time">
+                    <span className="booking-rec-badge">Score {rec.score}/100</span>
+                    <strong>{toISTTime(rec.startTime)} → {toISTTime(rec.endTime)}</strong>
+                  </div>
+                  <p className="booking-rec-reason">{rec.reason}</p>
+                  <button
+                    type="button"
+                    className="booking-apply-slot-btn"
+                    onClick={() => applyRecommendedSlot(rec)}
+                  >
+                    Select Slot
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="booking-page-grid">
         {/* Equipment Summary Card */}
@@ -192,11 +376,9 @@ function StudentBookingPage() {
                 <span>{equipment.maxBookingHours}h per booking</span>
               </p>
             )}
-            {equipment?.requiresApproval && (
-              <div className="booking-approval-notice">
-                ⚠️ This equipment requires admin approval before confirmation.
-              </div>
-            )}
+            <div className="booking-approval-notice">
+              🛡️ Student reservations start in Pending Approval status by default.
+            </div>
             {equipment?.description && (
               <p className="booking-equipment-desc">{equipment.description}</p>
             )}
@@ -218,7 +400,10 @@ function StudentBookingPage() {
                   type="date"
                   className="booking-input"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (!endDate) setEndDate(e.target.value);
+                  }}
                   min={new Date().toISOString().split("T")[0]}
                   required
                 />
@@ -268,6 +453,50 @@ function StudentBookingPage() {
               </div>
             </div>
 
+            {/* Milestone 2 - T4: Recurring Booking Options */}
+            <div className="booking-recurring-box">
+              <label className="booking-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                />
+                <span>🔁 Repeat this booking (Recurring Series)</span>
+              </label>
+
+              {isRecurring && (
+                <div className="booking-recurring-fields">
+                  <div className="booking-field">
+                    <label className="booking-label">Frequency:</label>
+                    <select
+                      className="booking-select"
+                      value={recurrenceType}
+                      onChange={(e) => setRecurrenceType(e.target.value)}
+                    >
+                      <option value="WEEKLY">Weekly (Same day &amp; time every week)</option>
+                      <option value="DAILY">Daily (Consecutive days)</option>
+                    </select>
+                  </div>
+
+                  <div className="booking-field">
+                    <label className="booking-label">Number of Sessions:</label>
+                    <select
+                      className="booking-select"
+                      value={occurrences}
+                      onChange={(e) => setOccurrences(Number(e.target.value))}
+                    >
+                      <option value="2">2 sessions</option>
+                      <option value="3">3 sessions</option>
+                      <option value="4">4 sessions (Recommended)</option>
+                      <option value="6">6 sessions</option>
+                      <option value="8">8 sessions</option>
+                      <option value="12">12 sessions</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="booking-field">
               <label htmlFor="purpose" className="booking-label">
                 Purpose / Description{" "}
@@ -294,6 +523,47 @@ function StudentBookingPage() {
               </div>
             )}
 
+            {/* Waitlist Call-to-action when conflict occurs */}
+            {showWaitlistOption && (
+              <div className="booking-waitlist-callout">
+                <div className="booking-waitlist-info">
+                  <strong>⏳ High-Demand Time Slot!</strong>
+                  <p>
+                    This time slot is already reserved by another session. You can join the equipment waitlist to be automatically promoted if the slot is cancelled or freed.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="booking-join-waitlist-btn"
+                  onClick={handleJoinWaitlist}
+                  disabled={joiningWaitlist}
+                >
+                  {joiningWaitlist ? "Joining Waitlist…" : "Join Waitlist for this Slot"}
+                </button>
+              </div>
+            )}
+
+            {/* Recurring partial results */}
+            {recurringResult && (
+              <div className="booking-recurring-summary">
+                <h4>Recurring Booking Summary</h4>
+                <p>
+                  ✅ <strong>{recurringResult.totalBooked}</strong> session(s) booked.
+                  {recurringResult.totalConflicted > 0 && (
+                    <span> ⚠️ <strong>{recurringResult.totalConflicted}</strong> session(s) had conflicting reservations.</span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="bh-browse-btn"
+                  onClick={() => navigate("/dashboard/student/bookings")}
+                  style={{ marginTop: "10px" }}
+                >
+                  View My Bookings →
+                </button>
+              </div>
+            )}
+
             <div className="booking-form-actions">
               <button
                 type="button"
@@ -312,6 +582,8 @@ function StudentBookingPage() {
                   <>
                     <span className="btn-spinner" /> Submitting…
                   </>
+                ) : isRecurring ? (
+                  `Submit ${occurrences} Recurring Sessions`
                 ) : (
                   "Submit Booking Request"
                 )}
@@ -330,4 +602,3 @@ function StudentBookingPage() {
 }
 
 export default StudentBookingPage;
-

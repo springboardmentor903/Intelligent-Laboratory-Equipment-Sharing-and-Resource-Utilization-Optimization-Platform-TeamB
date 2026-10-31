@@ -7,9 +7,9 @@ import com.campus.lab_resource_platform.booking.repository.BookingHistoryReposit
 import com.campus.lab_resource_platform.booking.repository.BookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -26,12 +26,15 @@ public class BookingAutoScheduler {
 
     private final BookingRepository bookingRepository;
     private final BookingHistoryRepository bookingHistoryRepository;
+    private final WaitlistService waitlistService;
 
     public BookingAutoScheduler(
             BookingRepository bookingRepository,
-            BookingHistoryRepository bookingHistoryRepository) {
+            BookingHistoryRepository bookingHistoryRepository,
+            @Lazy WaitlistService waitlistService) {
         this.bookingRepository = bookingRepository;
         this.bookingHistoryRepository = bookingHistoryRepository;
+        this.waitlistService = waitlistService;
     }
 
     /**
@@ -105,6 +108,15 @@ public class BookingAutoScheduler {
 
                 saveHistoryQuietly(booking, currentStatus, BookingStatus.CANCELLED, now,
                         "System auto-cancelled: 1-minute start time grace period elapsed without IN_USE status");
+
+                // Auto-promote any waiting student for this released slot
+                if (booking.getEquipment() != null) {
+                    waitlistService.checkAndPromoteWaitlistedCandidate(
+                            booking.getEquipment().getId(),
+                            booking.getStartTime(),
+                            booking.getEndTime()
+                    );
+                }
             }
         }
     }

@@ -1,6 +1,8 @@
 package com.campus.lab_resource_platform.equipment.controller;
 
 import com.campus.lab_resource_platform.booking.dto.AvailabilitySlotResponse;
+import com.campus.lab_resource_platform.booking.dto.SlotRecommendationResponse;
+import com.campus.lab_resource_platform.booking.service.BookingOptimizationService;
 import com.campus.lab_resource_platform.booking.service.BookingService;
 import com.campus.lab_resource_platform.equipment.entity.Equipment;
 import com.campus.lab_resource_platform.equipment.service.EquipmentService;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -31,14 +34,17 @@ public class EquipmentController {
     private final BookingService bookingService;
     private final EquipmentService equipmentService;
     private final UserRepository userRepository;
+    private final BookingOptimizationService bookingOptimizationService;
 
     public EquipmentController(
             BookingService bookingService,
             EquipmentService equipmentService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            BookingOptimizationService bookingOptimizationService) {
         this.bookingService = bookingService;
         this.equipmentService = equipmentService;
         this.userRepository = userRepository;
+        this.bookingOptimizationService = bookingOptimizationService;
     }
 
     private User getAuthenticatedUser(Authentication authentication) {
@@ -52,7 +58,7 @@ public class EquipmentController {
         if (user != null && COLLEGE_STAFF_ROLES.contains(user.getRole())) {
             return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
         }
-        return null; // Not restricted to single college (e.g. SYSTEM_ADMINISTRATOR)
+        return null;
     }
 
     @GetMapping
@@ -68,13 +74,10 @@ public class EquipmentController {
         if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
             Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
             if (staffCollegeId == null) {
-                // Staff member without assigned college cannot see any equipment
                 return ResponseEntity.ok(List.of());
             }
-            // Strictly locked to staff member's college only
             targetCollegeId = staffCollegeId;
         } else {
-            // SYSTEM_ADMINISTRATOR or RESEARCHER_STUDENT: can view all or filter by requested collegeId
             targetCollegeId = collegeId;
         }
 
@@ -132,7 +135,6 @@ public class EquipmentController {
             if (staffCollegeId == null) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to any college. Cannot register equipment.");
             }
-            // Force assigned college
             equipment.setCollegeId(staffCollegeId);
             equipment.setInstitutionId(staffCollegeId);
         }
@@ -221,5 +223,14 @@ public class EquipmentController {
 
         List<AvailabilitySlotResponse> slots = bookingService.getEquipmentAvailability(id, startDate, endDate);
         return ResponseEntity.ok(slots);
+    }
+
+    @GetMapping("/{id}/recommend-slots")
+    public ResponseEntity<SlotRecommendationResponse> getRecommendedSlots(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "120") int durationMinutes) {
+        SlotRecommendationResponse recommendations = bookingOptimizationService.recommendSlots(id, date, durationMinutes);
+        return ResponseEntity.ok(recommendations);
     }
 }

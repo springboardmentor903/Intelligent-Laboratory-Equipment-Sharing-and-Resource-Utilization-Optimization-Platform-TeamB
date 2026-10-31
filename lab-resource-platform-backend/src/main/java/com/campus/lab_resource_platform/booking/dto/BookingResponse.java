@@ -31,6 +31,9 @@ public class BookingResponse {
     private String rejectionReason;
     private Instant cancelledAt;
     private String cancellationReason;
+    private Boolean isRecurring;
+    private String recurrenceGroupId;
+    private String recurrenceType;
     private Instant createdAt;
 
     public static BookingResponse fromEntity(Booking b) {
@@ -46,7 +49,7 @@ public class BookingResponse {
                 .equipmentId(b.getEquipment() != null ? b.getEquipment().getId() : null)
                 .equipmentName(b.getEquipment() != null ? b.getEquipment().getName() : null)
                 .collegeId(cId)
-                .collegeName(null) // Populated by controller when needed
+                .collegeName(null)
                 .userId(b.getUser() != null ? b.getUser().getId() : null)
                 .userName(b.getUser() != null ? b.getUser().getFullName() : null)
                 .userEmail(b.getUser() != null ? b.getUser().getEmail() : null)
@@ -60,6 +63,9 @@ public class BookingResponse {
                 .rejectionReason(b.getRejectionReason())
                 .cancelledAt(b.getCancelledAt())
                 .cancellationReason(b.getCancellationReason())
+                .isRecurring(b.getIsRecurring())
+                .recurrenceGroupId(b.getRecurrenceGroupId())
+                .recurrenceType(b.getRecurrenceType())
                 .createdAt(b.getCreatedAt())
                 .build();
     }
