@@ -10,6 +10,11 @@ import com.campus.lab_resource_platform.college.entity.College;
 import com.campus.lab_resource_platform.college.repository.CollegeRepository;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import com.campus.lab_resource_platform.equipment.entity.Equipment;
+import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
+import com.campus.lab_resource_platform.equipment.repository.EquipmentRepository;
+import com.campus.lab_resource_platform.utilization.entity.Utilization;
+import com.campus.lab_resource_platform.utilization.repository.UtilizationRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -22,9 +27,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -45,18 +52,24 @@ public class BookingController {
     private final UserRepository userRepository;
     private final CollegeRepository collegeRepository;
     private final BookingAutoScheduler bookingAutoScheduler;
+    private final EquipmentRepository equipmentRepository;
+    private final UtilizationRepository utilizationRepository;
 
     public BookingController(
             BookingService bookingService,
             BookingRepository bookingRepository,
             UserRepository userRepository,
             CollegeRepository collegeRepository,
-            BookingAutoScheduler bookingAutoScheduler) {
+            BookingAutoScheduler bookingAutoScheduler,
+            EquipmentRepository equipmentRepository,
+            UtilizationRepository utilizationRepository) {
         this.bookingService = bookingService;
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.collegeRepository = collegeRepository;
         this.bookingAutoScheduler = bookingAutoScheduler;
+        this.equipmentRepository = equipmentRepository;
+        this.utilizationRepository = utilizationRepository;
     }
 
     public record BookingListItemDto(
@@ -225,12 +238,75 @@ public class BookingController {
         }
 
         booking.setStatus(newStatus);
+        Equipment equipment = booking.getEquipment();
+        Instant now = Instant.now();
+
         if (newStatus == BookingStatus.CONFIRMED && previousStatus == BookingStatus.PENDING_APPROVAL) {
             booking.setApprover(currentUser);
-            booking.setApprovedAt(Instant.now());
+            booking.setApprovedAt(now);
+        } else if (newStatus == BookingStatus.IN_USE) {
+            if (equipment != null) {
+                equipment.setStatus(EquipmentStatus.IN_USE);
+                equipmentRepository.save(equipment);
+            }
+            // Auto-create active utilization session if none exists
+            Optional<Utilization> existingActive = utilizationRepository.findFirstByBookingIdAndStatus(booking.getId(), "ACTIVE");
+            if (existingActive.isEmpty()) {
+                Utilization newUtil = Utilization.builder()
+                        .booking(booking)
+                        .equipment(equipment)
+                        .user(booking.getUser() != null ? booking.getUser() : currentUser)
+                        .checkInTime(now)
+                        .operatorNotes("Session initiated via booking status change to IN_USE")
+                        .status("ACTIVE")
+                        .build();
+                utilizationRepository.save(newUtil);
+            }
+        } else if (newStatus == BookingStatus.COMPLETED) {
+            if (equipment != null) {
+                equipment.setStatus(EquipmentStatus.AVAILABLE);
+                equipmentRepository.save(equipment);
+            }
+            // Close active utilization session or record completed log
+            Optional<Utilization> activeUtil = utilizationRepository.findFirstByBookingIdAndStatus(booking.getId(), "ACTIVE");
+            if (activeUtil.isPresent()) {
+                Utilization u = activeUtil.get();
+                u.setCheckOutTime(now);
+                long mins = Math.max(1, Duration.between(u.getCheckInTime(), now).toMinutes());
+                u.setActualDurationMinutes(mins);
+                u.setStatus("COMPLETED");
+                utilizationRepository.save(u);
+            } else {
+                Instant checkIn = (booking.getStartTime() != null && booking.getStartTime().isBefore(now))
+                        ? booking.getStartTime()
+                        : now.minusSeconds(180);
+                long mins = Math.max(1, Duration.between(checkIn, now).toMinutes());
+                Utilization u = Utilization.builder()
+                        .booking(booking)
+                        .equipment(equipment)
+                        .user(booking.getUser() != null ? booking.getUser() : currentUser)
+                        .checkInTime(checkIn)
+                        .checkOutTime(now)
+                        .actualDurationMinutes(mins)
+                        .operatorNotes("Session completed via booking status update")
+                        .status("COMPLETED")
+                        .build();
+                utilizationRepository.save(u);
+            }
         } else if (newStatus == BookingStatus.CANCELLED) {
-            booking.setCancelledAt(Instant.now());
+            booking.setCancelledAt(now);
             booking.setCancellationReason(body.getOrDefault("reason", "Cancelled via status dropdown"));
+            if (equipment != null && equipment.getStatus() == EquipmentStatus.IN_USE) {
+                equipment.setStatus(EquipmentStatus.AVAILABLE);
+                equipmentRepository.save(equipment);
+            }
+            Optional<Utilization> activeUtil = utilizationRepository.findFirstByBookingIdAndStatus(booking.getId(), "ACTIVE");
+            if (activeUtil.isPresent()) {
+                Utilization u = activeUtil.get();
+                u.setCheckOutTime(now);
+                u.setStatus("CANCELLED");
+                utilizationRepository.save(u);
+            }
         }
 
         bookingRepository.save(booking);

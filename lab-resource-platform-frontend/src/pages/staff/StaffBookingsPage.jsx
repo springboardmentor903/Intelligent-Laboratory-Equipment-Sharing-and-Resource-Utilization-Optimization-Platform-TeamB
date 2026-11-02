@@ -52,6 +52,15 @@ export default function StaffBookingsPage() {
     }
   }, [isStaff]);
 
+  const refreshBookingsQuietly = useCallback(async () => {
+    try {
+      const res = await api.get("/api/bookings");
+      setBookings(res.data || []);
+    } catch {
+      // background sync
+    }
+  }, []);
+
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
@@ -67,7 +76,22 @@ export default function StaffBookingsPage() {
   useEffect(() => {
     loadColleges();
     loadBookings();
-  }, [loadColleges, loadBookings]);
+
+    const interval = setInterval(refreshBookingsQuietly, 10000);
+    let ws = null;
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws/utilization`);
+      ws.onmessage = () => {
+        refreshBookingsQuietly();
+      };
+    } catch (e) {}
+
+    return () => {
+      clearInterval(interval);
+      if (ws) ws.close();
+    };
+  }, [loadColleges, loadBookings, refreshBookingsQuietly]);
 
   async function handleStatusChange(booking, newStatus) {
     if (!newStatus || newStatus === booking.status) return;
@@ -80,6 +104,40 @@ export default function StaffBookingsPage() {
       toast.success(`Booking #${booking.id} status updated to ${STATUS_CONFIG[newStatus]?.label || newStatus}.`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update booking status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Milestone 2 - T1: Check-in / Start Session directly from booking
+  async function handleBookingCheckIn(b) {
+    setUpdatingId(b.id);
+    try {
+      await api.post("/api/utilization/check-in", {
+        bookingId: b.id,
+        equipmentId: b.equipmentId,
+        notes: "Started session via Bookings Management",
+      });
+      toast.success(`Session started on Booking #${b.id}. Equipment is now marked IN USE.`);
+      loadBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to check in session.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Milestone 2 - T1: Check-out / Stop Session directly from booking
+  async function handleBookingCheckOut(b) {
+    setUpdatingId(b.id);
+    try {
+      await api.post(`/api/utilization/booking/${b.id}/check-out`, {
+        notes: "Session stopped via Bookings Management",
+      });
+      toast.success(`Session completed on Booking #${b.id}. Usage duration recorded.`);
+      loadBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to check out session.");
     } finally {
       setUpdatingId(null);
     }
@@ -151,8 +209,8 @@ export default function StaffBookingsPage() {
           </h1>
           <p className="admin-subtitle">
             {isStaff
-              ? `Manage student equipment bookings for ${currentCollegeName}. Change status directly from the dropdown. Unused confirmed bookings auto-cancel after 1 minute past start time in IST.`
-              : "Review and manage laboratory equipment bookings across all colleges. Change status directly from the dropdown. Auto-scheduler cancels unconfirmed bookings after 1 minute in IST."}
+              ? `Manage student equipment bookings for ${currentCollegeName}. Change status directly from the dropdown, or use quick Check-In/Check-Out to capture live usage.`
+              : "Review and manage laboratory equipment bookings across all colleges. Change status directly from the dropdown or manage live check-in sessions."}
           </p>
         </div>
       </div>
@@ -248,6 +306,7 @@ export default function StaffBookingsPage() {
                 <th>Student / User</th>
                 <th>Schedule (IST)</th>
                 <th>Status (Change Dropdown)</th>
+                <th>Live Telemetry / Usage</th>
               </tr>
             </thead>
             <tbody>
@@ -311,6 +370,34 @@ export default function StaffBookingsPage() {
                           ))}
                         </select>
                       </div>
+                    </td>
+                    <td>
+                      {/* Check-in / Check-out session buttons */}
+                      {b.status === "CONFIRMED" ? (
+                        <button
+                          type="button"
+                          className="staff-checkin-btn"
+                          disabled={isUpdating}
+                          onClick={() => handleBookingCheckIn(b)}
+                          title="Start live session and mark equipment IN USE"
+                        >
+                          ▶️ Check-In
+                        </button>
+                      ) : b.status === "IN_USE" ? (
+                        <button
+                          type="button"
+                          className="staff-checkout-btn"
+                          disabled={isUpdating}
+                          onClick={() => handleBookingCheckOut(b)}
+                          title="Stop session and record duration"
+                        >
+                          ⏹️ Check-Out
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
+                          {b.status === "COMPLETED" ? "Logged ✓" : "—"}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

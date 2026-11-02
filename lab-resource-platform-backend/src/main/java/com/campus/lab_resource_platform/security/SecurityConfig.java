@@ -46,17 +46,16 @@ public class SecurityConfig {
                 .formLogin(formLogin -> formLogin.disable())
 
                 .exceptionHandling(exception -> exception
-                        .defaultAuthenticationEntryPointFor(
-                                (request, response, authException) ->
-                                        response.sendError(
-                                                jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED
-                                        ),
-                                request -> {
-                                    String path = request.getRequestURI();
-                                    return path.startsWith("/api/")
-                                            || path.startsWith("/auth/");
-                                }
-                        )
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required or session expired. Please sign in again.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Access denied: insufficient permissions.\"}");
+                        })
                 )
                 // Google OAuth2 login
                 .oauth2Login(oauth2 -> oauth2
@@ -81,7 +80,9 @@ public class SecurityConfig {
                                 "/api/technician-requests/**",
                                 "/api/access-requests",
                                 "/api/access-requests/**",
-                                "/api/colleges"
+                                "/api/colleges",
+                                "/ws/utilization",
+                                "/ws/utilization/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",
@@ -115,6 +116,16 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/equipment/**")
                         .hasAnyRole(
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        .requestMatchers("/api/utilization/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
                                 "DEPARTMENT_HEAD",

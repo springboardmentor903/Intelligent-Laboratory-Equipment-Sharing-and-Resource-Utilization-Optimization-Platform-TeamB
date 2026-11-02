@@ -5,6 +5,12 @@ import com.campus.lab_resource_platform.booking.entity.BookingHistory;
 import com.campus.lab_resource_platform.booking.entity.BookingStatus;
 import com.campus.lab_resource_platform.booking.repository.BookingHistoryRepository;
 import com.campus.lab_resource_platform.booking.repository.BookingRepository;
+import com.campus.lab_resource_platform.equipment.entity.Equipment;
+import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
+import com.campus.lab_resource_platform.equipment.repository.EquipmentRepository;
+import com.campus.lab_resource_platform.utilization.entity.Utilization;
+import com.campus.lab_resource_platform.utilization.repository.UtilizationRepository;
+import com.campus.lab_resource_platform.utilization.websocket.UtilizationWebSocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -17,6 +23,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BookingAutoScheduler {
@@ -27,14 +34,23 @@ public class BookingAutoScheduler {
     private final BookingRepository bookingRepository;
     private final BookingHistoryRepository bookingHistoryRepository;
     private final WaitlistService waitlistService;
+    private final EquipmentRepository equipmentRepository;
+    private final UtilizationRepository utilizationRepository;
+    private final UtilizationWebSocketHandler webSocketHandler;
 
     public BookingAutoScheduler(
             BookingRepository bookingRepository,
             BookingHistoryRepository bookingHistoryRepository,
-            @Lazy WaitlistService waitlistService) {
+            @Lazy WaitlistService waitlistService,
+            EquipmentRepository equipmentRepository,
+            UtilizationRepository utilizationRepository,
+            @Lazy UtilizationWebSocketHandler webSocketHandler) {
         this.bookingRepository = bookingRepository;
         this.bookingHistoryRepository = bookingHistoryRepository;
         this.waitlistService = waitlistService;
+        this.equipmentRepository = equipmentRepository;
+        this.utilizationRepository = utilizationRepository;
+        this.webSocketHandler = webSocketHandler;
     }
 
     /**
@@ -66,6 +82,99 @@ public class BookingAutoScheduler {
                 log.error("Error processing lifecycle for booking #{}: {}", booking.getId(), e.getMessage(), e);
             }
         }
+
+        try {
+            reconcileActiveSessionsAndEquipments(now);
+        } catch (Exception e) {
+            log.error("Error reconciling active sessions and equipments: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Reconciles orphaned active sessions and stuck equipment statuses across the platform.
+     */
+    public void reconcileActiveSessionsAndEquipments(Instant now) {
+        // 1. Reconcile any orphaned ACTIVE utilization sessions
+        List<Utilization> activeSessions = utilizationRepository.findAllActiveSessions();
+        for (Utilization u : activeSessions) {
+            boolean shouldComplete = false;
+            String reason = null;
+
+            Booking b = u.getBooking();
+            if (b != null) {
+                if (b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CANCELLED) {
+                    shouldComplete = true;
+                    reason = "Booking already " + b.getStatus();
+                } else if (b.getEndTime() != null && !now.isBefore(b.getEndTime())) {
+                    shouldComplete = true;
+                    reason = "Booking scheduled end time reached";
+                    b.setStatus(BookingStatus.COMPLETED);
+                    bookingRepository.save(b);
+                }
+            } else {
+                // Session without booking (ad-hoc): auto-close if running > 4 hours
+                if (u.getCheckInTime() != null && Duration.between(u.getCheckInTime(), now).toHours() >= 4) {
+                    shouldComplete = true;
+                    reason = "Maximum ad-hoc session duration (4h) reached";
+                }
+            }
+
+            if (shouldComplete) {
+                log.info("Self-healing: Auto-completing active utilization session #{} for equipment #{} (Reason: {})",
+                        u.getId(), u.getEquipment() != null ? u.getEquipment().getId() : null, reason);
+                u.setCheckOutTime(now);
+                u.setStatus("COMPLETED");
+                long mins = Math.max(1, Duration.between(u.getCheckInTime() != null ? u.getCheckInTime() : now.minusSeconds(120), now).toMinutes());
+                u.setActualDurationMinutes(mins);
+                if (u.getOperatorNotes() == null || u.getOperatorNotes().isBlank()) {
+                    u.setOperatorNotes("Auto-completed by system: " + reason);
+                }
+                utilizationRepository.save(u);
+
+                if (u.getEquipment() != null && webSocketHandler != null) {
+                    String json = String.format(
+                            "{\"type\":\"CHECK_OUT\",\"equipmentId\":%d,\"utilizationId\":%d,\"status\":\"COMPLETED\",\"timestamp\":\"%s\"}",
+                            u.getEquipment().getId(),
+                            u.getId(),
+                            now.toString()
+                    );
+                    webSocketHandler.broadcastEvent(json);
+                }
+            }
+        }
+
+        // 2. Reconcile any equipments stuck in IN_USE status
+        List<Equipment> allEquipments = equipmentRepository.findAll();
+        for (Equipment eq : allEquipments) {
+            if (eq.getStatus() == EquipmentStatus.IN_USE) {
+                boolean hasActiveSession = utilizationRepository.findFirstByEquipmentIdAndStatus(eq.getId(), "ACTIVE").isPresent();
+                boolean hasActiveBooking = false;
+                List<Booking> eqBookings = bookingRepository.findConflictingBookings(
+                        eq.getId(),
+                        now.minusSeconds(1),
+                        now.plusSeconds(1),
+                        List.of(BookingStatus.IN_USE)
+                );
+                if (!eqBookings.isEmpty()) {
+                    hasActiveBooking = true;
+                }
+
+                if (!hasActiveSession && !hasActiveBooking) {
+                    log.info("Self-healing: Resetting stuck IN_USE equipment #{} ({}) back to AVAILABLE", eq.getId(), eq.getName());
+                    eq.setStatus(EquipmentStatus.AVAILABLE);
+                    equipmentRepository.save(eq);
+
+                    if (webSocketHandler != null) {
+                        String json = String.format(
+                                "{\"type\":\"STATUS_CHANGE\",\"equipmentId\":%d,\"status\":\"AVAILABLE\",\"timestamp\":\"%s\"}",
+                                eq.getId(),
+                                now.toString()
+                        );
+                        webSocketHandler.broadcastEvent(json);
+                    }
+                }
+            }
+        }
     }
 
     private void processSingleBooking(Booking booking, Instant now, ZonedDateTime nowIst) {
@@ -91,6 +200,51 @@ public class BookingAutoScheduler {
 
                 saveHistoryQuietly(booking, currentStatus, BookingStatus.COMPLETED, now,
                         "System auto-completed: Selected time range ended in IST");
+
+                // Complete utilization session and reset equipment status
+                Equipment equipment = booking.getEquipment();
+                if (equipment != null) {
+                    equipment.setStatus(EquipmentStatus.AVAILABLE);
+                    equipmentRepository.save(equipment);
+                }
+
+                try {
+                    Optional<Utilization> activeUtil = utilizationRepository.findFirstByBookingIdAndStatus(booking.getId(), "ACTIVE");
+                    Utilization u;
+                    if (activeUtil.isPresent()) {
+                        u = activeUtil.get();
+                        u.setCheckOutTime(now);
+                        long mins = Math.max(1, Duration.between(u.getCheckInTime(), now).toMinutes());
+                        u.setActualDurationMinutes(mins);
+                        u.setStatus("COMPLETED");
+                    } else {
+                        Instant checkIn = booking.getStartTime() != null ? booking.getStartTime() : now.minusSeconds(180);
+                        long mins = Math.max(1, Duration.between(checkIn, now).toMinutes());
+                        u = Utilization.builder()
+                                .booking(booking)
+                                .equipment(equipment)
+                                .user(booking.getUser())
+                                .checkInTime(checkIn)
+                                .checkOutTime(now)
+                                .actualDurationMinutes(mins)
+                                .operatorNotes("Auto-completed by scheduler at scheduled end time")
+                                .status("COMPLETED")
+                                .build();
+                    }
+                    utilizationRepository.save(u);
+
+                    if (webSocketHandler != null && equipment != null) {
+                        String json = String.format(
+                                "{\"type\":\"CHECK_OUT\",\"equipmentId\":%d,\"utilizationId\":%d,\"status\":\"COMPLETED\",\"timestamp\":\"%s\"}",
+                                equipment.getId(),
+                                u.getId() != null ? u.getId() : 0,
+                                Instant.now().toString()
+                        );
+                        webSocketHandler.broadcastEvent(json);
+                    }
+                } catch (Exception ex) {
+                    log.warn("Could not record utilization completion for auto-completed booking #{}: {}", booking.getId(), ex.getMessage());
+                }
             }
         } else {
             // Case 2: Status is anything EXCEPT IN_USE (PENDING_APPROVAL, CONFIRMED, etc.)
@@ -108,6 +262,12 @@ public class BookingAutoScheduler {
 
                 saveHistoryQuietly(booking, currentStatus, BookingStatus.CANCELLED, now,
                         "System auto-cancelled: 1-minute start time grace period elapsed without IN_USE status");
+
+                // Ensure equipment is available if it was tied to this booking
+                if (booking.getEquipment() != null && booking.getEquipment().getStatus() == EquipmentStatus.IN_USE) {
+                    booking.getEquipment().setStatus(EquipmentStatus.AVAILABLE);
+                    equipmentRepository.save(booking.getEquipment());
+                }
 
                 // Auto-promote any waiting student for this released slot
                 if (booking.getEquipment() != null) {

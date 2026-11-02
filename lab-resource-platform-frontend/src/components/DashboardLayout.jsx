@@ -98,13 +98,26 @@ function DashboardLayout() {
     <div className={`dashboard-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
       {/* Fixed Sticky Top Navbar Header */}
       <header className="fixed-top-navbar">
-        <div className="navbar-brand-section">
-          <div className="brand header-brand">
-            <span className="brand-mark">L</span>
-            <span className="brand-text">LabResource</span>
-          </div>
+        <div className="navbar-left-cluster">
+          {/* Mobile hamburger button */}
+          <button
+            type="button"
+            className="navbar-hamburger-btn"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            aria-label="Toggle navigation drawer"
+          >
+            <span className="hamburger-bar" />
+            <span className="hamburger-bar" />
+            <span className="hamburger-bar" />
+          </button>
 
-          {/* Toggle Sidebar Button (Right next to LabResource logo) */}
+          {/* Platform brand logo */}
+          <Link to="/dashboard" className="navbar-brand-pill">
+            <span className="brand-logo-icon">L</span>
+            <span className="brand-title-text">LabResource</span>
+          </Link>
+
+          {/* Desktop sidebar expand / collapse toggle */}
           <button
             type="button"
             className="sidebar-toggle-btn"
@@ -113,9 +126,9 @@ function DashboardLayout() {
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <svg
-              className="sidebar-toggle-icon"
-              width="20"
-              height="20"
+              className="toggle-sidebar-svg"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -123,25 +136,26 @@ function DashboardLayout() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <rect x="3" y="3" width="18" height="18" rx="4" />
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <line x1="9" y1="3" x2="9" y2="21" />
             </svg>
           </button>
         </div>
 
-        {/* Top Navbar Right: Profile Button & Dropdown */}
-        <div className="navbar-profile-section" ref={dropdownRef}>
+        {/* Right side Profile Icon with Dropdown Menu */}
+        <div className="navbar-right-cluster" ref={dropdownRef}>
           <button
             type="button"
-            className="myntra-profile-btn"
+            className={`myntra-profile-btn ${profileDropdownOpen ? "active" : ""}`}
             onClick={() => setProfileDropdownOpen((prev) => !prev)}
             aria-expanded={profileDropdownOpen}
             aria-haspopup="true"
+            aria-label="Open profile menu"
           >
             <svg
-              className="myntra-profile-icon"
-              width="22"
-              height="22"
+              className="myntra-profile-svg"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -273,6 +287,18 @@ function DashboardLayout() {
                 </NavLink>
 
                 <NavLink
+                  to="/dashboard/utilization"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Live Utilization"
+                >
+                  <span className="nav-icon">⚡</span>
+                  <span className="nav-text">Live Utilization</span>
+                </NavLink>
+
+                <NavLink
                   to="/dashboard/admin/accounts"
                   className={({ isActive }) =>
                     `sidebar-nav-item ${isActive ? "active" : ""}`
@@ -323,6 +349,18 @@ function DashboardLayout() {
                   <span className="nav-icon">📅</span>
                   <span className="nav-text">Booking History</span>
                 </NavLink>
+
+                <NavLink
+                  to="/dashboard/utilization"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Live Telemetry"
+                >
+                  <span className="nav-icon">⚡</span>
+                  <span className="nav-text">Live Telemetry</span>
+                </NavLink>
               </>
             ) : isInstitutionAdmin || isDepartmentHead || isLabManager || isTechnician ? (
               /* Institute Admin, Department Head, Lab Manager, Lab Technician Navigation */
@@ -363,6 +401,18 @@ function DashboardLayout() {
                   <span className="nav-icon">📅</span>
                   <span className="nav-text">Bookings</span>
                 </NavLink>
+
+                <NavLink
+                  to="/dashboard/utilization"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Live Utilization"
+                >
+                  <span className="nav-icon">⚡</span>
+                  <span className="nav-text">Live Utilization</span>
+                </NavLink>
               </>
             ) : (
               /* Other Generic Roles (Fallback) */
@@ -377,6 +427,18 @@ function DashboardLayout() {
                   title="Overview"
                 >
                   <span className="nav-text">Overview</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/utilization"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Live Utilization"
+                >
+                  <span className="nav-icon">⚡</span>
+                  <span className="nav-text">Live Utilization</span>
                 </NavLink>
 
                 <NavLink
