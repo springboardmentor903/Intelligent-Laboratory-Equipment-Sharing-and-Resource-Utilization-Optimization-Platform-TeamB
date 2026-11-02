@@ -2,12 +2,14 @@ package com.campus.lab_resource_platform.equipment.controller;
 
 import com.campus.lab_resource_platform.booking.dto.AvailabilitySlotResponse;
 import com.campus.lab_resource_platform.booking.dto.SlotRecommendationResponse;
+import com.campus.lab_resource_platform.booking.service.BookingAutoScheduler;
 import com.campus.lab_resource_platform.booking.service.BookingOptimizationService;
 import com.campus.lab_resource_platform.booking.service.BookingService;
 import com.campus.lab_resource_platform.equipment.entity.Equipment;
 import com.campus.lab_resource_platform.equipment.service.EquipmentService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,16 +37,19 @@ public class EquipmentController {
     private final EquipmentService equipmentService;
     private final UserRepository userRepository;
     private final BookingOptimizationService bookingOptimizationService;
+    private final BookingAutoScheduler bookingAutoScheduler;
 
     public EquipmentController(
             BookingService bookingService,
             EquipmentService equipmentService,
             UserRepository userRepository,
-            BookingOptimizationService bookingOptimizationService) {
+            BookingOptimizationService bookingOptimizationService,
+            @Lazy BookingAutoScheduler bookingAutoScheduler) {
         this.bookingService = bookingService;
         this.equipmentService = equipmentService;
         this.userRepository = userRepository;
         this.bookingOptimizationService = bookingOptimizationService;
+        this.bookingAutoScheduler = bookingAutoScheduler;
     }
 
     private User getAuthenticatedUser(Authentication authentication) {
@@ -67,6 +72,10 @@ public class EquipmentController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
             Authentication authentication) {
+
+        try {
+            bookingAutoScheduler.processBookingLifecycle();
+        } catch (Exception ignored) {}
 
         User currentUser = getAuthenticatedUser(authentication);
         final Long targetCollegeId;
@@ -110,6 +119,10 @@ public class EquipmentController {
     public ResponseEntity<Equipment> getEquipmentById(
             @PathVariable Long id,
             Authentication authentication) {
+        try {
+            bookingAutoScheduler.processBookingLifecycle();
+        } catch (Exception ignored) {}
+
         Equipment equipment = equipmentService.getEquipmentById(id);
         User currentUser = getAuthenticatedUser(authentication);
 

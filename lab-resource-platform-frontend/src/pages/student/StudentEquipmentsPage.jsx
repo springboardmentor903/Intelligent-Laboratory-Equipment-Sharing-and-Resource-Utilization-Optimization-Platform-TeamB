@@ -32,6 +32,15 @@ export default function StudentEquipmentsPage() {
     }
   }, []);
 
+  const refreshEquipmentsQuietly = useCallback(async () => {
+    try {
+      const res = await api.get("/api/equipment");
+      setEquipments(res.data || []);
+    } catch {
+      // background sync
+    }
+  }, []);
+
   const loadEquipments = useCallback(async () => {
     setLoading(true);
     try {
@@ -47,7 +56,27 @@ export default function StudentEquipmentsPage() {
   useEffect(() => {
     loadColleges();
     loadEquipments();
-  }, [loadColleges, loadEquipments]);
+
+    // Auto-sync status every 10 seconds with the backend scheduler
+    const interval = setInterval(refreshEquipmentsQuietly, 10000);
+
+    // WebSocket real-time updates
+    let ws = null;
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws/utilization`);
+      ws.onmessage = () => {
+        refreshEquipmentsQuietly();
+      };
+    } catch (e) {
+      // ignore ws setup error
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (ws) ws.close();
+    };
+  }, [loadColleges, loadEquipments, refreshEquipmentsQuietly]);
 
   // Unique categories for filtering
   const categories = Array.from(

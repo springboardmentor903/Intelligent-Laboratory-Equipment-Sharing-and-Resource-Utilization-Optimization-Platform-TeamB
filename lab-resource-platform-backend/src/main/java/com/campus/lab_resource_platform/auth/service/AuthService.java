@@ -130,7 +130,7 @@ public class AuthService {
             cookie.setHttpOnly(true);
             cookie.setSecure(false);
             cookie.setPath("/");
-            cookie.setMaxAge(60 * 60);
+            cookie.setMaxAge(24 * 60 * 60);
 
             response.addCookie(cookie);
         }

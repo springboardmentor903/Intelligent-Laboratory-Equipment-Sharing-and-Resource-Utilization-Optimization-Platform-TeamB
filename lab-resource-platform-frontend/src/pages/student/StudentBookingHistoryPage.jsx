@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 const STATUS_META = {
   PENDING_APPROVAL: { label: "Pending Approval", color: "status-pending" },
@@ -21,7 +22,6 @@ function formatDateTime(isoString) {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
     });
   } catch {
     return isoString;
@@ -40,6 +40,7 @@ function formatDuration(start, end) {
 
 function StudentBookingHistoryPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "waitlist"
 
   const [bookings, setBookings] = useState([]);
@@ -47,9 +48,27 @@ function StudentBookingHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [sessionActionId, setSessionActionId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [leavingWaitlistId, setLeavingWaitlistId] = useState(null);
+
+  const fetchBookingsQuietly = useCallback(async () => {
+    try {
+      const res = await api.get(
+        "/api/bookings/my?page=0&size=100&sortBy=createdAt&direction=desc"
+      );
+      const data = res.data;
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.content)
+        ? data.content
+        : [];
+      setBookings(list);
+    } catch {
+      // background sync
+    }
+  }, []);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -84,7 +103,22 @@ function StudentBookingHistoryPage() {
   useEffect(() => {
     fetchBookings();
     fetchWaitlist();
-  }, [fetchBookings, fetchWaitlist]);
+
+    const interval = setInterval(fetchBookingsQuietly, 10000);
+    let ws = null;
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws/utilization`);
+      ws.onmessage = () => {
+        fetchBookingsQuietly();
+      };
+    } catch (e) {}
+
+    return () => {
+      clearInterval(interval);
+      if (ws) ws.close();
+    };
+  }, [fetchBookings, fetchWaitlist, fetchBookingsQuietly]);
 
   async function handleCancel(bookingId) {
     if (!window.confirm("Are you sure you want to cancel this booking?"))
@@ -104,14 +138,49 @@ function StudentBookingHistoryPage() {
     }
   }
 
+  // Milestone 2 - T1: Student Check-In (Start session)
+  async function handleStudentCheckIn(booking) {
+    setSessionActionId(booking.id);
+    try {
+      await api.post("/api/utilization/check-in", {
+        bookingId: booking.id,
+        equipmentId: booking.equipmentId,
+        notes: "Student started laboratory session",
+      });
+      toast.success("Session started! Equipment is now IN USE.");
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Check-in failed.");
+    } finally {
+      setSessionActionId(null);
+    }
+  }
+
+  // Milestone 2 - T1: Student Check-Out (Stop session)
+  async function handleStudentCheckOut(booking) {
+    setSessionActionId(booking.id);
+    try {
+      await api.post(`/api/utilization/booking/${booking.id}/check-out`, {
+        notes: "Student finished session",
+      });
+      toast.success("Session completed! Usage duration logged.");
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Check-out failed.");
+    } finally {
+      setSessionActionId(null);
+    }
+  }
+
   async function handleLeaveWaitlist(id) {
     if (!window.confirm("Are you sure you want to leave this waitlist?")) return;
     setLeavingWaitlistId(id);
     try {
       await api.delete(`/api/waitlist/${id}`);
       setWaitlist((prev) => prev.filter((w) => w.id !== id));
+      toast.success("Removed from waitlist.");
     } catch {
-      alert("Failed to leave waitlist.");
+      toast.error("Failed to leave waitlist.");
     } finally {
       setLeavingWaitlistId(null);
     }
@@ -121,9 +190,8 @@ function StudentBookingHistoryPage() {
   const stats = {
     total: bookings.length,
     pending: bookings.filter((b) => b.status === "PENDING_APPROVAL").length,
-    confirmed: bookings.filter(
-      (b) => b.status === "CONFIRMED" || b.status === "IN_USE"
-    ).length,
+    confirmed: bookings.filter((b) => b.status === "CONFIRMED").length,
+    inUse: bookings.filter((b) => b.status === "IN_USE").length,
     completed: bookings.filter((b) => b.status === "COMPLETED").length,
     cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
     waitlistCount: waitlist.filter((w) => w.status === "WAITING").length,
@@ -151,7 +219,7 @@ function StudentBookingHistoryPage() {
         <div>
           <h1 className="bh-title">My Bookings &amp; Waitlists</h1>
           <p className="bh-subtitle">
-            Track all your reservations, recurring sessions, and equipment waitlist queue positions.
+            Track all your reservations, check-in to active sessions, and monitor waitlist queue positions.
           </p>
         </div>
         <button
@@ -195,7 +263,11 @@ function StudentBookingHistoryPage() {
             </div>
             <div className="bh-stat-card bh-stat-confirmed">
               <span className="bh-stat-num">{stats.confirmed}</span>
-              <span className="bh-stat-label">Confirmed / In Use</span>
+              <span className="bh-stat-label">Confirmed</span>
+            </div>
+            <div className="bh-stat-card bh-stat-inuse" style={{ background: "#e0f2fe", borderColor: "#bae6fd" }}>
+              <span className="bh-stat-num" style={{ color: "#0284c7" }}>{stats.inUse}</span>
+              <span className="bh-stat-label">In Use (Active)</span>
             </div>
             <div className="bh-stat-card bh-stat-completed">
               <span className="bh-stat-num">{stats.completed}</span>
@@ -279,6 +351,9 @@ function StudentBookingHistoryPage() {
                 const canCancel =
                   booking.status === "PENDING_APPROVAL" ||
                   booking.status === "CONFIRMED";
+                const isConfirmed = booking.status === "CONFIRMED";
+                const isInUse = booking.status === "IN_USE";
+                const isActionLoading = sessionActionId === booking.id;
                 const duration = formatDuration(booking.startTime, booking.endTime);
 
                 return (
@@ -340,20 +415,45 @@ function StudentBookingHistoryPage() {
                       )}
                     </div>
 
-                    {canCancel && (
-                      <div className="bh-card-footer">
+                    <div className="bh-card-footer" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {/* Live Check-in / Check-out session buttons for student */}
+                      {isConfirmed && (
+                        <button
+                          type="button"
+                          className="bh-checkin-action-btn"
+                          disabled={isActionLoading}
+                          onClick={() => handleStudentCheckIn(booking)}
+                          title="Start laboratory session"
+                        >
+                          ▶️ Check-In (Start Session)
+                        </button>
+                      )}
+
+                      {isInUse && (
+                        <button
+                          type="button"
+                          className="bh-checkout-action-btn"
+                          disabled={isActionLoading}
+                          onClick={() => handleStudentCheckOut(booking)}
+                          title="Finish laboratory session and log usage"
+                        >
+                          ⏹️ Check-Out (Complete Session)
+                        </button>
+                      )}
+
+                      {canCancel && (
                         <button
                           type="button"
                           className="bh-cancel-btn"
-                          disabled={cancellingId === booking.id}
+                          disabled={cancellingId === booking.id || isActionLoading}
                           onClick={() => handleCancel(booking.id)}
                         >
                           {cancellingId === booking.id
                             ? "Cancelling…"
                             : "Cancel Booking"}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })}

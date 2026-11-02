@@ -33,6 +33,7 @@ import AdminEquipmentsPage from "./pages/admin/AdminEquipmentsPage";
 import AdminRoleRequestsPage from "./pages/admin/AdminRoleRequestsPage";
 import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
+import LiveUtilizationPage from "./pages/utilization/LiveUtilizationPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -64,6 +65,7 @@ function AuthProvider({ children }) {
       })
       .catch(() => {
         if (!ignore) {
+          localStorage.removeItem("token");
           setUser(null);
         }
       })
@@ -73,13 +75,22 @@ function AuthProvider({ children }) {
         }
       });
 
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+
     return () => {
       ignore = true;
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
     };
   }, []);
 
   async function login(credentials) {
-    await api.post("/api/auth/mylogin", credentials);
+    const response = await api.post("/api/auth/mylogin", credentials);
+    if (response.data?.token) {
+      localStorage.setItem("token", response.data.token);
+    }
     return refreshUser();
   }
 
@@ -93,39 +104,50 @@ function AuthProvider({ children }) {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
+      localStorage.removeItem("token");
       setUser(null);
     }
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, refreshUser }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        refreshUser,
+        isAuthenticated: Boolean(user),
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-function DashboardRedirect() {
-  const { user, loading } = useAuth();
+function RoleDefaultRedirect() {
+  const { user } = useAuth();
 
-  if (loading) return <p>Loading workspace...</p>;
-  if (!user) return <Navigate to="/login" replace />;
-
-  const routes = {
-    RESEARCHER_STUDENT: "/dashboard/student",
-    LAB_TECHNICIAN: "/dashboard/technician",
-    LAB_MANAGER: "/dashboard/lab-manager",
-    DEPARTMENT_HEAD: "/dashboard/department-head",
-    INSTITUTION_ADMINISTRATOR: "/dashboard/institution-admin",
-    SYSTEM_ADMINISTRATOR: "/dashboard/system-admin",
-  };
-
-  return <Navigate to={routes[user.role] || "/login"} replace />;
+  switch (user?.role) {
+    case "RESEARCHER_STUDENT":
+      return <Navigate to="/dashboard/student" replace />;
+    case "LAB_TECHNICIAN":
+      return <Navigate to="/dashboard/technician" replace />;
+    case "LAB_MANAGER":
+      return <Navigate to="/dashboard/lab-manager" replace />;
+    case "DEPARTMENT_HEAD":
+      return <Navigate to="/dashboard/department-head" replace />;
+    case "INSTITUTION_ADMINISTRATOR":
+      return <Navigate to="/dashboard/institution-admin" replace />;
+    case "SYSTEM_ADMINISTRATOR":
+      return <Navigate to="/dashboard/system-admin" replace />;
+    default:
+      return <Navigate to="/login" replace />;
+  }
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -148,9 +170,37 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardRedirect />} />
-        
-        {/* Student / Researcher Routes */}
+        <Route index element={<RoleDefaultRedirect />} />
+
+        {/* Dedicated standalone equipment creation page */}
+        <Route
+          path="equipment/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "LAB_TECHNICIAN",
+                "LAB_MANAGER",
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <CreateEquipmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Live Utilization Telemetry & Monitoring (Milestone 2 - T1 & T8) */}
+        <Route
+          path="utilization"
+          element={
+            <ProtectedRoute>
+              <LiveUtilizationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Routes */}
         <Route
           path="student"
           element={
@@ -180,16 +230,6 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["RESEARCHER_STUDENT"]}>
               <StudentBookingHistoryPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Create Equipment Page - For staff roles */}
-        <Route
-          path="equipment/create"
-          element={
-            <ProtectedRoute allowedRoles={["LAB_TECHNICIAN", "LAB_MANAGER", "DEPARTMENT_HEAD", "INSTITUTION_ADMINISTRATOR", "SYSTEM_ADMINISTRATOR"]}>
-              <CreateEquipmentPage />
             </ProtectedRoute>
           }
         />

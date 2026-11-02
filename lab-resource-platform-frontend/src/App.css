@@ -5587,3 +5587,554 @@ tbody tr:hover {
   color: #92400e;
   border: 1px solid #fef3c7;
 }
+
+
+/* ==========================================================================
+   Milestone 2 - Tasks T1 & T8: Real-Time Utilization Monitoring & Telemetry
+   ========================================================================== */
+
+.util-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.util-ws-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.util-ws-badge.connected {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.util-ws-badge.reconnecting {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.util-ws-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
+  animation: utilPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes utilPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* KPI Grid */
+.util-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.util-kpi-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.util-kpi-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.util-kpi-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.util-kpi-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.util-kpi-num {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.util-kpi-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.util-kpi-active {
+  border-left: 4px solid #0284c7;
+}
+
+.util-kpi-active .util-kpi-num {
+  color: #0284c7;
+}
+
+.util-kpi-avail {
+  border-left: 4px solid #16a34a;
+}
+
+.util-kpi-avail .util-kpi-num {
+  color: #16a34a;
+}
+
+.util-kpi-rate {
+  border-left: 4px solid #8b5cf6;
+}
+
+.util-kpi-rate .util-kpi-num {
+  color: #8b5cf6;
+}
+
+.util-kpi-hours {
+  border-left: 4px solid #f59e0b;
+}
+
+.util-kpi-hours .util-kpi-num {
+  color: #d97706;
+}
+
+.util-kpi-pulse {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #0284c7;
+  animation: utilPulse 1.2s infinite ease-in-out;
+}
+
+/* Section Header */
+.util-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.util-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.util-section-count {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Equipment Telemetry Cards Grid */
+.util-equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.util-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.util-card.card-in-use {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.1);
+}
+
+.util-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.util-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.pill-in-use {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+.pill-available {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.util-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.pill-in-use .util-status-dot {
+  animation: utilPulse 1.2s infinite;
+}
+
+.util-card-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.util-meta-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.util-location {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+/* Active Session Telemetry */
+.util-active-session-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.util-active-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0369a1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.util-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #0284c7;
+  display: inline-block;
+  animation: utilPulse 1s infinite ease-in-out;
+}
+
+.util-active-user {
+  font-size: 0.84rem;
+  color: #0c4a6e;
+  margin-bottom: 4px;
+}
+
+.util-active-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #0369a1;
+}
+
+.util-elapsed-badge {
+  background: #0284c7;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.util-idle-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 14px;
+}
+
+/* Utilization Progress Bar */
+.util-progress-section {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  margin-bottom: 14px;
+}
+
+.util-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.util-progress-label strong {
+  color: #0f172a;
+}
+
+.util-progress-bar {
+  height: 7px;
+  background-color: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.util-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.util-progress-fill.high { background-color: #8b5cf6; }
+.util-progress-fill.med  { background-color: #3b82f6; }
+.util-progress-fill.low  { background-color: #10b981; }
+
+.util-progress-sub {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* Actions Footer */
+.util-card-footer {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.util-start-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.util-start-btn:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.util-start-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.util-stop-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.util-stop-btn:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.util-logs-btn {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.util-logs-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Check-In / Check-Out Buttons in Bookings tables and cards */
+.staff-checkin-btn {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.staff-checkin-btn:hover:not(:disabled) {
+  background-color: #bbf7d0;
+  border-color: #4ade80;
+}
+
+.staff-checkout-btn {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.staff-checkout-btn:hover:not(:disabled) {
+  background-color: #fecaca;
+  border-color: #f87171;
+}
+
+.bh-checkin-action-btn {
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.bh-checkin-action-btn:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.bh-checkout-action-btn {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.bh-checkout-action-btn:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+/* Historical Usage Logs Items */
+.util-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.util-log-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.util-log-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.util-log-duration {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.util-log-user {
+  font-size: 0.86rem;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.util-log-times {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.util-log-notes {
+  font-size: 0.78rem;
+  color: #475569;
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px dashed #cbd5e1;
+  margin-top: 6px;
+}

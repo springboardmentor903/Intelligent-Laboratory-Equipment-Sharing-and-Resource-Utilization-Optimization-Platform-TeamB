@@ -39,15 +39,21 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = null;
         String authorizationHeader = req.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            token = authorizationHeader.substring(7).trim();
+            String candidate = authorizationHeader.substring(7).trim();
+            if (!candidate.isEmpty() && !"null".equalsIgnoreCase(candidate) && !"undefined".equalsIgnoreCase(candidate)) {
+                token = candidate;
+            }
         }
 
-        Cookie[] cookies = req.getCookies();
-        if (token == null && cookies != null) {
-            for (Cookie cookie : cookies) {
+        // If no Bearer token or it fails validation, fall back to the "jwt" cookie
+        if ((token == null || !jwtService.validateToken(token)) && req.getCookies() != null) {
+            for (Cookie cookie : req.getCookies()) {
                 if ("jwt".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
+                    String cookieVal = cookie.getValue();
+                    if (cookieVal != null && !cookieVal.isBlank() && !"null".equalsIgnoreCase(cookieVal)) {
+                        token = cookieVal;
+                        break;
+                    }
                 }
             }
         }
