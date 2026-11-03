@@ -81,8 +81,11 @@ public class SecurityConfig {
                                 "/api/access-requests",
                                 "/api/access-requests/**",
                                 "/api/colleges",
+                                "/api/departments",
+                                "/api/departments/**",
                                 "/ws/utilization",
-                                "/ws/utilization/**"
+                                "/ws/utilization/**",
+                                "/error"
                         ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",

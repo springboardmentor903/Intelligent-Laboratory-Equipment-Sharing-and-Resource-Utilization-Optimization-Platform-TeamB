@@ -31,4 +31,14 @@ public interface UtilizationRepository extends JpaRepository<Utilization, Long> 
 
     @Query("SELECT u FROM Utilization u WHERE u.status = 'ACTIVE'")
     List<Utilization> findAllActiveSessions();
+
+    @Query("SELECT u FROM Utilization u WHERE u.equipment.id IN :equipmentIds " +
+           "AND (u.checkOutTime IS NULL OR u.checkOutTime >= :rangeStart) " +
+           "AND u.checkInTime <= :rangeEnd " +
+           "ORDER BY u.checkInTime ASC")
+    List<Utilization> findUtilizationsInRangeForEquipments(
+            @Param("equipmentIds") java.util.Collection<Long> equipmentIds,
+            @Param("rangeStart") Instant rangeStart,
+            @Param("rangeEnd") Instant rangeEnd
+    );
 }
