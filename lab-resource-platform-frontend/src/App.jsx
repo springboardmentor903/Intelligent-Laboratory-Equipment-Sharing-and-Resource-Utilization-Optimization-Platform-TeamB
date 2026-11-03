@@ -34,6 +34,7 @@ import AdminRoleRequestsPage from "./pages/admin/AdminRoleRequestsPage";
 import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
 import LiveUtilizationPage from "./pages/utilization/LiveUtilizationPage";
+import UtilizationAnalyticsPage from "./pages/analytics/UtilizationAnalyticsPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -201,6 +202,21 @@ function AppRoutes() {
         />
 
         {/* Student Routes */}
+        <Route
+          path="analytics"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "LAB_MANAGER",
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <UtilizationAnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="student"
           element={

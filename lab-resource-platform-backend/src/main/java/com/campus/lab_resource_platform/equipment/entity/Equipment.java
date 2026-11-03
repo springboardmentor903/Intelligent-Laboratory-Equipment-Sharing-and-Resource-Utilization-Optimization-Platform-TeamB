@@ -21,6 +21,9 @@ public class Equipment {
     @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(name = "asset_tag", length = 50)
+    private String assetTag;
+
     @Column(length = 1000)
     private String description;
 
@@ -76,7 +79,7 @@ public class Equipment {
     @Builder.Default
     private int maxBookingHours = 8;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "is_active", nullable = false, columnDefinition = "boolean default true")
     @Builder.Default
     private boolean active = true;
 
@@ -91,6 +94,9 @@ public class Equipment {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
+        if (assetTag == null || assetTag.isBlank()) {
+            assetTag = "EQ-" + System.currentTimeMillis() % 100000;
+        }
     }
 
     @PreUpdate

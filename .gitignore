@@ -1,0 +1,23 @@
+# Environment files containing local secrets
+.env
+.env*.local
+*.env
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Build artifacts
+**/target/
+**/build/
+**/dist/
+**/node_modules/
+*.log

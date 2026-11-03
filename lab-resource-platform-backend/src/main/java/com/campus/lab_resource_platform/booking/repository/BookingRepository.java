@@ -42,4 +42,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByUserIdAndStatus(Long userId, BookingStatus status, Pageable pageable);
 
     List<Booking> findByRecurrenceGroupId(String recurrenceGroupId);
+
+    @Query("SELECT b FROM Booking b WHERE b.equipment.id IN :equipmentIds " +
+           "AND b.endTime >= :rangeStart AND b.startTime <= :rangeEnd " +
+           "ORDER BY b.startTime ASC")
+    List<Booking> findBookingsInDateRangeForEquipments(
+            @Param("equipmentIds") Collection<Long> equipmentIds,
+            @Param("rangeStart") Instant rangeStart,
+            @Param("rangeEnd") Instant rangeEnd
+    );
+
+    @Query("SELECT b FROM Booking b WHERE b.equipment.id = :equipmentId " +
+           "AND b.status IN ('COMPLETED', 'IN_USE', 'CONFIRMED') " +
+           "ORDER BY b.endTime DESC")
+    List<Booking> findRecentCompletedOrConfirmedBookings(@Param("equipmentId") Long equipmentId);
 }

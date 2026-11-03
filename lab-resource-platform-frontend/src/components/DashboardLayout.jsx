@@ -18,6 +18,7 @@ function DashboardLayout() {
   const isDepartmentHead = user?.role === "DEPARTMENT_HEAD";
   const isLabManager = user?.role === "LAB_MANAGER";
   const isTechnician = user?.role === "LAB_TECHNICIAN";
+  const canAccessAnalytics = isSystemAdmin || isInstitutionAdmin || isDepartmentHead || isLabManager;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -299,6 +300,18 @@ function DashboardLayout() {
                 </NavLink>
 
                 <NavLink
+                  to="/dashboard/analytics"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Utilization Analytics"
+                >
+                  <span className="nav-icon">📊</span>
+                  <span className="nav-text">Analytics Engine</span>
+                </NavLink>
+
+                <NavLink
                   to="/dashboard/admin/accounts"
                   className={({ isActive }) =>
                     `sidebar-nav-item ${isActive ? "active" : ""}`
@@ -413,6 +426,18 @@ function DashboardLayout() {
                   <span className="nav-icon">⚡</span>
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
+
+                <NavLink
+                  to="/dashboard/analytics"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Utilization Analytics"
+                >
+                  <span className="nav-icon">📊</span>
+                  <span className="nav-text">Analytics Engine</span>
+                </NavLink>
               </>
             ) : (
               /* Other Generic Roles (Fallback) */
@@ -439,6 +464,18 @@ function DashboardLayout() {
                 >
                   <span className="nav-icon">⚡</span>
                   <span className="nav-text">Live Utilization</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/analytics"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Utilization Analytics"
+                >
+                  <span className="nav-icon">📊</span>
+                  <span className="nav-text">Analytics Engine</span>
                 </NavLink>
 
                 <NavLink

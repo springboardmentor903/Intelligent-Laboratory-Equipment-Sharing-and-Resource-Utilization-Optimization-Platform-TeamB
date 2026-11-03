@@ -37,5 +37,10 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
     );
 
     boolean existsByEquipmentIdAndUserIdAndStatus(Long equipmentId, Long userId, WaitlistStatus status);
+
+    long countByEquipmentId(Long equipmentId);
+
+    @Query("SELECT w.equipment.id, COUNT(w) FROM WaitlistEntry w WHERE w.status = 'WAITING' GROUP BY w.equipment.id")
+    List<Object[]> countActiveGroupedByEquipment();
 }
 
