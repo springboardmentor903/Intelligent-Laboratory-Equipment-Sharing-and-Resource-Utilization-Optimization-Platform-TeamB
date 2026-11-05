@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useSearch } from "../../context/SearchContext";
+import FilterDropdown from "../../components/FilterDropdown";
 import EquipmentAvailabilityModal from "../../components/EquipmentAvailabilityModal";
+import EditEquipmentModal from "../../components/EditEquipmentModal";
 
 const STATUS_CONFIG = {
   AVAILABLE: { bg: "#dcfce7", text: "#15803d", label: "Available" },
@@ -16,6 +19,7 @@ export default function StaffEquipmentsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
+  const { searchTerm, setSearchPlaceholder } = useSearch();
 
   const isStaff = [
     "INSTITUTION_ADMINISTRATOR",
@@ -28,11 +32,15 @@ export default function StaffEquipmentsPage() {
   const [selectedCollegeId, setSelectedCollegeId] = useState("");
   const [equipments, setEquipments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [selectedEquipmentForAvail, setSelectedEquipmentForAvail] = useState(null);
+  const [editingEquipment, setEditingEquipment] = useState(null);
+
+  useEffect(() => {
+    setSearchPlaceholder("Search by instrument name, model, specs, tags...");
+  }, [setSearchPlaceholder]);
 
   const loadColleges = useCallback(async () => {
     // Only System Admin needs full list of colleges to filter
@@ -128,8 +136,8 @@ export default function StaffEquipmentsPage() {
   const currentCollegeName = isStaff
     ? user?.collegeName || "Your College"
     : selectedCollegeId
-    ? collegeMap[selectedCollegeId] || "Selected College"
-    : "All Colleges";
+      ? collegeMap[selectedCollegeId] || "Selected College"
+      : "All Colleges";
 
   // Filter equipments by selected college (for System Admin), category, and search term
   const filteredEquipments = equipments.filter((item) => {
@@ -160,7 +168,7 @@ export default function StaffEquipmentsPage() {
 
   return (
     <div className="admin-page-container">
-      {/* Page Header */}
+      {/* Page Header with Actions and Filter Dropdown */}
       <div className="admin-header-row">
         <div>
           <p className="admin-eyebrow">LABORATORY ASSETS &amp; CATALOG</p>
@@ -174,84 +182,26 @@ export default function StaffEquipmentsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="admin-btn-primary"
-          onClick={() => navigate("/dashboard/equipment/create")}
-        >
-          + Register Equipment
-        </button>
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="admin-filter-bar">
-        {/* Only System Admin sees the College Dropdown to switch colleges */}
-        {!isStaff && (
-          <div className="admin-filter-group">
-            <label htmlFor="staffCollegeSelect" className="admin-filter-label">
-              Filter by College:
-            </label>
-            <select
-              id="staffCollegeSelect"
-              className="admin-select admin-college-select"
-              value={selectedCollegeId}
-              onChange={(e) => setSelectedCollegeId(e.target.value)}
-            >
-              <option value="">All Colleges ({colleges.length})</option>
-              {colleges.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.name} ({col.code || "COL"})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {categories.length > 0 && (
-          <div className="admin-filter-group">
-            <label htmlFor="staffCategorySelect" className="admin-filter-label">
-              Category:
-            </label>
-            <select
-              id="staffCategorySelect"
-              className="admin-select"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="admin-filter-group admin-search-group">
-          <input
-            type="text"
-            className="admin-input"
-            placeholder="Search by instrument name, model, specs, tags..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+        <div className="admin-header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <FilterDropdown
+            colleges={colleges}
+            selectedCollegeId={selectedCollegeId}
+            onCollegeChange={setSelectedCollegeId}
+            categories={categories}
+            selectedCategory={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            showCollege={!isStaff && colleges.length > 0}
+            showCategory={categories.length > 0}
           />
-          {searchTerm && (
-            <button
-              type="button"
-              className="admin-clear-btn"
-              onClick={() => setSearchTerm("")}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Active College Indicator */}
-      <div className="admin-active-filter-badge">
-        Showing equipment for: <strong>{currentCollegeName}</strong> (
-        {filteredEquipments.length} {filteredEquipments.length === 1 ? "instrument" : "instruments"})
+          <button
+            type="button"
+            className="admin-btn-primary"
+            onClick={() => navigate("/dashboard/equipment/create")}
+          >
+            + Register Equipment
+          </button>
+        </div>
       </div>
 
       {/* Equipment Cards Grid */}
@@ -259,22 +209,22 @@ export default function StaffEquipmentsPage() {
         <div className="admin-loading-state">Loading equipment catalog...</div>
       ) : filteredEquipments.length === 0 ? (
         <div className="admin-empty-card">
-          <h3>No equipment available</h3>
+          <h3>No equipment found</h3>
           <p>
             {isStaff || selectedCollegeId
-              ? `There is no equipment cataloged under ${currentCollegeName}. Click "+ Register Equipment" to add instruments.`
+              ? `No instruments found matching your criteria in ${currentCollegeName}.`
               : "No equipment records match your search criteria."}
           </p>
         </div>
       ) : (
         <div className="student-equipment-grid">
           {filteredEquipments.map((item) => {
-            const itemColId = item.collegeId || item.institutionId;
-            const colName = isStaff
-              ? user?.collegeName || "Affiliated College"
-              : itemColId
-              ? collegeMap[itemColId] || "Affiliated College"
-              : "General / Inter-College";
+            const itemCollegeId = item.collegeId || item.institutionId;
+            const itemCollegeName = isStaff
+              ? user?.collegeName || "Your College"
+              : itemCollegeId
+                ? collegeMap[itemCollegeId] || "Affiliated College"
+                : "All Colleges";
 
             const statusConf = STATUS_CONFIG[item.status] || {
               bg: "#f3f4f6",
@@ -282,16 +232,29 @@ export default function StaffEquipmentsPage() {
               label: item.status,
             };
 
+            const isUpdating = updatingId === item.id;
+            const isDeleting = deletingId === item.id;
+
             return (
               <article key={item.id} className="student-equipment-card">
                 <div className="student-card-header">
-                  <span className="admin-badge-college">{colName}</span>
-                  <span
-                    className="admin-status-pill"
-                    style={{ backgroundColor: statusConf.bg, color: statusConf.text }}
+                  <span className="admin-badge-college">{itemCollegeName}</span>
+                  <select
+                    className="equipment-status-select"
+                    value={item.status}
+                    disabled={isUpdating}
+                    style={{
+                      backgroundColor: statusConf.bg,
+                      color: statusConf.text,
+                      borderColor: statusConf.text,
+                    }}
+                    onChange={(e) => handleStatusChange(item, e.target.value)}
                   >
-                    {statusConf.label}
-                  </span>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="IN_USE">In Use</option>
+                    <option value="UNDER_MAINTENANCE">Under Maintenance</option>
+                    <option value="DECOMMISSIONED">Decommissioned</option>
+                  </select>
                 </div>
 
                 <div className="student-card-body">
@@ -299,24 +262,16 @@ export default function StaffEquipmentsPage() {
 
                   <div className="student-equipment-meta">
                     {item.category && (
-                      <span className="student-meta-item">
-                        📁 <strong>Category:</strong> {item.category}
-                      </span>
+                      <span className="student-meta-item">📁 <strong>Category:</strong> {item.category}</span>
                     )}
                     {item.model && (
-                      <span className="student-meta-item">
-                        🏷️ <strong>Model:</strong> {item.model}
-                      </span>
+                      <span className="student-meta-item">🏷️ <strong>Model:</strong> {item.model}</span>
                     )}
                     {item.manufacturer && (
-                      <span className="student-meta-item">
-                        🏭 <strong>Mfr:</strong> {item.manufacturer}
-                      </span>
+                      <span className="student-meta-item">🏭 <strong>Mfr:</strong> {item.manufacturer}</span>
                     )}
                     {item.location && (
-                      <span className="student-meta-item">
-                        📍 <strong>Location:</strong> {item.location}
-                      </span>
+                      <span className="student-meta-item">📍 <strong>Location:</strong> {item.location}</span>
                     )}
                   </div>
 
@@ -331,53 +286,43 @@ export default function StaffEquipmentsPage() {
                   )}
 
                   <div className="student-equipment-features">
-                    <span className="student-feature-pill">
-                      ⏱ Max {item.maxBookingHours || 8} hrs/session
-                    </span>
-                    <span className="student-feature-pill approval">
-                      🛡️ Approval Required (By Default)
-                    </span>
+                    <span className="student-feature-pill">⏱️ Max {item.maxBookingHours || 8} hrs/session</span>
+                    {item.requiresApproval && (
+                      <span className="student-feature-pill approval">🛡️ Manager Approval Required</span>
+                    )}
                   </div>
                 </div>
 
-                {/* Card Footer: Status Dropdown, Schedule & Delete Option */}
-                <div className="student-card-footer staff-card-footer">
-                  <div className="staff-card-status-control">
-                    <label className="staff-status-select-label" htmlFor={`status-select-${item.id}`}>
-                      Status:
-                    </label>
-                    <select
-                      id={`status-select-${item.id}`}
-                      className="staff-status-select"
-                      value={item.status}
-                      disabled={updatingId === item.id}
-                      onChange={(e) => handleStatusChange(item, e.target.value)}
-                    >
-                      <option value="AVAILABLE">Available</option>
-                      <option value="IN_USE">In Use</option>
-                      <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-                      <option value="DECOMMISSIONED">Decommissioned</option>
-                    </select>
-                  </div>
+                <div className="student-card-footer">
+                  <button
+                    type="button"
+                    className="student-availability-btn"
+                    onClick={() => setSelectedEquipmentForAvail(item)}
+                    title="View occupied time slots and availability"
+                  >
+                    🗓️ View Slots &amp; Availability
+                  </button>
 
-                  <div className="staff-card-btn-group">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                     <button
                       type="button"
-                      className="staff-availability-btn"
-                      onClick={() => setSelectedEquipmentForAvail(item)}
-                      title="View occupied slots and schedule"
+                      className="student-book-btn"
+                      style={{ backgroundColor: "#2563eb", borderColor: "#2563eb" }}
+                      onClick={() => setEditingEquipment(item)}
+                      title="Edit equipment specifications and settings"
                     >
-                      🗓️ Schedule
+                      ✏️ Edit
                     </button>
 
                     <button
                       type="button"
-                      className="staff-delete-card-btn"
-                      disabled={deletingId === item.id}
+                      className="student-book-btn"
+                      style={{ backgroundColor: "#ef4444", borderColor: "#ef4444" }}
+                      disabled={isDeleting}
                       onClick={() => handleDeleteEquipment(item.id, item.name)}
-                      title="Delete equipment"
+                      title="Delete equipment from catalog"
                     >
-                      🗑️ Delete
+                      {isDeleting ? "Deleting..." : "🗑️ Delete"}
                     </button>
                   </div>
                 </div>
@@ -393,6 +338,19 @@ export default function StaffEquipmentsPage() {
           equipmentId={selectedEquipmentForAvail.id}
           equipmentName={selectedEquipmentForAvail.name}
           onClose={() => setSelectedEquipmentForAvail(null)}
+        />
+      )}
+
+      {/* Edit Equipment Modal */}
+      {editingEquipment && (
+        <EditEquipmentModal
+          equipment={editingEquipment}
+          onClose={() => setEditingEquipment(null)}
+          onSuccess={(updated) => {
+            setEquipments((prev) =>
+              prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e))
+            );
+          }}
         />
       )}
     </div>

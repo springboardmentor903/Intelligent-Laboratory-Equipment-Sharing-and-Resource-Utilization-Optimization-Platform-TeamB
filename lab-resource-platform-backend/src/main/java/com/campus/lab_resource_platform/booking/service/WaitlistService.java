@@ -1,5 +1,6 @@
 package com.campus.lab_resource_platform.booking.service;
 
+import com.campus.lab_resource_platform.booking.dto.BookingResponse;
 import com.campus.lab_resource_platform.booking.dto.WaitlistRequest;
 import com.campus.lab_resource_platform.booking.dto.WaitlistResponse;
 import com.campus.lab_resource_platform.booking.entity.Booking;
@@ -108,6 +109,61 @@ public class WaitlistService {
         return results;
     }
 
+    @Transactional(readOnly = true)
+    public List<WaitlistResponse> getAllWaitlist(Long collegeId, String userEmail) {
+        User user = getUserByEmail(userEmail);
+        List<WaitlistEntry> list;
+        Long targetColId = collegeId;
+
+        if (user.getRole() != User.Role.SYSTEM_ADMINISTRATOR) {
+            targetColId = user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
+        }
+
+        if (targetColId != null) {
+            list = waitlistRepository.findByCollegeId(targetColId);
+        } else {
+            list = waitlistRepository.findAllByOrderByCreatedAtDesc();
+        }
+
+        return list.stream().map(w -> {
+            long queuePos = 0;
+            if (w.getStatus() == WaitlistStatus.WAITING) {
+                queuePos = waitlistRepository.calculateQueuePosition(w.getEquipment().getId(), w.getPriority(), w.getCreatedAt());
+            }
+            return WaitlistResponse.fromEntity(w, queuePos);
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public BookingResponse promoteWaitlistEntry(Long waitlistId, String approverEmail) {
+        WaitlistEntry entry = waitlistRepository.findById(waitlistId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waitlist entry not found with ID: " + waitlistId));
+
+        User approver = getUserByEmail(approverEmail);
+
+        // Convert to confirmed booking
+        Booking booking = Booking.builder()
+                .equipment(entry.getEquipment())
+                .user(entry.getUser())
+                .startTime(entry.getDesiredStartTime())
+                .endTime(entry.getDesiredEndTime())
+                .purpose("[Waitlist Promoted] " + (entry.getPurpose() != null ? entry.getPurpose() : ""))
+                .status(BookingStatus.CONFIRMED)
+                .approver(approver)
+                .approvedAt(Instant.now())
+                .build();
+
+        Booking saved = bookingRepository.save(booking);
+
+        entry.setStatus(WaitlistStatus.CONVERTED);
+        entry.setConvertedBookingId(saved.getId());
+        entry.setNotifiedAt(Instant.now());
+        waitlistRepository.save(entry);
+
+        log.info("Manager {} manually promoted waitlist entry #{} to Booking #{}", approver.getEmail(), waitlistId, saved.getId());
+        return BookingResponse.fromEntity(saved);
+    }
+
     @Transactional
     public void leaveWaitlist(Long id, String userEmail) {
         WaitlistEntry entry = waitlistRepository.findById(id)
@@ -186,4 +242,3 @@ public class WaitlistService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
     }
 }
-

@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useSearch } from "../context/SearchContext";
 
 function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const { searchTerm, setSearchTerm, searchPlaceholder, showSearch } = useSearch();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -34,25 +37,6 @@ function DashboardLayout() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [profileDropdownOpen]);
-
-  const getDashboardPath = () => {
-    switch (user?.role) {
-      case "RESEARCHER_STUDENT":
-        return "/dashboard/student";
-      case "LAB_TECHNICIAN":
-        return "/dashboard/technician";
-      case "LAB_MANAGER":
-        return "/dashboard/lab-manager";
-      case "DEPARTMENT_HEAD":
-        return "/dashboard/department-head";
-      case "INSTITUTION_ADMINISTRATOR":
-        return "/dashboard/institution-admin";
-      case "SYSTEM_ADMINISTRATOR":
-        return "/dashboard/system-admin";
-      default:
-        return "/dashboard";
-    }
-  };
 
   const getStaffEquipmentsPath = () => {
     switch (user?.role) {
@@ -100,48 +84,48 @@ function DashboardLayout() {
       {/* Fixed Sticky Top Navbar Header */}
       <header className="fixed-top-navbar">
         <div className="navbar-left-cluster">
-          {/* Mobile hamburger button */}
-          <button
+          {/* Platform brand logo with reload capability */}
+          <a
             type="button"
-            className="navbar-hamburger-btn"
-            onClick={() => setMobileOpen((prev) => !prev)}
-            aria-label="Toggle navigation drawer"
+            className="navbar-brand-pill navbar-brand-reload-btn"
+            onClick={() => window.location.reload()}
+            title="Click to reload page"
+            aria-label="Reload platform"
           >
-            <span className="hamburger-bar" />
-            <span className="hamburger-bar" />
-            <span className="hamburger-bar" />
-          </button>
-
-          {/* Platform brand logo */}
-          <Link to="/dashboard" className="navbar-brand-pill">
-            <span className="brand-logo-icon">L</span>
+            <img src="/logo.png" alt="LabResource Logo" className="brand-logo-image" />
             <span className="brand-title-text">LabResource</span>
-          </Link>
+          </a>
 
           {/* Desktop sidebar expand / collapse toggle */}
-          <button
-            type="button"
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarCollapsed((prev) => !prev)}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <svg
-              className="toggle-sidebar-svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-            </svg>
-          </button>
         </div>
+
+        {/* Dynamic Page-Aware Search Bar in Center Navbar */}
+        {showSearch && (
+          <div className="navbar-center-search-cluster">
+            <div className="navbar-search-bar">
+              <span className="navbar-search-icon">🔍</span>
+              <input
+                type="text"
+                className="navbar-search-input"
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search on current page"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="navbar-search-clear"
+                  onClick={() => setSearchTerm("")}
+                  title="Clear search query"
+                  aria-label="Clear search query"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Right side Profile Icon with Dropdown Menu */}
         <div className="navbar-right-cluster" ref={dropdownRef}>
@@ -203,6 +187,16 @@ function DashboardLayout() {
                 <span>Account Settings</span>
               </Link>
 
+              <Link
+                to="/forgot-password"
+                className="profile-dropdown-item"
+                role="menuitem"
+                onClick={() => setProfileDropdownOpen(false)}
+              >
+                <span className="dropdown-item-icon">🔑</span>
+                <span>Forgot / Reset Password</span>
+              </Link>
+
               <div className="profile-dropdown-divider" />
 
               <button
@@ -232,25 +226,37 @@ function DashboardLayout() {
 
         {/* Sidebar */}
         <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-          <p className="sidebar-label">WORKSPACE</p>
+          <div className="workspace-header">
+            <p className="sidebar-label">WORKSPACE</p>
+
+            <button
+              type="button"
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <svg
+                className="toggle-sidebar-svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            </button>
+          </div>
 
           <nav className="sidebar-nav">
             {isSystemAdmin ? (
-              /* System Admin Specific Navigation */
+              /* System Admin Specific Navigation (No Dashboard page) */
               <>
-                <NavLink
-                  to="/dashboard/system-admin"
-                  end
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Dashboard"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Dashboard</span>
-                </NavLink>
-
                 <NavLink
                   to="/dashboard/admin/equipments"
                   className={({ isActive }) =>
@@ -299,17 +305,19 @@ function DashboardLayout() {
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
 
-                <NavLink
-                  to="/dashboard/analytics"
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Utilization Analytics"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Analytics Engine</span>
-                </NavLink>
+                {canAccessAnalytics && (
+                  <NavLink
+                    to="/dashboard/analytics"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Utilization Analytics"
+                  >
+                    <span className="nav-icon">📊</span>
+                    <span className="nav-text">Analytics Engine</span>
+                  </NavLink>
+                )}
 
                 <NavLink
                   to="/dashboard/admin/accounts"
@@ -324,21 +332,8 @@ function DashboardLayout() {
                 </NavLink>
               </>
             ) : isStudent ? (
-              /* Student / Researcher Navigation */
+              /* Student / Researcher Navigation (No Dashboard page) */
               <>
-                <NavLink
-                  to="/dashboard/student"
-                  end
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Dashboard"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Dashboard</span>
-                </NavLink>
-
                 <NavLink
                   to="/dashboard/student/equipments"
                   className={({ isActive }) =>
@@ -376,21 +371,8 @@ function DashboardLayout() {
                 </NavLink>
               </>
             ) : isInstitutionAdmin || isDepartmentHead || isLabManager || isTechnician ? (
-              /* Institute Admin, Department Head, Lab Manager, Lab Technician Navigation */
+              /* Institute Admin, Department Head, Lab Manager, Lab Technician Navigation (No Dashboard page) */
               <>
-                <NavLink
-                  to={getDashboardPath()}
-                  end
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Dashboard"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Dashboard</span>
-                </NavLink>
-
                 <NavLink
                   to={getStaffEquipmentsPath()}
                   className={({ isActive }) =>
@@ -427,33 +409,23 @@ function DashboardLayout() {
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
 
-                <NavLink
-                  to="/dashboard/analytics"
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Utilization Analytics"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Analytics Engine</span>
-                </NavLink>
+                {canAccessAnalytics && (
+                  <NavLink
+                    to="/dashboard/analytics"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Utilization Analytics"
+                  >
+                    <span className="nav-icon">📊</span>
+                    <span className="nav-text">Analytics Engine</span>
+                  </NavLink>
+                )}
               </>
             ) : (
-              /* Other Generic Roles (Fallback) */
+              /* Other Generic Roles (Fallback - No Dashboard page) */
               <>
-                <NavLink
-                  to={getDashboardPath()}
-                  end
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Overview"
-                >
-                  <span className="nav-text">Overview</span>
-                </NavLink>
-
                 <NavLink
                   to="/dashboard/utilization"
                   className={({ isActive }) =>
@@ -464,18 +436,6 @@ function DashboardLayout() {
                 >
                   <span className="nav-icon">⚡</span>
                   <span className="nav-text">Live Utilization</span>
-                </NavLink>
-
-                <NavLink
-                  to="/dashboard/analytics"
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Utilization Analytics"
-                >
-                  <span className="nav-icon">📊</span>
-                  <span className="nav-text">Analytics Engine</span>
                 </NavLink>
 
                 <NavLink

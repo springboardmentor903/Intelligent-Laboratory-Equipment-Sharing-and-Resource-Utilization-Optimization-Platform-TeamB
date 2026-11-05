@@ -971,15 +971,24 @@ public class UtilizationAnalyticsService {
 
     public List<Equipment> resolveEquipmentsInScope(String scope, Long scopeId) {
         if ("EQUIPMENT".equalsIgnoreCase(scope)) {
-            if (scopeId == null) throw new IllegalArgumentException("Equipment ID is required for EQUIPMENT scope");
+            if (scopeId == null) {
+                return equipmentRepository.findAll().stream().findFirst().map(List::of).orElse(Collections.emptyList());
+            }
             return equipmentRepository.findById(scopeId).map(List::of).orElse(Collections.emptyList());
         } else if ("DEPARTMENT".equalsIgnoreCase(scope)) {
-            if (scopeId == null) throw new IllegalArgumentException("Department ID is required for DEPARTMENT scope");
+            if (scopeId == null) {
+                List<Equipment> deptEqs = equipmentRepository.findAll().stream()
+                        .filter(e -> e.getDepartmentId() != null)
+                        .toList();
+                return deptEqs.isEmpty() ? equipmentRepository.findAll() : deptEqs;
+            }
             return equipmentRepository.findAll().stream()
                     .filter(e -> scopeId.equals(e.getDepartmentId()))
                     .toList();
         } else if ("INSTITUTION".equalsIgnoreCase(scope) || "COLLEGE".equalsIgnoreCase(scope)) {
-            if (scopeId == null) throw new IllegalArgumentException("Institution ID is required for INSTITUTION scope");
+            if (scopeId == null) {
+                return equipmentRepository.findAll();
+            }
             return equipmentRepository.findAll().stream()
                     .filter(e -> scopeId.equals(e.getCollegeId()) || scopeId.equals(e.getInstitutionId()))
                     .toList();
@@ -1140,12 +1149,21 @@ public class UtilizationAnalyticsService {
     }
 
     private String resolveScopeName(String scope, Long scopeId, List<Equipment> equipments) {
-        if ("EQUIPMENT".equalsIgnoreCase(scope) && !equipments.isEmpty()) {
-            return equipments.get(0).getName();
-        } else if ("DEPARTMENT".equalsIgnoreCase(scope) && scopeId != null) {
-            return departmentRepository.findById(scopeId).map(Department::getName).orElse("Department #" + scopeId);
-        } else if ("INSTITUTION".equalsIgnoreCase(scope) && scopeId != null) {
-            return collegeRepository.findById(scopeId).map(College::getName).orElse("Institution #" + scopeId);
+        if ("EQUIPMENT".equalsIgnoreCase(scope)) {
+            if (!equipments.isEmpty()) {
+                return equipments.get(0).getName();
+            }
+            return scopeId != null ? "Equipment #" + scopeId : "All Equipment";
+        } else if ("DEPARTMENT".equalsIgnoreCase(scope)) {
+            if (scopeId != null) {
+                return departmentRepository.findById(scopeId).map(Department::getName).orElse("Department #" + scopeId);
+            }
+            return "All Departments (" + equipments.size() + " items)";
+        } else if ("INSTITUTION".equalsIgnoreCase(scope) || "COLLEGE".equalsIgnoreCase(scope)) {
+            if (scopeId != null) {
+                return collegeRepository.findById(scopeId).map(College::getName).orElse("Institution #" + scopeId);
+            }
+            return "All Institutions (" + equipments.size() + " items)";
         }
         return scope + " (" + equipments.size() + " items)";
     }

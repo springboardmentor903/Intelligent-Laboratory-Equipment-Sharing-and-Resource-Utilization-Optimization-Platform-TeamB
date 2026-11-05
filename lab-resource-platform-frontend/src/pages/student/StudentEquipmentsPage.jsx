@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { useSearch } from "../../context/SearchContext";
+import FilterDropdown from "../../components/FilterDropdown";
 import EquipmentAvailabilityModal from "../../components/EquipmentAvailabilityModal";
 
 const STATUS_CONFIG = {
@@ -14,14 +16,18 @@ const STATUS_CONFIG = {
 export default function StudentEquipmentsPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { searchTerm, setSearchPlaceholder } = useSearch();
 
   const [colleges, setColleges] = useState([]);
   const [selectedCollegeId, setSelectedCollegeId] = useState("");
   const [equipments, setEquipments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selectedEquipmentForAvail, setSelectedEquipmentForAvail] = useState(null);
+
+  useEffect(() => {
+    setSearchPlaceholder("Search by instrument name, model, specs, tags...");
+  }, [setSearchPlaceholder]);
 
   const loadColleges = useCallback(async () => {
     try {
@@ -120,7 +126,7 @@ export default function StudentEquipmentsPage() {
 
   return (
     <div className="admin-page-container">
-      {/* Page Header */}
+      {/* Page Header with Right-Side Filter Dropdown */}
       <div className="admin-header-row">
         <div>
           <p className="admin-eyebrow">EQUIPMENT CATALOG</p>
@@ -129,74 +135,19 @@ export default function StudentEquipmentsPage() {
             Browse and reserve scientific instruments across partner institutions. Select a college to explore its dedicated lab equipment.
           </p>
         </div>
-      </div>
 
-      {/* Filter Toolbar with College Dropdown */}
-      <div className="admin-filter-bar">
-        <div className="admin-filter-group">
-          <label htmlFor="studentCollegeSelect" className="admin-filter-label">
-            Filter by College:
-          </label>
-          <select
-            id="studentCollegeSelect"
-            className="admin-select admin-college-select"
-            value={selectedCollegeId}
-            onChange={(e) => setSelectedCollegeId(e.target.value)}
-          >
-            <option value="">All Colleges ({colleges.length})</option>
-            {colleges.map((col) => (
-              <option key={col.id} value={col.id}>
-                {col.name} ({col.code || "COL"})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {categories.length > 0 && (
-          <div className="admin-filter-group">
-            <label htmlFor="categorySelect" className="admin-filter-label">
-              Category:
-            </label>
-            <select
-              id="categorySelect"
-              className="admin-select"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="admin-filter-group admin-search-group">
-          <input
-            type="text"
-            className="admin-input"
-            placeholder="Search by instrument name, model, specs, tags..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+        <div className="admin-header-actions">
+          <FilterDropdown
+            colleges={colleges}
+            selectedCollegeId={selectedCollegeId}
+            onCollegeChange={setSelectedCollegeId}
+            categories={categories}
+            selectedCategory={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            showCollege={true}
+            showCategory={true}
           />
-          {searchTerm && (
-            <button
-              type="button"
-              className="admin-clear-btn"
-              onClick={() => setSearchTerm("")}
-            >
-              ✕
-            </button>
-          )}
         </div>
-      </div>
-
-      {/* Active College Indicator */}
-      <div className="admin-active-filter-badge">
-        Showing equipment for: <strong>{currentCollegeName}</strong> (
-        {filteredEquipments.length} {filteredEquipments.length === 1 ? "instrument" : "instruments"})
       </div>
 
       {/* Equipments Cards Grid */}

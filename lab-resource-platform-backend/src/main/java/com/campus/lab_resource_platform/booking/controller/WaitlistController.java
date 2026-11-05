@@ -1,5 +1,6 @@
 package com.campus.lab_resource_platform.booking.controller;
 
+import com.campus.lab_resource_platform.booking.dto.BookingResponse;
 import com.campus.lab_resource_platform.booking.dto.WaitlistRequest;
 import com.campus.lab_resource_platform.booking.dto.WaitlistResponse;
 import com.campus.lab_resource_platform.booking.service.WaitlistService;
@@ -36,9 +37,27 @@ public class WaitlistController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<WaitlistResponse>> getAllWaitlist(
+            @RequestParam(required = false) Long collegeId,
+            Authentication authentication
+    ) {
+        List<WaitlistResponse> response = waitlistService.getAllWaitlist(collegeId, authentication.getName());
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/equipment/{equipmentId}")
     public ResponseEntity<List<WaitlistResponse>> getEquipmentWaitlist(@PathVariable Long equipmentId) {
         List<WaitlistResponse> response = waitlistService.getEquipmentWaitlist(equipmentId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/promote")
+    public ResponseEntity<BookingResponse> promoteWaitlistEntry(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        BookingResponse response = waitlistService.promoteWaitlistEntry(id, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -51,4 +70,3 @@ public class WaitlistController {
         return ResponseEntity.noContent().build();
     }
 }
-

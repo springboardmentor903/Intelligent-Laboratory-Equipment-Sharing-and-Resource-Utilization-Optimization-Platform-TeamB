@@ -78,6 +78,20 @@ public class UtilizationService {
         } else if (request.getEquipmentId() != null) {
             equipment = equipmentRepository.findById(request.getEquipmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Equipment not found: " + request.getEquipmentId()));
+
+            // Auto-detect current active or confirmed booking for this equipment
+            Instant nowTime = Instant.now();
+            List<Booking> currentBookings = bookingRepository.findConflictingBookings(
+                    equipment.getId(),
+                    nowTime.minus(Duration.ofMinutes(15)),
+                    nowTime.plus(Duration.ofMinutes(15)),
+                    List.of(BookingStatus.CONFIRMED, BookingStatus.IN_USE)
+            );
+            if (!currentBookings.isEmpty()) {
+                booking = currentBookings.get(0);
+                booking.setStatus(BookingStatus.IN_USE);
+                bookingRepository.save(booking);
+            }
         } else {
             throw new BadRequestException("Either bookingId or equipmentId must be provided");
         }
@@ -249,6 +263,16 @@ public class UtilizationService {
         if (equipment != null) {
             equipment.setStatus(EquipmentStatus.AVAILABLE);
             equipmentRepository.save(equipment);
+
+            List<Utilization> activeForEq = utilizationRepository.findByEquipmentIdOrderByCheckInTimeDesc(equipment.getId());
+            for (Utilization u : activeForEq) {
+                if ("ACTIVE".equalsIgnoreCase(u.getStatus())) {
+                    u.setCheckOutTime(now);
+                    u.setStatus("COMPLETED");
+                    u.setActualDurationMinutes(Math.max(1, Duration.between(u.getCheckInTime(), now).toMinutes()));
+                    utilizationRepository.save(u);
+                }
+            }
         }
 
         String colName = getCollegeName(equipment);

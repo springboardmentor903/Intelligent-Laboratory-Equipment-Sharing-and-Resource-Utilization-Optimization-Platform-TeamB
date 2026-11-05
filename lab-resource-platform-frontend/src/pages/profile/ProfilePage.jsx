@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -55,18 +54,33 @@ export default function ProfilePage() {
                         <span>Account Role</span>
                         <strong>{roleLabels[role] || role || "Not assigned"}</strong>
                     </div>
-
-                    {user.id != null && (
-                        <div className="profile-field">
-                            <span>User ID</span>
-                            <strong>{user.id}</strong>
-                        </div>
-                    )}
                 </div>
 
-                <Link to="/dashboard/account-settings" className="profile-button">
-                    Account Settings
-                </Link>
+                <div className="profile-actions-group" style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", marginTop: "24px" }}>
+                    <Link to="/dashboard/account-settings" className="profile-button">
+                        Account Settings
+                    </Link>
+
+                    <Link
+                        to="/forgot-password"
+                        className="profile-button profile-forgot-button"
+                        style={{
+                            backgroundColor: "#f3f4f6",
+                            color: "#374151",
+                            border: "1px solid #d1d5db",
+                            textAlign: "center",
+                            textDecoration: "none",
+                            padding: "10px 16px",
+                            borderRadius: "8px",
+                            fontWeight: "600",
+                            fontSize: "0.92rem",
+                            transition: "all 0.2s ease",
+                            display: "inline-block"
+                        }}
+                    >
+                        🔑 Forgot Password? Reset Password
+                    </Link>
+                </div>
             </section>
         </main>
     );

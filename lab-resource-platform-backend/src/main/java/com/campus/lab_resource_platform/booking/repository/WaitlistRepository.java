@@ -42,5 +42,9 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, Long> {
 
     @Query("SELECT w.equipment.id, COUNT(w) FROM WaitlistEntry w WHERE w.status = 'WAITING' GROUP BY w.equipment.id")
     List<Object[]> countActiveGroupedByEquipment();
-}
 
+    List<WaitlistEntry> findAllByOrderByCreatedAtDesc();
+
+    @Query("SELECT w FROM WaitlistEntry w WHERE w.equipment.collegeId = :collegeId OR w.equipment.institutionId = :collegeId ORDER BY w.createdAt DESC")
+    List<WaitlistEntry> findByCollegeId(@Param("collegeId") Long collegeId);
+}
