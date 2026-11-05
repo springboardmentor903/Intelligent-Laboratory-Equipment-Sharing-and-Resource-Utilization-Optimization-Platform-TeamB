@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { useSearch } from "../../context/SearchContext";
+import FilterDropdown from "../../components/FilterDropdown";
 
 const STATUS_META = {
   PENDING_APPROVAL: { label: "Pending Approval", color: "status-pending" },
@@ -11,6 +13,14 @@ const STATUS_META = {
   CANCELLED: { label: "Cancelled", color: "status-cancelled" },
   NO_SHOW: { label: "No Show", color: "status-no-show" },
 };
+
+const ALL_STATUS_KEYS = [
+  "PENDING_APPROVAL",
+  "CONFIRMED",
+  "IN_USE",
+  "COMPLETED",
+  "CANCELLED",
+];
 
 function formatDateTime(isoString) {
   if (!isoString) return "—";
@@ -41,6 +51,8 @@ function formatDuration(start, end) {
 function StudentBookingHistoryPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { searchTerm, setSearchPlaceholder } = useSearch();
+
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" or "waitlist"
 
   const [bookings, setBookings] = useState([]);
@@ -52,6 +64,10 @@ function StudentBookingHistoryPage() {
   const [cancelError, setCancelError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [leavingWaitlistId, setLeavingWaitlistId] = useState(null);
+
+  useEffect(() => {
+    setSearchPlaceholder("Search your reservations by equipment, purpose, status...");
+  }, [setSearchPlaceholder]);
 
   const fetchBookingsQuietly = useCallback(async () => {
     try {
@@ -128,17 +144,17 @@ function StudentBookingHistoryPage() {
     try {
       await api.post(`/api/bookings/${bookingId}/cancel`);
       await fetchBookings();
+      toast.success("Booking cancelled successfully.");
     } catch (err) {
-      setCancelError(
-        err?.response?.data?.message ||
-          "Failed to cancel booking. Please try again."
-      );
+      const msg = err?.response?.data?.message || "Failed to cancel booking. Please try again.";
+      setCancelError(msg);
+      toast.error(msg);
     } finally {
       setCancellingId(null);
     }
   }
 
-  // Milestone 2 - T1: Student Check-In (Start session)
+  // Student Check-In (Start session)
   async function handleStudentCheckIn(booking) {
     setSessionActionId(booking.id);
     try {
@@ -156,7 +172,7 @@ function StudentBookingHistoryPage() {
     }
   }
 
-  // Milestone 2 - T1: Student Check-Out (Stop session)
+  // Student Check-Out (Stop session)
   async function handleStudentCheckOut(booking) {
     setSessionActionId(booking.id);
     try {
@@ -197,10 +213,22 @@ function StudentBookingHistoryPage() {
     waitlistCount: waitlist.filter((w) => w.status === "WAITING").length,
   };
 
-  const filtered =
-    statusFilter === "ALL"
-      ? bookings
-      : bookings.filter((b) => b.status === statusFilter);
+  const filtered = bookings.filter((b) => {
+    if (statusFilter && statusFilter !== "ALL" && b.status !== statusFilter) {
+      return false;
+    }
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const matchName = b.equipmentName?.toLowerCase().includes(q);
+      const matchPurpose = b.purpose?.toLowerCase().includes(q);
+      const matchCollege = b.collegeName?.toLowerCase().includes(q);
+      const matchStatus = b.status?.toLowerCase().includes(q);
+      if (!matchName && !matchPurpose && !matchCollege && !matchStatus) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   if (loading) {
     return (
@@ -215,20 +243,35 @@ function StudentBookingHistoryPage() {
 
   return (
     <div className="bh-container">
-      <div className="bh-header">
+      <div className="bh-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 className="bh-title">My Bookings &amp; Waitlists</h1>
           <p className="bh-subtitle">
             Track all your reservations, check-in to active sessions, and monitor waitlist queue positions.
           </p>
         </div>
-        <button
-          type="button"
-          className="bh-browse-btn"
-          onClick={() => navigate("/dashboard/student/equipments")}
-        >
-          + New Booking
-        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {activeTab === "bookings" && (
+            <FilterDropdown
+              statuses={ALL_STATUS_KEYS}
+              selectedStatus={statusFilter}
+              onStatusChange={(st) => setStatusFilter(st || "ALL")}
+              statusLabels={STATUS_META}
+              showCollege={false}
+              showCategory={false}
+              showStatus={true}
+            />
+          )}
+
+          <button
+            type="button"
+            className="bh-browse-btn"
+            onClick={() => navigate("/dashboard/student/equipments")}
+          >
+            + New Booking
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -279,41 +322,26 @@ function StudentBookingHistoryPage() {
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="bh-filter-bar">
-            <span className="bh-filter-label">Filter by status:</span>
-            <div className="bh-filter-pills">
-              {["ALL", "PENDING_APPROVAL", "CONFIRMED", "IN_USE", "COMPLETED", "CANCELLED"].map(
-                (s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`bh-filter-pill ${statusFilter === s ? "active" : ""}`}
-                    onClick={() => setStatusFilter(s)}
-                  >
-                    {s === "ALL" ? "All" : STATUS_META[s]?.label || s}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
           {cancelError && (
-            <div className="booking-form-error" role="alert">
-              ⚠️ {cancelError}
+            <div className="toast-item toast-error" role="alert" style={{ margin: "16px 0" }}>
+              <div className="toast-icon">✕</div>
+              <div className="toast-message">{cancelError}</div>
             </div>
           )}
 
           {error && (
-            <div className="booking-form-error" role="alert">
-              ⚠️ {error}
-              <button
-                type="button"
-                className="bh-retry-btn"
-                onClick={fetchBookings}
-              >
-                Retry
-              </button>
+            <div className="toast-item toast-error" role="alert" style={{ margin: "16px 0" }}>
+              <div className="toast-icon">✕</div>
+              <div className="toast-message" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>{error}</span>
+                <button
+                  type="button"
+                  className="bh-retry-btn"
+                  onClick={fetchBookings}
+                >
+                  Retry
+                </button>
+              </div>
             </div>
           )}
 
@@ -323,51 +351,46 @@ function StudentBookingHistoryPage() {
               <div className="bh-empty-icon">📋</div>
               <h3>
                 {statusFilter === "ALL"
-                  ? "No bookings yet"
+                  ? "No bookings found"
                   : `No ${STATUS_META[statusFilter]?.label || statusFilter} bookings`}
               </h3>
               <p>
                 {statusFilter === "ALL"
-                  ? "Start by browsing available equipment and making your first booking."
-                  : "Try selecting a different status filter."}
+                  ? "You have not made any bookings yet, or none match your search."
+                  : `No bookings match your current filter and search query.`}
               </p>
-              {statusFilter === "ALL" && (
-                <button
-                  type="button"
-                  className="bh-browse-btn"
-                  onClick={() => navigate("/dashboard/student/equipments")}
-                >
-                  Browse Equipment
-                </button>
-              )}
             </div>
           ) : (
             <div className="bh-list">
               {filtered.map((booking) => {
                 const meta = STATUS_META[booking.status] || {
                   label: booking.status,
-                  color: "status-pending",
+                  color: "status-default",
                 };
+                const isCancelling = cancellingId === booking.id;
+                const isActioning = sessionActionId === booking.id;
                 const canCancel =
                   booking.status === "PENDING_APPROVAL" ||
                   booking.status === "CONFIRMED";
-                const isConfirmed = booking.status === "CONFIRMED";
-                const isInUse = booking.status === "IN_USE";
-                const isActionLoading = sessionActionId === booking.id;
-                const duration = formatDuration(booking.startTime, booking.endTime);
+
+                const canCheckIn = booking.status === "CONFIRMED";
+                const canCheckOut = booking.status === "IN_USE";
 
                 return (
                   <div key={booking.id} className="bh-card">
                     <div className="bh-card-header">
-                      <div className="bh-card-title-area">
+                      <div className="bh-card-title-group">
                         <h3 className="bh-equipment-name">
-                          {booking.equipmentName || `Equipment #${booking.equipmentId}`}
+                          {booking.equipmentName ||
+                            `Equipment #${booking.equipmentId}`}
                         </h3>
                         {booking.collegeName && (
-                          <span className="bh-college-tag">{booking.collegeName}</span>
+                          <span className="bh-college-badge">
+                            {booking.collegeName}
+                          </span>
                         )}
                         {booking.isRecurring && (
-                          <span className="bh-recurring-tag">
+                          <span className="bh-recurring-badge">
                             🔁 Recurring ({booking.recurrenceType || "Weekly"})
                           </span>
                         )}
@@ -378,79 +401,86 @@ function StudentBookingHistoryPage() {
                     </div>
 
                     <div className="bh-card-body">
-                      <div className="bh-time-block">
-                        <div className="bh-time-item">
-                          <span className="bh-time-label">Start (IST)</span>
-                          <span className="bh-time-value">
+                      <div className="bh-time-row">
+                        <div className="bh-time-col">
+                          <span className="bh-time-label">START (IST)</span>
+                          <span className="bh-time-val">
                             {formatDateTime(booking.startTime)}
                           </span>
                         </div>
-                        <div className="bh-time-arrow">→</div>
-                        <div className="bh-time-item">
-                          <span className="bh-time-label">End (IST)</span>
-                          <span className="bh-time-value">
+                        <span className="bh-time-arrow">→</span>
+                        <div className="bh-time-col">
+                          <span className="bh-time-label">END (IST)</span>
+                          <span className="bh-time-val">
                             {formatDateTime(booking.endTime)}
                           </span>
                         </div>
-                        {duration && (
-                          <div className="bh-duration-badge">{duration}</div>
+                        {booking.startTime && booking.endTime && (
+                          <span className="bh-duration-pill">
+                            {formatDuration(
+                              booking.startTime,
+                              booking.endTime
+                            )}
+                          </span>
                         )}
                       </div>
 
                       {booking.purpose && (
                         <p className="bh-purpose">
-                          <span className="bh-purpose-label">Purpose:</span>{" "}
-                          {booking.purpose}
+                          <strong>Purpose:</strong> {booking.purpose}
+                        </p>
+                      )}
+
+                      {booking.cancellationReason && (
+                        <p className="bh-cancel-reason">
+                          <strong>Cancellation Reason:</strong>{" "}
+                          {booking.cancellationReason}
                         </p>
                       )}
 
                       {booking.rejectionReason && (
-                        <div className="bh-rejection-notice">
-                          <span className="bh-rejection-icon">❌</span>
-                          <div>
-                            <strong>Cancellation/Rejection Reason:</strong>
-                            <p>{booking.rejectionReason}</p>
-                          </div>
-                        </div>
+                        <p className="bh-reject-reason">
+                          <strong>Rejection Reason:</strong>{" "}
+                          {booking.rejectionReason}
+                        </p>
                       )}
                     </div>
 
-                    <div className="bh-card-footer" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {/* Live Check-in / Check-out session buttons for student */}
-                      {isConfirmed && (
-                        <button
-                          type="button"
-                          className="bh-checkin-action-btn"
-                          disabled={isActionLoading}
-                          onClick={() => handleStudentCheckIn(booking)}
-                          title="Start laboratory session"
-                        >
-                          ▶️ Check-In (Start Session)
-                        </button>
-                      )}
+                    <div className="bh-card-footer">
+                      <div className="bh-session-action-group">
+                        {canCheckIn && (
+                          <button
+                            type="button"
+                            className="bh-checkin-btn"
+                            disabled={isActioning}
+                            onClick={() => handleStudentCheckIn(booking)}
+                            title="Start laboratory session and mark equipment IN USE"
+                          >
+                            {isActioning ? "Starting..." : "▶ Check-In (Start Session)"}
+                          </button>
+                        )}
 
-                      {isInUse && (
-                        <button
-                          type="button"
-                          className="bh-checkout-action-btn"
-                          disabled={isActionLoading}
-                          onClick={() => handleStudentCheckOut(booking)}
-                          title="Finish laboratory session and log usage"
-                        >
-                          ⏹️ Check-Out (Complete Session)
-                        </button>
-                      )}
+                        {canCheckOut && (
+                          <button
+                            type="button"
+                            className="bh-checkout-btn"
+                            disabled={isActioning}
+                            onClick={() => handleStudentCheckOut(booking)}
+                            title="Complete laboratory session and log usage duration"
+                          >
+                            {isActioning ? "Completing..." : "⏹ Check-Out (Complete Session)"}
+                          </button>
+                        )}
+                      </div>
 
                       {canCancel && (
                         <button
                           type="button"
                           className="bh-cancel-btn"
-                          disabled={cancellingId === booking.id || isActionLoading}
+                          disabled={isCancelling}
                           onClick={() => handleCancel(booking.id)}
                         >
-                          {cancellingId === booking.id
-                            ? "Cancelling…"
-                            : "Cancel Booking"}
+                          {isCancelling ? "Cancelling…" : "Cancel Reservation"}
                         </button>
                       )}
                     </div>
@@ -466,65 +496,67 @@ function StudentBookingHistoryPage() {
           {waitlist.length === 0 ? (
             <div className="bh-empty">
               <div className="bh-empty-icon">⏳</div>
-              <h3>No Active Waitlists</h3>
+              <h3>No active waitlist entries</h3>
               <p>
-                When a desired equipment slot is busy, you can join the waitlist from the booking page. You will automatically receive the slot if it opens!
+                When equipment you want to use is fully booked, you can join
+                its waitlist to be queued for next availability.
               </p>
             </div>
           ) : (
             <div className="bh-list">
-              {waitlist.map((item) => (
-                <div key={item.id} className="bh-card bh-waitlist-card">
+              {waitlist.map((w) => (
+                <div key={w.id} className="bh-card waitlist-card">
                   <div className="bh-card-header">
-                    <div className="bh-card-title-area">
-                      <h3 className="bh-equipment-name">{item.equipmentName}</h3>
-                      <span className="bh-queue-pill">
-                        🎯 Position #{item.queuePosition || 1} in line
-                      </span>
+                    <div>
+                      <h3 className="bh-equipment-name">
+                        {w.equipmentName || `Equipment #${w.equipmentId}`}
+                      </h3>
+                      {w.collegeName && (
+                        <span className="bh-college-badge">
+                          {w.collegeName}
+                        </span>
+                      )}
                     </div>
-                    <span className="bh-status-pill status-pending">
-                      {item.status}
+                    <span className="bh-status-pill status-waitlist">
+                      Position #{w.queuePosition}
                     </span>
                   </div>
 
                   <div className="bh-card-body">
-                    <div className="bh-time-block">
-                      <div className="bh-time-item">
-                        <span className="bh-time-label">Desired Start</span>
-                        <span className="bh-time-value">{formatDateTime(item.desiredStartTime)}</span>
+                    <div className="bh-time-row">
+                      <div className="bh-time-col">
+                        <span className="bh-time-label">DESIRED START</span>
+                        <span className="bh-time-val">
+                          {formatDateTime(w.desiredStartTime)}
+                        </span>
                       </div>
-                      <div className="bh-time-arrow">→</div>
-                      <div className="bh-time-item">
-                        <span className="bh-time-label">Desired End</span>
-                        <span className="bh-time-value">{formatDateTime(item.desiredEndTime)}</span>
+                      <span className="bh-time-arrow">→</span>
+                      <div className="bh-time-col">
+                        <span className="bh-time-label">DESIRED END</span>
+                        <span className="bh-time-val">
+                          {formatDateTime(w.desiredEndTime)}
+                        </span>
                       </div>
                     </div>
-
-                    {item.purpose && (
+                    {w.purpose && (
                       <p className="bh-purpose">
-                        <span className="bh-purpose-label">Requested for:</span> {item.purpose}
+                        <strong>Purpose:</strong> {w.purpose}
                       </p>
-                    )}
-
-                    {item.status === "WAITING" && (
-                      <div className="bh-waitlist-status-note">
-                        ℹ️ You are in the priority waitlist. If any conflicting reservation is cancelled, you will be automatically promoted!
-                      </div>
                     )}
                   </div>
 
-                  {item.status === "WAITING" && (
-                    <div className="bh-card-footer">
-                      <button
-                        type="button"
-                        className="bh-cancel-btn"
-                        disabled={leavingWaitlistId === item.id}
-                        onClick={() => handleLeaveWaitlist(item.id)}
-                      >
-                        {leavingWaitlistId === item.id ? "Leaving…" : "Leave Waitlist"}
-                      </button>
-                    </div>
-                  )}
+                  <div className="bh-card-footer">
+                    <button
+                      type="button"
+                      className="bh-cancel-btn"
+                      disabled={leavingWaitlistId === w.id}
+                      onClick={() => handleLeaveWaitlist(w.id)}
+                    >
+                      {leavingWaitlistId === w.id
+                        ? "Leaving..."
+                        : "Leave Waitlist"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

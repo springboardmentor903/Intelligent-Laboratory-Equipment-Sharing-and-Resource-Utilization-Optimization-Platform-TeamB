@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useSearch } from "../../context/SearchContext";
+import FilterDropdown from "../../components/FilterDropdown";
 
 function toISTTime(iso) {
   if (!iso) return "—";
@@ -29,6 +31,7 @@ function formatDuration(minutes) {
 export default function LiveUtilizationPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const { searchTerm, setSearchPlaceholder } = useSearch();
 
   const isStaff = [
     "INSTITUTION_ADMINISTRATOR",
@@ -50,6 +53,10 @@ export default function LiveUtilizationPage() {
   const [loadingLogs, setLoadingLogs] = useState(false);
 
   const wsRef = useRef(null);
+
+  useEffect(() => {
+    setSearchPlaceholder("Search live instruments by name, model, specs, user...");
+  }, [setSearchPlaceholder]);
 
   // Load colleges list for System Admin
   useEffect(() => {
@@ -96,7 +103,7 @@ export default function LiveUtilizationPage() {
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data.type === "CHECK_IN" || data.type === "CHECK_OUT") {
+            if (data.type === "CHECK_IN" || data.type === "CHECK_OUT" || data.type === "STATUS_CHANGE") {
               // Real-time update broadcast received! Refresh live status
               fetchSummary();
             }
@@ -200,7 +207,19 @@ export default function LiveUtilizationPage() {
     ? colleges.find((c) => String(c.id) === String(selectedCollegeId))?.name || "Selected College"
     : "All Partner Colleges";
 
-  const equipmentsList = summary?.equipments || [];
+  const rawEquipments = summary?.equipments || [];
+  const equipmentsList = rawEquipments.filter((item) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      item.equipmentName?.toLowerCase().includes(q) ||
+      item.category?.toLowerCase().includes(q) ||
+      item.model?.toLowerCase().includes(q) ||
+      item.currentUserName?.toLowerCase().includes(q) ||
+      item.collegeName?.toLowerCase().includes(q) ||
+      item.location?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="admin-page-container">
@@ -220,39 +239,28 @@ export default function LiveUtilizationPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="admin-btn-secondary"
-          onClick={fetchSummary}
-          title="Refresh Data"
-        >
-          🔄 Refresh
-        </button>
-      </div>
+        <div className="admin-header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {!isStaff && colleges.length > 0 && (
+            <FilterDropdown
+              colleges={colleges}
+              selectedCollegeId={selectedCollegeId}
+              onCollegeChange={setSelectedCollegeId}
+              showCollege={true}
+              showCategory={false}
+              showStatus={false}
+            />
+          )}
 
-      {/* Filter Bar (Only System Admin gets College Filter) */}
-      {!isStaff && colleges.length > 0 && (
-        <div className="admin-filter-bar">
-          <div className="admin-filter-group">
-            <label htmlFor="utilCollegeSelect" className="admin-filter-label">
-              Filter by College:
-            </label>
-            <select
-              id="utilCollegeSelect"
-              className="admin-select admin-college-select"
-              value={selectedCollegeId}
-              onChange={(e) => setSelectedCollegeId(e.target.value)}
-            >
-              <option value="">All Colleges ({colleges.length})</option>
-              {colleges.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.name} ({col.code || "COL"})
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            type="button"
+            className="admin-btn-secondary"
+            onClick={fetchSummary}
+            title="Refresh Data"
+          >
+            🔄 Refresh
+          </button>
         </div>
-      )}
+      </div>
 
       {/* KPI Stats Summary Cards */}
       <div className="util-kpi-grid">

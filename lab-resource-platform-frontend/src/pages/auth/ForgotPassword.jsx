@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-//import api from "../../services/api";
+import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
 export default function ForgotPassword() {
@@ -50,11 +50,11 @@ export default function ForgotPassword() {
 
     try {
       const response = await api.post(
-        "/auth/forgot-password",
+        "/api/auth/forgot-password",
         form
       );
 
-      const msg = response.data.message || "Password updated successfully.";
+      const msg = response.data?.message || "Password updated successfully.";
       setSuccess(msg);
       toast.success(msg);
 
@@ -63,6 +63,10 @@ export default function ForgotPassword() {
         newPassword: "",
         confirmPassword: "",
       });
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err) {
       const msg =
         err.response?.data?.detail ||
@@ -102,7 +106,7 @@ export default function ForgotPassword() {
             id="newPassword"
             name="newPassword"
             type="password"
-            placeholder="Enter new password"
+            placeholder="Enter new password (min 8 chars)"
             value={form.newPassword}
             onChange={handleChange}
             autoComplete="new-password"
@@ -111,9 +115,7 @@ export default function ForgotPassword() {
             required
           />
 
-          <label htmlFor="confirmPassword">
-            Confirm Password
-          </label>
+          <label htmlFor="confirmPassword">Confirm New Password</label>
           <input
             id="confirmPassword"
             name="confirmPassword"
@@ -127,36 +129,21 @@ export default function ForgotPassword() {
             required
           />
 
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <div className="toast-item toast-error" role="alert" style={{ margin: "12px 0" }}><div className="toast-icon">✕</div><div className="toast-message">{error}</div></div>}
+          {success && <div className="toast-item toast-success" role="alert" style={{ margin: "12px 0" }}><div className="toast-icon">✓</div><div className="toast-message">{success}</div></div>}
 
-          {success && (
-            <p className="form-success" role="status">
-              {success}
-            </p>
-          )}
-
-          <button type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Update Password"}
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={loading}
+          >
+            {loading ? "Updating password..." : "Reset password"}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Remember your password?{" "}
-          <Link to="/login">Back to Login</Link>
-        </p>
-
-        {success && (
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-          >
-            Go to Login
-          </button>
-        )}
+        <div className="auth-links">
+          <Link to="/login">Back to Sign in</Link>
+        </div>
       </section>
     </main>
   );

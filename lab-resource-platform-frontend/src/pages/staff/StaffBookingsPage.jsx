@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useSearch } from "../../context/SearchContext";
+import FilterDropdown from "../../components/FilterDropdown";
 
 const STATUS_CONFIG = {
   PENDING_APPROVAL: { bg: "#fef3c7", text: "#b45309", label: "Pending Approval" },
@@ -24,6 +26,7 @@ const ALL_STATUSES = [
 export default function StaffBookingsPage() {
   const toast = useToast();
   const { user } = useAuth();
+  const { searchTerm, setSearchPlaceholder } = useSearch();
 
   const isStaff = [
     "INSTITUTION_ADMINISTRATOR",
@@ -32,16 +35,21 @@ export default function StaffBookingsPage() {
     "LAB_TECHNICIAN",
   ].includes(user?.role);
 
+  const [activeTab, setActiveTab] = useState("bookings"); // "bookings" | "approvals" | "waitlist"
   const [colleges, setColleges] = useState([]);
   const [selectedCollegeId, setSelectedCollegeId] = useState("");
   const [bookings, setBookings] = useState([]);
+  const [waitlist, setWaitlist] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [loadingWaitlist, setLoadingWaitlist] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
 
+  useEffect(() => {
+    setSearchPlaceholder("Search by student, equipment, or purpose...");
+  }, [setSearchPlaceholder]);
+
   const loadColleges = useCallback(async () => {
-    // Only System Admin needs full list of colleges to filter
     if (!isStaff) {
       try {
         const res = await api.get("/api/colleges");
@@ -73,17 +81,35 @@ export default function StaffBookingsPage() {
     }
   }, [toast]);
 
+  const loadWaitlist = useCallback(async () => {
+    setLoadingWaitlist(true);
+    try {
+      const res = await api.get("/api/waitlist/all");
+      setWaitlist(res.data || []);
+    } catch (err) {
+      console.error("Could not load waitlist", err);
+    } finally {
+      setLoadingWaitlist(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadColleges();
     loadBookings();
+    loadWaitlist();
 
-    const interval = setInterval(refreshBookingsQuietly, 10000);
+    const interval = setInterval(() => {
+      refreshBookingsQuietly();
+      loadWaitlist();
+    }, 10000);
+
     let ws = null;
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       ws = new WebSocket(`${protocol}//${window.location.hostname}:8080/ws/utilization`);
       ws.onmessage = () => {
         refreshBookingsQuietly();
+        loadWaitlist();
       };
     } catch (e) {}
 
@@ -91,7 +117,7 @@ export default function StaffBookingsPage() {
       clearInterval(interval);
       if (ws) ws.close();
     };
-  }, [loadColleges, loadBookings, refreshBookingsQuietly]);
+  }, [loadColleges, loadBookings, loadWaitlist, refreshBookingsQuietly]);
 
   async function handleStatusChange(booking, newStatus) {
     if (!newStatus || newStatus === booking.status) return;
@@ -109,7 +135,80 @@ export default function StaffBookingsPage() {
     }
   }
 
-  // Milestone 2 - T1: Check-in / Start Session directly from booking
+  // Manager Approval workflow: Approve
+  async function handleApproveBooking(b) {
+    setUpdatingId(b.id);
+    try {
+      await api.post(`/api/bookings/${b.id}/approve`);
+      toast.success(`Booking #${b.id} for "${b.equipmentName}" approved successfully!`);
+      setBookings((prev) =>
+        prev.map((item) => (item.id === b.id ? { ...item, status: "CONFIRMED" } : item))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to approve booking.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Manager Approval workflow: Reject
+  async function handleRejectBooking(b) {
+    const reason = window.prompt(
+      `Enter rejection reason for Booking #${b.id} (${b.equipmentName}):`,
+      "Scheduling conflict or operational limitation"
+    );
+    if (reason === null) return;
+
+    setUpdatingId(b.id);
+    try {
+      await api.post(`/api/bookings/${b.id}/reject`, {
+        reason: reason.trim() || "Rejected by laboratory administrator",
+      });
+      toast.success(`Booking #${b.id} was rejected.`);
+      setBookings((prev) =>
+        prev.map((item) => (item.id === b.id ? { ...item, status: "CANCELLED" } : item))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reject booking.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Waitlist Promotion
+  async function handlePromoteWaitlist(w) {
+    if (!window.confirm(`Promote waitlist candidate #${w.id} ("${w.userName}") to a confirmed booking?`)) {
+      return;
+    }
+    setUpdatingId(w.id);
+    try {
+      await api.post(`/api/waitlist/${w.id}/promote`);
+      toast.success(`Waitlist candidate #${w.id} promoted to confirmed booking!`);
+      loadWaitlist();
+      loadBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to promote waitlist candidate.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Remove from Waitlist
+  async function handleRemoveWaitlist(w) {
+    if (!window.confirm(`Remove waitlist entry #${w.id}?`)) return;
+    setUpdatingId(w.id);
+    try {
+      await api.delete(`/api/waitlist/${w.id}`);
+      toast.success(`Waitlist entry #${w.id} removed.`);
+      setWaitlist((prev) => prev.filter((item) => item.id !== w.id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove waitlist entry.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Check-in / Start Session directly from booking
   async function handleBookingCheckIn(b) {
     setUpdatingId(b.id);
     try {
@@ -127,7 +226,7 @@ export default function StaffBookingsPage() {
     }
   }
 
-  // Milestone 2 - T1: Check-out / Stop Session directly from booking
+  // Check-out / Stop Session directly from booking
   async function handleBookingCheckOut(b) {
     setUpdatingId(b.id);
     try {
@@ -151,7 +250,6 @@ export default function StaffBookingsPage() {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       timeZone: "Asia/Kolkata",
     };
     const s = new Date(start).toLocaleString("en-IN", opts);
@@ -159,11 +257,11 @@ export default function StaffBookingsPage() {
     return (
       <div style={{ fontSize: "0.85rem", lineHeight: 1.45 }}>
         <div>
-          <strong>From:</strong> {s}
+          <strong>Start:</strong> {s}
         </div>
         {e && (
           <div>
-            <strong>To:</strong> {e}
+            <strong>End:</strong> {e}
           </div>
         )}
       </div>
@@ -177,7 +275,13 @@ export default function StaffBookingsPage() {
     ? collegeMap[selectedCollegeId] || "Selected College"
     : "All Colleges";
 
-  const filteredBookings = bookings.filter((b) => {
+  const pendingBookings = bookings.filter((b) => b.status === "PENDING_APPROVAL");
+  const activeWaitlists = waitlist.filter((w) => w.status === "WAITING");
+
+  const displayedBookings = bookings.filter((b) => {
+    if (activeTab === "approvals" && b.status !== "PENDING_APPROVAL") {
+      return false;
+    }
     if (!isStaff && selectedCollegeId) {
       if (String(b.collegeId) !== String(selectedCollegeId)) {
         return false;
@@ -198,213 +302,369 @@ export default function StaffBookingsPage() {
     return true;
   });
 
+  const filteredWaitlist = waitlist.filter((w) => {
+    if (!isStaff && selectedCollegeId) {
+      if (String(w.collegeId) !== String(selectedCollegeId)) {
+        return false;
+      }
+    }
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const matchEquip = w.equipmentName?.toLowerCase().includes(q);
+      const matchUser = w.userName?.toLowerCase().includes(q) || w.userEmail?.toLowerCase().includes(q);
+      const matchPurpose = w.purpose?.toLowerCase().includes(q);
+      if (!matchEquip && !matchUser && !matchPurpose) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <div className="admin-page-container">
       {/* Page Header */}
       <div className="admin-header-row">
         <div>
-          <p className="admin-eyebrow">STUDENT RESERVATIONS &amp; LIFECYCLE</p>
+          <p className="admin-eyebrow">STUDENT RESERVATIONS &amp; WORKFLOWS</p>
           <h1 className="admin-title">
-            {isStaff ? `${currentCollegeName} Bookings Management` : "Bookings Management"}
+            {isStaff ? `${currentCollegeName} Bookings &amp; Approvals` : "Bookings &amp; Waitlist Management"}
           </h1>
           <p className="admin-subtitle">
             {isStaff
-              ? `Manage student equipment bookings for ${currentCollegeName}. Change status directly from the dropdown, or use quick Check-In/Check-Out to capture live usage.`
-              : "Review and manage laboratory equipment bookings across all colleges. Change status directly from the dropdown or manage live check-in sessions."}
+              ? `Review, approve, or reject student equipment reservations for ${currentCollegeName}. Monitor the active waitlist queue and dispatch live sessions.`
+              : "Review and manage laboratory equipment bookings across all colleges. Perform approval workflows, waitlist queue monitoring, and telemetry check-ins."}
           </p>
         </div>
-      </div>
 
-      {/* Filter Toolbar */}
-      <div className="admin-filter-bar">
-        {!isStaff && (
-          <div className="admin-filter-group">
-            <label htmlFor="staffBookingCollegeSelect" className="admin-filter-label">
-              Filter by College:
-            </label>
-            <select
-              id="staffBookingCollegeSelect"
-              className="admin-select admin-college-select"
-              value={selectedCollegeId}
-              onChange={(e) => setSelectedCollegeId(e.target.value)}
-            >
-              <option value="">All Colleges ({colleges.length})</option>
-              {colleges.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.name} ({col.code || "COL"})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="admin-filter-group">
-          <label htmlFor="staffBookingStatusSelect" className="admin-filter-label">
-            Filter by Status:
-          </label>
-          <select
-            id="staffBookingStatusSelect"
-            className="admin-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            {ALL_STATUSES.map((st) => (
-              <option key={st} value={st}>
-                {STATUS_CONFIG[st]?.label || st}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="admin-filter-group admin-search-group">
-          <input
-            type="text"
-            className="admin-input"
-            placeholder="Search by student, equipment, or purpose..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              type="button"
-              className="admin-clear-btn"
-              onClick={() => setSearchTerm("")}
-            >
-              ✕
-            </button>
+        <div className="admin-header-actions">
+          {activeTab !== "waitlist" && (
+            <FilterDropdown
+              colleges={colleges}
+              selectedCollegeId={selectedCollegeId}
+              onCollegeChange={setSelectedCollegeId}
+              statuses={ALL_STATUSES}
+              selectedStatus={statusFilter}
+              onStatusChange={setStatusFilter}
+              statusLabels={STATUS_CONFIG}
+              showCollege={!isStaff && colleges.length > 0}
+              showCategory={false}
+              showStatus={activeTab === "bookings"}
+            />
           )}
         </div>
       </div>
 
-      {/* Active College Indicator */}
-      <div className="admin-active-filter-badge">
-        Showing student bookings for: <strong>{currentCollegeName}</strong> (
-        {filteredBookings.length} {filteredBookings.length === 1 ? "booking" : "bookings"})
+      {/* Tabs Switcher: All Bookings, Pending Approvals, Waitlist Queue */}
+      <div className="bh-nav-tabs" style={{ marginBottom: "20px" }}>
+        <button
+          type="button"
+          className={`bh-nav-tab ${activeTab === "bookings" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("bookings");
+            setStatusFilter("");
+          }}
+        >
+          📅 All Bookings ({bookings.length})
+        </button>
+
+        <button
+          type="button"
+          className={`bh-nav-tab ${activeTab === "approvals" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("approvals");
+            setStatusFilter("");
+          }}
+          style={{ position: "relative" }}
+        >
+          ⏳ Pending Approvals ({pendingBookings.length})
+          {pendingBookings.length > 0 && (
+            <span
+              style={{
+                display: "inline-block",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: "#f59e0b",
+                marginLeft: "8px",
+              }}
+            />
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
+          onClick={() => setActiveTab("waitlist")}
+        >
+          📋 Waitlist Queue ({activeWaitlists.length} Waiting)
+        </button>
       </div>
 
-      {/* Bookings Table */}
-      {loading ? (
-        <div className="admin-loading-state">Loading bookings data...</div>
-      ) : filteredBookings.length === 0 ? (
-        <div className="admin-empty-card">
-          <h3>No bookings found</h3>
-          <p>
-            {isStaff || selectedCollegeId
-              ? `There are no student bookings for ${currentCollegeName} matching the selected filters.`
-              : "No student bookings match the selected filters."}
-          </p>
-        </div>
-      ) : (
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Equipment</th>
-                <th>College</th>
-                <th>Student / User</th>
-                <th>Schedule (IST)</th>
-                <th>Status (Change Dropdown)</th>
-                <th>Live Telemetry / Usage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBookings.map((b) => {
-                const statusConf = STATUS_CONFIG[b.status] || {
-                  bg: "#f3f4f6",
-                  text: "#374151",
-                  label: b.status,
-                };
-                const isUpdating = updatingId === b.id;
+      {/* Main Tab Content */}
+      {activeTab === "waitlist" ? (
+        /* Waitlist Queue Tab */
+        loadingWaitlist ? (
+          <div className="admin-loading-state">Loading waitlist entries...</div>
+        ) : filteredWaitlist.length === 0 ? (
+          <div className="admin-empty-card">
+            <h3>No waitlist entries</h3>
+            <p>
+              There are currently no active waitlist requests for {currentCollegeName}. When high-demand slots are contested, students queuing will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="admin-table-wrapper">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Queue Pos</th>
+                  <th>Equipment</th>
+                  <th>College</th>
+                  <th>Student</th>
+                  <th>Desired Slot (IST)</th>
+                  <th>Purpose</th>
+                  <th>Status</th>
+                  <th>Manager Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWaitlist.map((w) => {
+                  const isUpdating = updatingId === w.id;
+                  const isWaiting = w.status === "WAITING";
 
-                return (
-                  <tr key={b.id}>
-                    <td>#{b.id}</td>
-                    <td>
-                      <strong style={{ display: "block", color: "#111827" }}>
-                        {b.equipmentName || `Equipment #${b.equipmentId}`}
-                      </strong>
-                      {b.purpose && (
-                        <span style={{ fontSize: "0.8rem", color: "#6b7280", display: "block" }}>
-                          Purpose: {b.purpose}
-                        </span>
-                      )}
-                      {b.isRecurring && (
-                        <span className="staff-recurring-badge">
-                          🔁 Recurring ({b.recurrenceType || "Weekly"})
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="admin-badge-college">
-                        {b.collegeName || "General"}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ lineHeight: 1.3 }}>
-                        <strong>{b.userName || "Unknown Student"}</strong>
-                        <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-                          {b.userEmail}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{formatSchedule(b.startTime, b.endTime)}</td>
-                    <td>
-                      <div className="booking-status-inline-container">
-                        <select
-                          className="booking-status-inline-select"
-                          value={b.status}
-                          disabled={isUpdating}
+                  return (
+                    <tr key={w.id}>
+                      <td>
+                        <span
                           style={{
-                            backgroundColor: statusConf.bg,
-                            color: statusConf.text,
-                            borderColor: statusConf.text,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            backgroundColor: isWaiting ? "#e0f2fe" : "#f3f4f6",
+                            color: isWaiting ? "#0369a1" : "#6b7280",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
                           }}
-                          onChange={(e) => handleStatusChange(b, e.target.value)}
                         >
-                          {ALL_STATUSES.map((st) => (
-                            <option key={st} value={st}>
-                              {STATUS_CONFIG[st]?.label || st}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </td>
-                    <td>
-                      {/* Check-in / Check-out session buttons */}
-                      {b.status === "CONFIRMED" ? (
-                        <button
-                          type="button"
-                          className="staff-checkin-btn"
-                          disabled={isUpdating}
-                          onClick={() => handleBookingCheckIn(b)}
-                          title="Start live session and mark equipment IN USE"
-                        >
-                          ▶️ Check-In
-                        </button>
-                      ) : b.status === "IN_USE" ? (
-                        <button
-                          type="button"
-                          className="staff-checkout-btn"
-                          disabled={isUpdating}
-                          onClick={() => handleBookingCheckOut(b)}
-                          title="Stop session and record duration"
-                        >
-                          ⏹️ Check-Out
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
-                          {b.status === "COMPLETED" ? "Logged ✓" : "—"}
+                          #{w.queuePosition || 1}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td>
+                        <strong style={{ color: "#111827", display: "block" }}>
+                          {w.equipmentName}
+                        </strong>
+                        <span style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                          ID: #{w.equipmentId}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="admin-badge-college">{w.collegeName || "General"}</span>
+                      </td>
+                      <td>
+                        <div style={{ lineHeight: 1.3 }}>
+                          <strong>{w.userName || "Student"}</strong>
+                          <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{w.userEmail}</div>
+                        </div>
+                      </td>
+                      <td>{formatSchedule(w.desiredStartTime, w.desiredEndTime)}</td>
+                      <td>
+                        <span style={{ fontSize: "0.82rem", color: "#4b5563" }}>
+                          {w.purpose || "—"}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className="admin-status-pill"
+                          style={{
+                            backgroundColor: isWaiting ? "#fef3c7" : w.status === "CONVERTED" ? "#dcfce7" : "#fee2e2",
+                            color: isWaiting ? "#b45309" : w.status === "CONVERTED" ? "#15803d" : "#b91c1c",
+                          }}
+                        >
+                          {w.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          {isWaiting && (
+                            <button
+                              type="button"
+                              className="staff-promote-btn"
+                              disabled={isUpdating}
+                              onClick={() => handlePromoteWaitlist(w)}
+                              title="Promote directly into a confirmed reservation"
+                            >
+                              ⚡ Promote
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="staff-reject-btn"
+                            disabled={isUpdating}
+                            onClick={() => handleRemoveWaitlist(w)}
+                            title="Remove from waitlist"
+                          >
+                            🗑️ Remove
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+        /* Bookings & Approvals Tab */
+        loading ? (
+          <div className="admin-loading-state">Loading bookings data...</div>
+        ) : displayedBookings.length === 0 ? (
+          <div className="admin-empty-card">
+            <h3>No bookings found</h3>
+            <p>
+              {activeTab === "approvals"
+                ? `No pending approvals found for ${currentCollegeName}. All student requests are currently processed.`
+                : isStaff || selectedCollegeId
+                ? `There are no student bookings for ${currentCollegeName} matching the selected filters.`
+                : "No student bookings match the selected filters."}
+            </p>
+          </div>
+        ) : (
+          <div className="admin-table-wrapper">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Equipment</th>
+                  <th>College</th>
+                  <th>Student / Researcher</th>
+                  <th>Schedule (IST)</th>
+                  <th>Approval / Status Action</th>
+                  <th>Live Telemetry</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedBookings.map((b) => {
+                  const statusConf = STATUS_CONFIG[b.status] || {
+                    bg: "#f3f4f6",
+                    text: "#374151",
+                    label: b.status,
+                  };
+                  const isUpdating = updatingId === b.id;
+                  const isPending = b.status === "PENDING_APPROVAL";
+
+                  return (
+                    <tr key={b.id} style={isPending ? { backgroundColor: "#fffbeb" } : {}}>
+                      <td>#{b.id}</td>
+                      <td>
+                        <strong style={{ display: "block", color: "#111827" }}>
+                          {b.equipmentName || `Equipment #${b.equipmentId}`}
+                        </strong>
+                        {b.purpose && (
+                          <span style={{ fontSize: "0.8rem", color: "#6b7280", display: "block" }}>
+                            Purpose: {b.purpose}
+                          </span>
+                        )}
+                        {b.isRecurring && (
+                          <span className="staff-recurring-badge">
+                            🔁 Recurring ({b.recurrenceType || "Weekly"})
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="admin-badge-college">{b.collegeName || "General"}</span>
+                      </td>
+                      <td>
+                        <div style={{ lineHeight: 1.3 }}>
+                          <strong>{b.userName || "Unknown Student"}</strong>
+                          <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{b.userEmail}</div>
+                        </div>
+                      </td>
+                      <td>{formatSchedule(b.startTime, b.endTime)}</td>
+                      <td>
+                        {/* Approval / Rejection Workflow for Pending Requests */}
+                        {isPending ? (
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <button
+                              type="button"
+                              className="staff-approve-btn"
+                              disabled={isUpdating}
+                              onClick={() => handleApproveBooking(b)}
+                              title="Approve booking request"
+                            >
+                              ✅ Approve
+                            </button>
+
+                            <button
+                              type="button"
+                              className="staff-reject-btn"
+                              disabled={isUpdating}
+                              onClick={() => handleRejectBooking(b)}
+                              title="Reject booking request with reason"
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="booking-status-inline-container">
+                            <select
+                              className="booking-status-inline-select"
+                              value={b.status}
+                              disabled={isUpdating}
+                              style={{
+                                backgroundColor: statusConf.bg,
+                                color: statusConf.text,
+                                borderColor: statusConf.text,
+                              }}
+                              onChange={(e) => handleStatusChange(b, e.target.value)}
+                            >
+                              {ALL_STATUSES.map((st) => (
+                                <option key={st} value={st}>
+                                  {STATUS_CONFIG[st]?.label || st}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {/* Check-in / Check-out session buttons */}
+                        {b.status === "CONFIRMED" ? (
+                          <button
+                            type="button"
+                            className="staff-checkin-btn"
+                            disabled={isUpdating}
+                            onClick={() => handleBookingCheckIn(b)}
+                            title="Start live session and mark equipment IN USE"
+                          >
+                            ▶️ Check-In
+                          </button>
+                        ) : b.status === "IN_USE" ? (
+                          <button
+                            type="button"
+                            className="staff-checkout-btn"
+                            disabled={isUpdating}
+                            onClick={() => handleBookingCheckOut(b)}
+                            title="Stop session and record duration"
+                          >
+                            ⏹️ Check-Out
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
+                            {b.status === "COMPLETED" ? "Logged ✓" : "—"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   );
