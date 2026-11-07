@@ -90,7 +90,10 @@ public class EquipmentController {
             targetCollegeId = collegeId;
         }
 
-        List<Equipment> list = equipmentService.getAllEquipment();
+        List<Equipment> list = equipmentService.getAllEquipment()
+                .stream()
+                .filter(Equipment::isActive)
+                .toList();
         if (targetCollegeId != null) {
             list = list.stream()
                     .filter(e -> targetCollegeId.equals(e.getCollegeId()) || targetCollegeId.equals(e.getInstitutionId()))
@@ -211,6 +214,8 @@ public class EquipmentController {
             Authentication authentication) {
         Equipment existing = equipmentService.getEquipmentById(id);
         User currentUser = getAuthenticatedUser(authentication);
+
+        System.out.println("EquipmentID:"+id);
 
         if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
             Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);

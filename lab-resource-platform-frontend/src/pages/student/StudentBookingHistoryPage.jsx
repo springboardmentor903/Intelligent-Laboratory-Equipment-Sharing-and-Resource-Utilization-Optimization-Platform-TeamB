@@ -202,6 +202,10 @@ function StudentBookingHistoryPage() {
     }
   }
 
+  const activeWaitlists = waitlist.filter(
+    (w) => w.status === "WAITING"
+  );
+
   // Compute stats
   const stats = {
     total: bookings.length,
@@ -210,7 +214,7 @@ function StudentBookingHistoryPage() {
     inUse: bookings.filter((b) => b.status === "IN_USE").length,
     completed: bookings.filter((b) => b.status === "COMPLETED").length,
     cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
-    waitlistCount: waitlist.filter((w) => w.status === "WAITING").length,
+    waitlistCount: activeWaitlists.length,
   };
 
   const filtered = bookings.filter((b) => {
@@ -493,7 +497,7 @@ function StudentBookingHistoryPage() {
       ) : (
         /* Waitlist Tab */
         <div className="bh-waitlist-section">
-          {waitlist.length === 0 ? (
+          {activeWaitlists.length === 0 ? (
             <div className="bh-empty">
               <div className="bh-empty-icon">⏳</div>
               <h3>No active waitlist entries</h3>
@@ -504,7 +508,7 @@ function StudentBookingHistoryPage() {
             </div>
           ) : (
             <div className="bh-list">
-              {waitlist.map((w) => (
+              {activeWaitlists.map((w) => (
                 <div key={w.id} className="bh-card waitlist-card">
                   <div className="bh-card-header">
                     <div>
