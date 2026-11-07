@@ -59,7 +59,6 @@ public class EquipmentService {
         existing.setCalibrationDate(updated.getCalibrationDate());
         existing.setCertificationInfo(updated.getCertificationInfo());
         existing.setMaxBookingHours(updated.getMaxBookingHours());
-        existing.setActive(updated.isActive());
         // Always keep requiresApproval = true regardless of what was sent
         existing.setRequiresApproval(true);
 
@@ -68,7 +67,8 @@ public class EquipmentService {
 
     @Transactional
     public void deleteEquipment(Long id) {
-        Equipment existing = getEquipmentById(id);
-        equipmentRepository.delete(existing);
+        Equipment equipment = getEquipmentById(id);
+        equipment.setActive(false);
+        equipmentRepository.save(equipment);
     }
 }

@@ -302,7 +302,7 @@ export default function StaffBookingsPage() {
     return true;
   });
 
-  const filteredWaitlist = waitlist.filter((w) => {
+  const filteredWaitlist = activeWaitlists.filter((w) => {
     if (!isStaff && selectedCollegeId) {
       if (String(w.collegeId) !== String(selectedCollegeId)) {
         return false;
