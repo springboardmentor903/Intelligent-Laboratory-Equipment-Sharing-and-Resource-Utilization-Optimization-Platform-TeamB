@@ -61,4 +61,11 @@ public class EquipmentController {
             @Valid @RequestBody EquipmentStatusRequest request) {
         return equipmentService.updateEquipmentStatus(id, request);
     }
+
+    @PatchMapping("/{id}/shareable")
+    public EquipmentResponse updateEquipmentShareable(
+            @PathVariable Long id,
+            @RequestParam boolean shareable) {
+        return equipmentService.updateEquipmentShareable(id, shareable);
+    }
 }

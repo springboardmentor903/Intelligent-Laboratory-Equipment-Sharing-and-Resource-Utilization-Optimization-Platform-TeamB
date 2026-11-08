@@ -187,6 +187,18 @@ public EquipmentResponse updateEquipment(
         equipment.setPurchaseDate(request.getPurchaseDate());
         equipment.setDepartmentId(request.getDepartmentId());
         equipment.setInstitutionId(request.getInstitutionId());
+        if (request.getIsShareable() != null) {
+            equipment.setIsShareable(request.getIsShareable());
+        }
+        if (request.getRequiresApproval() != null) {
+            equipment.setRequiresApproval(request.getRequiresApproval());
+        }
+        if (request.getOperatingStartTime() != null) {
+            equipment.setOperatingStartTime(request.getOperatingStartTime());
+        }
+        if (request.getOperatingEndTime() != null) {
+            equipment.setOperatingEndTime(request.getOperatingEndTime());
+        }
 
         if (request.getCategoryId() == null) {
             equipment.setCategory(null);
@@ -287,6 +299,10 @@ private EquipmentResponse toResponse(Equipment equipment) {
     response.setPurchaseDate(equipment.getPurchaseDate());
     response.setDepartmentId(equipment.getDepartmentId());
     response.setInstitutionId(equipment.getInstitutionId());
+    response.setIsShareable(equipment.getIsShareable());
+    response.setRequiresApproval(equipment.getRequiresApproval());
+    response.setOperatingStartTime(equipment.getOperatingStartTime());
+    response.setOperatingEndTime(equipment.getOperatingEndTime());
 
     if (equipment.getCategory() != null) {
         response.setCategoryId(equipment.getCategory().getId());
@@ -407,5 +423,13 @@ equipment.setStatus(newStatus);
 
     return toResponse(equipmentRepository.save(equipment));
 }
+
+    @Transactional
+    public EquipmentResponse updateEquipmentShareable(Long id, boolean shareable) {
+        Equipment equipment = findEquipment(id);
+        authorizeEquipmentManagement(equipment.getInstitutionId());
+        equipment.setIsShareable(shareable);
+        return toResponse(equipmentRepository.save(equipment));
+    }
 
 }

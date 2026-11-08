@@ -12,6 +12,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -44,4 +45,12 @@ public class EquipmentRequest {
 
     @NotNull(message = "Institution ID is required")
     private Long institutionId;
+
+    private Boolean isShareable;
+
+    private Boolean requiresApproval;
+
+    private LocalTime operatingStartTime;
+
+    private LocalTime operatingEndTime;
 }

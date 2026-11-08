@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Getter
@@ -29,6 +30,11 @@ public class EquipmentResponse {
 
     private Long departmentId;
     private Long institutionId;
+
+    private Boolean isShareable;
+    private Boolean requiresApproval;
+    private LocalTime operatingStartTime;
+    private LocalTime operatingEndTime;
 
     private List<TagSummary> tags;
 

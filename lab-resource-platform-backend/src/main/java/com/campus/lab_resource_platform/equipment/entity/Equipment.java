@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
@@ -71,6 +72,18 @@ public class Equipment {
     @Column(name = "institution_id", nullable = false)
     private Long institutionId;
 
+    @Column(name = "is_shareable", nullable = false)
+    private Boolean isShareable = false;
+
+    @Column(name = "requires_approval", nullable = false)
+    private Boolean requiresApproval = false;
+
+    @Column(name = "operating_start_time")
+    private LocalTime operatingStartTime = LocalTime.of(8, 0);
+
+    @Column(name = "operating_end_time")
+    private LocalTime operatingEndTime = LocalTime.of(18, 0);
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -93,6 +106,22 @@ public class Equipment {
 
         if (status == null) {
             status = EquipmentStatus.AVAILABLE;
+        }
+
+        if (isShareable == null) {
+            isShareable = false;
+        }
+
+        if (requiresApproval == null) {
+            requiresApproval = false;
+        }
+
+        if (operatingStartTime == null) {
+            operatingStartTime = LocalTime.of(8, 0);
+        }
+
+        if (operatingEndTime == null) {
+            operatingEndTime = LocalTime.of(18, 0);
         }
     }
 

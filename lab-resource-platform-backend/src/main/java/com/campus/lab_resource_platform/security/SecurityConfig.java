@@ -142,6 +142,28 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // Sharing APIs
+                        .requestMatchers("/api/sharing/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        // Utilization APIs
+                        .requestMatchers("/api/utilization/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
                         // Maintenance APIs
                         .requestMatchers("/api/maintenance/**")
                         .hasAnyRole(

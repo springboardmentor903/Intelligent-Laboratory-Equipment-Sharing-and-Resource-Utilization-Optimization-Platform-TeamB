@@ -41,3 +41,17 @@ build/
 # Postman collections and local settings
 /postman/
 /.postman/
+@"
+
+# Additional local environment files
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Generated Maven argument files
+argfile.txt
+cp.txt
+cp_args.txt
+"@ | Add-Content .gitignore
