@@ -145,4 +145,33 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") Instant startTime,
             @Param("endTime") Instant endTime
     );
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE (b.equipment.institutionId = :institutionId OR b.equipment.collegeId = :institutionId
+               OR b.user.institutionId = :institutionId OR b.user.collegeId = :institutionId)
+          AND (b.sharingAgreementId IS NOT NULL OR b.external = true)
+    """)
+    List<Booking> findAllSharingBookingsForInstitution(@Param("institutionId") Long institutionId);
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE (b.equipment.institutionId = :institutionId OR b.equipment.collegeId = :institutionId)
+          AND b.external = true
+          AND b.status IN :statuses
+    """)
+    List<Booking> findExternalBookingsForEquipmentOwnerAndStatuses(
+            @Param("institutionId") Long institutionId,
+            @Param("statuses") Collection<BookingStatus> statuses
+    );
+
+    @EntityGraph(attributePaths = {"equipment", "user"})
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.equipment.id = :equipmentId
+          AND b.external = true
+    """)
+    List<Booking> findExternalBookingsByEquipmentId(@Param("equipmentId") Long equipmentId);
 }

@@ -74,5 +74,37 @@ public interface SharingAgreementRepository extends JpaRepository<SharingAgreeme
             @Param("status") AgreementStatus status,
             @Param("currentDate") LocalDate currentDate
     );
+
+    @EntityGraph(attributePaths = {"equipment"})
+    @Query("""
+        SELECT sa FROM SharingAgreement sa
+        WHERE sa.ownerInstitutionId = :institutionId OR sa.partnerInstitutionId = :institutionId
+    """)
+    List<SharingAgreement> findAllByInstitutionInvolved(@Param("institutionId") Long institutionId);
+
+    @EntityGraph(attributePaths = {"equipment"})
+    @Query("""
+        SELECT sa FROM SharingAgreement sa
+        WHERE (sa.ownerInstitutionId = :instA AND sa.partnerInstitutionId = :instB)
+           OR (sa.ownerInstitutionId = :instB AND sa.partnerInstitutionId = :instA)
+    """)
+    List<SharingAgreement> findAgreementsBetweenInstitutions(
+            @Param("instA") Long instA,
+            @Param("instB") Long instB
+    );
+
+    @Query("""
+        SELECT sa FROM SharingAgreement sa
+        WHERE (sa.ownerInstitutionId = :institutionId OR sa.partnerInstitutionId = :institutionId)
+          AND sa.status = :status
+          AND sa.endDate >= :today
+          AND sa.endDate <= :thirtyDaysLater
+    """)
+    List<SharingAgreement> findExpiringAgreements(
+            @Param("institutionId") Long institutionId,
+            @Param("status") AgreementStatus status,
+            @Param("today") LocalDate today,
+            @Param("thirtyDaysLater") LocalDate thirtyDaysLater
+    );
 }
 

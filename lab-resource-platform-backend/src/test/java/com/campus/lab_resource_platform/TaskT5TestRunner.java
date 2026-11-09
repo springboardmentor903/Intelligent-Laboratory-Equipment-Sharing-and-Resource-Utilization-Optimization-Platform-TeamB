@@ -19,7 +19,8 @@ public class TaskT5TestRunner {
                 com.campus.lab_resource_platform.booking.service.ExternalAccessValidatorTest.class,
                 com.campus.lab_resource_platform.sharing.service.FeeCalculationServiceTest.class,
                 com.campus.lab_resource_platform.sharing.service.SharedScheduleServiceTest.class,
-                com.campus.lab_resource_platform.utilization.service.UtilizationServiceTest.class
+                com.campus.lab_resource_platform.utilization.service.UtilizationServiceTest.class,
+                com.campus.lab_resource_platform.sharing.service.SharingAnalyticsServiceTest.class
         );
 
         int total = 0;
@@ -28,7 +29,7 @@ public class TaskT5TestRunner {
         List<String> failureMessages = new ArrayList<>();
 
         System.out.println("================================================================================");
-        System.out.println("             RUNNING BACKEND TASK T5 COMPREHENSIVE TEST SUITE                  ");
+        System.out.println("         RUNNING SHARING PLATFORM (T5 & T6) COMPREHENSIVE TEST SUITE           ");
         System.out.println("================================================================================");
 
         for (Class<?> clazz : testClasses) {

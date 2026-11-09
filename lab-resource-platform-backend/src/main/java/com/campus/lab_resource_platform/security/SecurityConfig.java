@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .successHandler(googleOAuth2SuccessHandler))
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/index.html").permitAll()
 
                         // Public authentication and OAuth2 endpoints
                         .requestMatchers("/api/auth/**").permitAll()
@@ -173,6 +174,13 @@ public class SecurityConfig {
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
                                 "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        // Sharing Analytics APIs (T6)
+                        .requestMatchers("/api/sharing/analytics/**")
+                        .hasAnyRole(
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )

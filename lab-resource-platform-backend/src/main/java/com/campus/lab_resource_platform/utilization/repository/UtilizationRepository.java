@@ -62,4 +62,60 @@ public interface UtilizationRepository extends JpaRepository<Utilization, Long> 
             @Param("rangeStart") Instant rangeStart,
             @Param("rangeEnd") Instant rangeEnd
     );
+
+    @EntityGraph(attributePaths = {"booking", "equipment", "user"})
+    @Query("""
+        SELECT u FROM Utilization u
+        WHERE (u.equipment.institutionId = :institutionId OR u.equipment.collegeId = :institutionId)
+          AND u.usedMinutes IS NOT NULL
+        ORDER BY u.checkInTime DESC
+    """)
+    List<Utilization> findAllProvidedUtilizations(@Param("institutionId") Long institutionId);
+
+    @EntityGraph(attributePaths = {"booking", "equipment", "user"})
+    @Query("""
+        SELECT u FROM Utilization u
+        WHERE (u.user.institutionId = :institutionId OR u.user.collegeId = :institutionId)
+          AND (u.equipment.institutionId != :institutionId AND (u.equipment.collegeId IS NULL OR u.equipment.collegeId != :institutionId))
+          AND u.usedMinutes IS NOT NULL
+        ORDER BY u.checkInTime DESC
+    """)
+    List<Utilization> findAllUsedExternalUtilizations(@Param("institutionId") Long institutionId);
+
+    @EntityGraph(attributePaths = {"booking", "equipment", "user"})
+    @Query("""
+        SELECT u FROM Utilization u
+        WHERE (u.equipment.institutionId = :institutionId OR u.equipment.collegeId = :institutionId)
+          AND u.usedMinutes IS NOT NULL
+          AND u.checkInTime >= :rangeStart AND u.checkInTime <= :rangeEnd
+        ORDER BY u.checkInTime ASC
+    """)
+    List<Utilization> findProvidedUtilizationsBetween(
+            @Param("institutionId") Long institutionId,
+            @Param("rangeStart") Instant rangeStart,
+            @Param("rangeEnd") Instant rangeEnd
+    );
+
+    @EntityGraph(attributePaths = {"booking", "equipment", "user"})
+    @Query("""
+        SELECT u FROM Utilization u
+        WHERE (u.user.institutionId = :institutionId OR u.user.collegeId = :institutionId)
+          AND (u.equipment.institutionId != :institutionId AND (u.equipment.collegeId IS NULL OR u.equipment.collegeId != :institutionId))
+          AND u.usedMinutes IS NOT NULL
+          AND u.checkInTime >= :rangeStart AND u.checkInTime <= :rangeEnd
+        ORDER BY u.checkInTime ASC
+    """)
+    List<Utilization> findUsedExternalUtilizationsBetween(
+            @Param("institutionId") Long institutionId,
+            @Param("rangeStart") Instant rangeStart,
+            @Param("rangeEnd") Instant rangeEnd
+    );
+
+    @EntityGraph(attributePaths = {"booking", "equipment", "user"})
+    @Query("""
+        SELECT u FROM Utilization u
+        WHERE (u.equipment.institutionId = :institutionId OR u.equipment.collegeId = :institutionId)
+          AND u.usedMinutes IS NOT NULL
+    """)
+    List<Utilization> findAllByEquipmentInstitution(@Param("institutionId") Long institutionId);
 }
