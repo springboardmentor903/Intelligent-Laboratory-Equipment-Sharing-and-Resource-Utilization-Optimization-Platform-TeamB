@@ -56,6 +56,17 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         final String normalizedEmail = email.trim().toLowerCase();
 
         User user = userRepository.findByGoogleId(googleId)
+                .or(() -> userRepository.findByEmail(normalizedEmail))
+                .map(existingUser -> {
+                    if (existingUser.getGoogleId() == null) {
+                        existingUser.setGoogleId(googleId);
+                    }
+                    if (existingUser.getProfileImageUrl() == null && picture != null) {
+                        existingUser.setProfileImageUrl(picture);
+                    }
+                    existingUser.setEmailVerified(true);
+                    return existingUser;
+                })
                 .orElseGet(() -> {
                     User newUser = new User();
                     newUser.setGoogleId(googleId);
@@ -90,7 +101,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         jwtCookie.setHttpOnly(true);
         jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(60 * 60);
+        jwtCookie.setMaxAge(24 * 60 * 60);
         jwtCookie.setSecure(false); // Local HTTP development only
 
         response.addCookie(jwtCookie);

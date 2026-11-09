@@ -191,14 +191,14 @@ public class ExternalAccessValidatorTest {
         when(listingRepository.findByEquipmentId(10L)).thenReturn(Optional.of(listing));
 
         // Listing max duration is 6 hours; request 8 hours
-        LocalDateTime start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
+        LocalDateTime start = LocalDateTime.now().plusDays(2).withHour(10).withMinute(0);
         LocalDateTime end = start.plusHours(8);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                 validator.validate(equipment, externalUser, start, end)
         );
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertTrue(ex.getReason().contains("maximum allowed duration"));
+        assertTrue(ex.getReason().contains("maximum allowed duration"), ex.getReason());
     }
 
     @Test
@@ -213,15 +213,18 @@ public class ExternalAccessValidatorTest {
 
         // Already booked 700 minutes of external time
         Booking existing = new Booking();
-        existing.setStartTime(LocalDateTime.now().plusDays(1).withHour(8).withMinute(0));
-        existing.setEndTime(existing.getStartTime().plusMinutes(700));
+        LocalDateTime existingStart = LocalDateTime.now().plusDays(1).withHour(8).withMinute(0);
+        LocalDateTime existingEnd = existingStart.plusMinutes(700);
+        existing.setStartTime(existingStart);
+        existing.setEndTime(existingEnd);
 
         when(bookingRepository.findExternalBookingsInPeriod(eq(10L), any(), any(), any()))
                 .thenReturn(List.of(existing));
         when(capacityService.getOperatingStartTime(equipment)).thenReturn(LocalTime.of(8, 0));
         when(capacityService.getOperatingEndTime(equipment)).thenReturn(LocalTime.of(18, 0));
 
-        when(capacityService.calculateBookedMinutesInOperatingHours(eq(existing.getStartTime()), eq(existing.getEndTime()), any(), any(), any(), any()))
+        when(capacityService.calculateBookedMinutesInOperatingHours(
+                eq(existingStart), eq(existingEnd), any(), any(), any(), any()))
                 .thenReturn(700L);
 
         // New booking requests 200 minutes (700 + 200 = 900 > 840 limit)
@@ -239,4 +242,3 @@ public class ExternalAccessValidatorTest {
         assertTrue(ex.getReason().contains("Weekly external share limit exceeded"));
     }
 }
-

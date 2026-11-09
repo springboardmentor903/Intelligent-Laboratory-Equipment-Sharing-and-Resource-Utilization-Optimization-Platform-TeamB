@@ -19,6 +19,9 @@ public class User {
     @Column(name = "institution_id")
     private Long institutionId;
 
+    @Column(name = "college_id")
+    private Long collegeId;
+
     @Column(name = "department_id")
     private Long departmentId;
 

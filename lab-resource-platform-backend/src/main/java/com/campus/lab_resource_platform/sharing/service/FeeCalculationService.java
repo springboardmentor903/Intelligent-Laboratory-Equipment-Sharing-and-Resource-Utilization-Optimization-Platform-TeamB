@@ -20,15 +20,19 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class FeeCalculationService {
+
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final SharingAgreementRepository agreementRepository;
     private final AccessGrantRepository grantRepository;
@@ -83,8 +87,12 @@ public class FeeCalculationService {
         User currentUser = getAuthenticatedUser();
         authorizeUsageFeesAccess(agreement, currentUser);
 
-        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
-        LocalDateTime endDateTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        Instant startDateTime = startDate != null
+                ? startDate.atStartOfDay(IST_ZONE).toInstant()
+                : null;
+        Instant endDateTime = endDate != null
+                ? endDate.atTime(LocalTime.MAX).atZone(IST_ZONE).toInstant()
+                : null;
 
         List<Booking> bookings = bookingRepository.findAgreementBookingsInPeriod(
                 agreementId, startDateTime, endDateTime);
@@ -136,8 +144,8 @@ public class FeeCalculationService {
 
             AgreementUsageFeesResponse.BookingFeeItem item = new AgreementUsageFeesResponse.BookingFeeItem();
             item.setBookingId(b.getId());
-            item.setStartTime(b.getStartTime());
-            item.setEndTime(b.getEndTime());
+            item.setStartTime(LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE));
+            item.setEndTime(LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE));
             item.setBookedMinutes(bookedMins);
             item.setUsedMinutes(usedMins);
             item.setFeePerHour(agreement.getFeePerHour());
@@ -193,4 +201,3 @@ public class FeeCalculationService {
         return user;
     }
 }
-

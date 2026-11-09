@@ -9,12 +9,15 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class SharedOccupancyService {
+
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final BookingRepository bookingRepository;
     private final BookingHoldRepository holdRepository;
@@ -60,13 +63,18 @@ public class SharedOccupancyService {
                 BookingStatus.IN_USE
         );
 
-        List<Booking> bookings = bookingRepository.findScheduleBookings(equipmentId, rangeStart, rangeEnd, activeStatuses);
+        List<Booking> bookings = bookingRepository.findScheduleBookings(
+                equipmentId,
+                rangeStart.atZone(IST_ZONE).toInstant(),
+                rangeEnd.atZone(IST_ZONE).toInstant(),
+                activeStatuses
+        );
         for (Booking b : bookings) {
             Long partnerInstId = (b.isExternal() && b.getUser() != null) ? b.getUser().getInstitutionId() : null;
             slots.add(new OccupancySlot(
                     b.getId(),
-                    b.getStartTime(),
-                    b.getEndTime(),
+                    LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE),
+                    LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE),
                     b.isExternal(),
                     "BOOKING",
                     partnerInstId
@@ -89,7 +97,7 @@ public class SharedOccupancyService {
         return slots;
     }
 
-    public boolean isSlotOccupied(Long equipmentId, LocalDateTime startTime, LocalDateTime endTime, Long excludeBookingId) {
+    public boolean isSlotOccupied(Long equipmentId, Instant startTime, Instant endTime, Long excludeBookingId) {
         Set<BookingStatus> activeStatuses = Set.of(
                 BookingStatus.PENDING_APPROVAL,
                 BookingStatus.CONFIRMED,
@@ -97,20 +105,21 @@ public class SharedOccupancyService {
         );
 
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
-                equipmentId, startTime, endTime,
-                Set.of(BookingStatus.CANCELLED, BookingStatus.REJECTED, BookingStatus.COMPLETED)
+                equipmentId, startTime, endTime, activeStatuses
         );
 
         for (Booking b : conflicts) {
-            if (activeStatuses.contains(b.getStatus())) {
-                if (excludeBookingId == null || !b.getId().equals(excludeBookingId)) {
-                    return true;
-                }
+            if (excludeBookingId == null || !b.getId().equals(excludeBookingId)) {
+                return true;
             }
         }
 
-        List<BookingHold> holds = holdRepository.findActiveHoldsInPeriod(equipmentId, startTime, endTime, Instant.now());
+        List<BookingHold> holds = holdRepository.findActiveHoldsInPeriod(
+                equipmentId,
+                LocalDateTime.ofInstant(startTime, IST_ZONE),
+                LocalDateTime.ofInstant(endTime, IST_ZONE),
+                Instant.now()
+        );
         return !holds.isEmpty();
     }
 }
-

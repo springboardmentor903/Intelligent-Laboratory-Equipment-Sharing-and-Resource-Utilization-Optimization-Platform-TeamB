@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -20,6 +21,14 @@ public class EquipmentResponse {
     private String name;
     private String assetTag;
     private String description;
+    private String category;
+    private String model;
+    private String manufacturer;
+    private String serialNumber;
+    private String location;
+    private String specifications;
+    private String documentationUrl;
+    private String legacyTags;
     private EquipmentStatus status;
     private BigDecimal purchaseCost;
     private BigDecimal hourlyCost;
@@ -30,11 +39,16 @@ public class EquipmentResponse {
 
     private Long departmentId;
     private Long institutionId;
+    private Long collegeId;
 
     private Boolean isShareable;
     private Boolean requiresApproval;
     private LocalTime operatingStartTime;
     private LocalTime operatingEndTime;
+    private Instant calibrationDate;
+    private String certificationInfo;
+    private Integer maxBookingHours;
+    private Boolean active;
 
     private List<TagSummary> tags;
 

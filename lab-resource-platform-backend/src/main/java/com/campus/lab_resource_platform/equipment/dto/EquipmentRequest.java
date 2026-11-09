@@ -1,9 +1,9 @@
 
 package com.campus.lab_resource_platform.equipment.dto;
 
+import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -12,6 +12,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalTime;
 
 @Getter
@@ -30,6 +31,24 @@ public class EquipmentRequest {
     @Size(max = 2000, message = "Description cannot exceed 2000 characters")
     private String description;
 
+    private String category;
+
+    private String model;
+
+    private String manufacturer;
+
+    private String serialNumber;
+
+    private String location;
+
+    private String specifications;
+
+    private String documentationUrl;
+
+    private String tags;
+
+    private EquipmentStatus status;
+
     @DecimalMin(value = "0.0", message = "Purchase cost cannot be negative")
     private BigDecimal purchaseCost;
 
@@ -43,8 +62,9 @@ public class EquipmentRequest {
 
     private Long departmentId;
 
-    @NotNull(message = "Institution ID is required")
     private Long institutionId;
+
+    private Long collegeId;
 
     private Boolean isShareable;
 
@@ -53,4 +73,12 @@ public class EquipmentRequest {
     private LocalTime operatingStartTime;
 
     private LocalTime operatingEndTime;
+
+    private Instant calibrationDate;
+
+    private String certificationInfo;
+
+    private Integer maxBookingHours;
+
+    private Boolean active;
 }

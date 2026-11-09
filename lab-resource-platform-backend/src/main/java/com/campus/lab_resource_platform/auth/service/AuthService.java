@@ -5,56 +5,182 @@ import com.campus.lab_resource_platform.auth.dto.RegisterRequest;
 import com.campus.lab_resource_platform.security.JwtService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import com.campus.lab_resource_platform.user.service.TechnicianAccessRequestService;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Locale;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final UserRepository userRepo;
+    private final BCryptPasswordEncoder encoder;
     private final JwtService jwtService;
+    private final TechnicianAccessRequestService accessRequestService;
 
     public AuthService(
-            UserRepository userRepository,
-            BCryptPasswordEncoder passwordEncoder,
-            JwtService jwtService) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+            UserRepository userRepo,
+            BCryptPasswordEncoder encoder,
+            JwtService jwtService,
+            TechnicianAccessRequestService accessRequestService) {
+        this.userRepo = userRepo;
+        this.encoder = encoder;
         this.jwtService = jwtService;
+        this.accessRequestService = accessRequestService;
     }
 
-    public String register(RegisterRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        if (userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+    @Transactional
+    public User register(RegisterRequest dto) {
+        String email = dto.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        if (userRepo.existsByEmail(email)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email is already registered"
+            );
+        }
+
+        User.Role requestedRole;
+        try {
+            requestedRole = User.Role.valueOf(dto.getRole().trim());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role"
+            );
+        }
+
+        if (requestedRole == User.Role.SYSTEM_ADMINISTRATOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "System Administrator cannot be requested via public registration"
+            );
         }
 
         User user = new User();
-        user.setFullName(request.getFullName().trim());
+        user.setFullName(dto.getFullName().trim());
         user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setPasswordHash(encoder.encode(dto.getPassword()));
         user.setAuthProvider(User.AuthProvider.LOCAL);
+
+        // Public registration assigns default unprivileged role only.
         user.setRole(User.Role.RESEARCHER_STUDENT);
         user.setEmailVerified(false);
         user.setActive(true);
 
-        userRepository.save(user);
-        return "Registration successful";
+        User savedUser = userRepo.save(user);
+
+        // If the applicant requested a privileged role, record a pending access request
+        // for System Administrator review and approval.
+        if (requestedRole != User.Role.RESEARCHER_STUDENT) {
+            accessRequestService.submitRequest(
+                    dto.getFullName(),
+                    email,
+                    dto.getPassword(),
+                    dto.getInstitution(),
+                    dto.getDepartment(),
+                    requestedRole,
+                    dto.getReason() != null ? dto.getReason() : "Requested during registration"
+            );
+        }
+
+        return savedUser;
     }
 
-    public String login(LoginRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        User user = userRepository.findByEmail(email)
-                .filter(User::isActive)
-                .filter(account -> account.getAuthProvider() == User.AuthProvider.LOCAL)
-                .filter(account -> account.getPasswordHash() != null
-                        && passwordEncoder.matches(request.getPassword(), account.getPasswordHash()))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+    public String login(LoginRequest dto) {
+        return login(dto, null);
+    }
 
-        return jwtService.generateToken(user.getEmail(), user.getRole().name());
+    public String login(LoginRequest dto, HttpServletResponse response) {
+        String email = dto.getEmail().trim().toLowerCase();
+
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() ->
+                        new BadCredentialsException(
+                                "Invalid email or password"));
+
+        if (user.getAuthProvider() != User.AuthProvider.LOCAL
+                || user.getPasswordHash() == null
+                || !encoder.matches(dto.getPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException(
+                    "Invalid email or password");
+        }
+
+        if (!user.isActive()) {
+            throw new DisabledException("Account is inactive");
+        }
+
+        String token = jwtService.generateToken(
+                user.getEmail(),
+                user.getRole().name()
+        );
+
+        if (response != null) {
+            Cookie cookie = new Cookie("jwt", token);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);
+            cookie.setPath("/");
+            cookie.setMaxAge(24 * 60 * 60);
+
+            response.addCookie(cookie);
+        }
+
+        return token;
+    }
+
+    public void logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("jwt", "");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+
+        response.addCookie(cookie);
+    }
+
+    @Transactional
+    public void resetPassword(
+            String email,
+            String newPassword,
+            String confirmPassword) {
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Passwords do not match"
+            );
+        }
+
+        String normalizedEmail =
+                email.trim().toLowerCase(Locale.ROOT);
+
+        User user = userRepo.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        if (!user.isActive()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account is inactive"
+            );
+        }
+
+        user.setPasswordHash(
+                encoder.encode(newPassword)
+        );
+
+        userRepo.save(user);
     }
 }

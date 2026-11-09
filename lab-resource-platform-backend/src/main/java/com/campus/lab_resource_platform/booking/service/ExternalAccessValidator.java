@@ -24,6 +24,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +34,7 @@ import java.util.Set;
 public class ExternalAccessValidator {
 
     public static final int GENERAL_MAX_BOOKING_HOURS = 24;
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final SharingListingRepository listingRepository;
     private final SharingAgreementRepository agreementRepository;
@@ -74,7 +77,12 @@ public class ExternalAccessValidator {
         public BigDecimal getEstimatedFee() { return estimatedFee; }
     }
 
-    public ValidationResult validate(Equipment equipment, User user, LocalDateTime startTime, LocalDateTime endTime) {
+    public ValidationResult validate(Equipment equipment, User user, Instant startInstant, Instant endInstant) {
+        if (startInstant == null || endInstant == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking start and end times are required");
+        }
+        LocalDateTime startTime = LocalDateTime.ofInstant(startInstant, IST_ZONE);
+        LocalDateTime endTime = LocalDateTime.ofInstant(endInstant, IST_ZONE);
         if (!endTime.isAfter(startTime)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
         }
@@ -99,7 +107,7 @@ public class ExternalAccessValidator {
                 user.getId(),
                 AgreementStatus.ACTIVE,
                 GrantStatus.ACTIVE,
-                LocalDate.now()
+                LocalDate.now(IST_ZONE)
         );
 
         SharingAgreement validAgreement = null;
@@ -146,7 +154,7 @@ public class ExternalAccessValidator {
         }
 
         // Rule 6: Minimum booking notice hours
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(IST_ZONE);
         int minNotice = listing.getMinNoticeHours() != null ? listing.getMinNoticeHours() : 0;
         if (startTime.isBefore(now.plusHours(minNotice))) {
             throw new ResponseStatusException(
@@ -176,6 +184,19 @@ public class ExternalAccessValidator {
         BigDecimal estimatedFee = feeCalculationService.calculateEstimatedFee(startTime, endTime, agreementFee);
 
         return new ValidationResult(true, validAgreement.getId(), agreementFee, estimatedFee);
+    }
+
+    public ValidationResult validate(
+            Equipment equipment, User user, LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking start and end times are required");
+        }
+        return validate(
+                equipment,
+                user,
+                startTime.atZone(IST_ZONE).toInstant(),
+                endTime.atZone(IST_ZONE).toInstant()
+        );
     }
 
     private void validateWeeklyExternalShareLimit(
@@ -211,7 +232,11 @@ public class ExternalAccessValidator {
         );
 
         List<Booking> existingExternalBookings = bookingRepository.findExternalBookingsInPeriod(
-                equipment.getId(), weekStartDateTime, weekEndDateTime, countedStatuses);
+                equipment.getId(),
+                weekStartDateTime.atZone(IST_ZONE).toInstant(),
+                weekEndDateTime.atZone(IST_ZONE).toInstant(),
+                countedStatuses
+        );
 
         LocalTime opStart = capacityService.getOperatingStartTime(equipment);
         LocalTime opEnd = capacityService.getOperatingEndTime(equipment);
@@ -219,7 +244,13 @@ public class ExternalAccessValidator {
         long alreadyBookedMinutes = 0L;
         for (Booking b : existingExternalBookings) {
             alreadyBookedMinutes += capacityService.calculateBookedMinutesInOperatingHours(
-                    b.getStartTime(), b.getEndTime(), weekMonday, weekSunday, opStart, opEnd);
+                    LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE),
+                    LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE),
+                    weekMonday,
+                    weekSunday,
+                    opStart,
+                    opEnd
+            );
         }
 
         long newBookingMinutes = capacityService.calculateBookedMinutesInOperatingHours(
@@ -234,4 +265,3 @@ public class ExternalAccessValidator {
         }
     }
 }
-

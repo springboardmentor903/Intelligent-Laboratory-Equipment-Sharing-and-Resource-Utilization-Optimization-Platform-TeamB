@@ -30,6 +30,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +38,8 @@ import java.util.Set;
 
 @Service
 public class SharedScheduleService {
+
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final EquipmentRepository equipmentRepository;
     private final SharingListingRepository listingRepository;
@@ -165,7 +168,11 @@ public class SharedScheduleService {
                     BookingStatus.COMPLETED
             );
             List<Booking> weeklyBookings = bookingRepository.findExternalBookingsInPeriod(
-                    equipment.getId(), monday.atStartOfDay(), sunday.atTime(LocalTime.MAX), countedStatuses);
+                    equipment.getId(),
+                    monday.atStartOfDay(IST_ZONE).toInstant(),
+                    sunday.atTime(LocalTime.MAX).atZone(IST_ZONE).toInstant(),
+                    countedStatuses
+            );
 
             LocalTime opStart = capacityService.getOperatingStartTime(equipment);
             LocalTime opEnd = capacityService.getOperatingEndTime(equipment);
@@ -173,7 +180,13 @@ public class SharedScheduleService {
             long externalUsedMinutes = 0L;
             for (Booking b : weeklyBookings) {
                 externalUsedMinutes += capacityService.calculateBookedMinutesInOperatingHours(
-                        b.getStartTime(), b.getEndTime(), monday, sunday, opStart, opEnd);
+                        LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE),
+                        LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE),
+                        monday,
+                        sunday,
+                        opStart,
+                        opEnd
+                );
             }
 
             response.setWeeklyExternalMinutesUsed(externalUsedMinutes);
@@ -210,4 +223,3 @@ public class SharedScheduleService {
         return userRepository.findByEmail(authentication.getName()).orElse(null);
     }
 }
-

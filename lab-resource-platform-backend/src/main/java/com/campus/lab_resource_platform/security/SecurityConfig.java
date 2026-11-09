@@ -1,4 +1,3 @@
-
 package com.campus.lab_resource_platform.security;
 
 import org.springframework.context.annotation.Bean;
@@ -44,14 +43,18 @@ public class SecurityConfig {
                 .formLogin(formLogin -> formLogin.disable())
 
                 .exceptionHandling(exception -> exception
-                        .defaultAuthenticationEntryPointFor(
-                                (request, response, authException) ->
-                                        response.sendError(
-                                                jakarta.servlet.http.HttpServletResponse
-                                                        .SC_UNAUTHORIZED),
-                                request -> request.getRequestURI()
-                                        .startsWith("/api/")))
-
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required or session expired. Please sign in again.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Access denied: insufficient permissions.\"}");
+                        })
+                )
+                // Google OAuth2 login
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(googleOAuth2SuccessHandler))
 
@@ -59,6 +62,23 @@ public class SecurityConfig {
 
                         // Public authentication and OAuth2 endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/register",
+                                "/auth/myregister",
+                                "/auth/forgot-password",
+                                "/auth/reset-password",
+                                "/api/technician-requests",
+                                "/api/technician-requests/**",
+                                "/api/access-requests",
+                                "/api/access-requests/**",
+                                "/api/colleges",
+                                "/api/departments",
+                                "/api/departments/**",
+                                "/ws/utilization",
+                                "/ws/utilization/**",
+                                "/error"
+                        ).permitAll()
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/login/oauth2/**"
@@ -87,17 +107,30 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/equipment/**"
                         ).hasAnyRole(
+                                "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
-                        // Only equipment managers can modify equipment
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/equipment/**"
                         ).hasAnyRole(
+                                "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR",
+                                "SYSTEM_ADMINISTRATOR"
+                        )
+
+                        .requestMatchers("/api/utilization/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
@@ -106,7 +139,9 @@ public class SecurityConfig {
                                 HttpMethod.PATCH,
                                 "/api/equipment/**"
                         ).hasAnyRole(
+                                "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
@@ -144,17 +179,6 @@ public class SecurityConfig {
 
                         // Sharing APIs
                         .requestMatchers("/api/sharing/**")
-                        .hasAnyRole(
-                                "RESEARCHER_STUDENT",
-                                "LAB_TECHNICIAN",
-                                "LAB_MANAGER",
-                                "DEPARTMENT_HEAD",
-                                "INSTITUTION_ADMINISTRATOR",
-                                "SYSTEM_ADMINISTRATOR"
-                        )
-
-                        // Utilization APIs
-                        .requestMatchers("/api/utilization/**")
                         .hasAnyRole(
                                 "RESEARCHER_STUDENT",
                                 "LAB_TECHNICIAN",
@@ -203,7 +227,11 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173"));
+                List.of(
+                        "http://localhost:5173",
+                        "http://localhost:5174"
+                )
+        );
 
         configuration.setAllowedMethods(
                 List.of(

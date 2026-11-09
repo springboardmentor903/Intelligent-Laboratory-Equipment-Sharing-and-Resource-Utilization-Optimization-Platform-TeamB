@@ -28,11 +28,14 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class SharingAgreementService {
+
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final SharingAgreementRepository agreementRepository;
     private final AccessGrantRepository grantRepository;
@@ -138,7 +141,7 @@ public class SharingAgreementService {
         agreementRepository.save(agreement);
 
         // Cancel future bookings that have not started and are in PENDING_APPROVAL or CONFIRMED status
-        LocalDateTime currentDateTime = LocalDateTime.now();
+        Instant currentDateTime = Instant.now();
         Set<BookingStatus> cancelableStatuses = Set.of(
                 BookingStatus.PENDING_APPROVAL,
                 BookingStatus.CONFIRMED
@@ -157,8 +160,8 @@ public class SharingAgreementService {
                     this,
                     b.getEquipment().getId(),
                     b.getId(),
-                    b.getStartTime(),
-                    b.getEndTime(),
+                    LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE),
+                    LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE),
                     b.getCancellationReason()
             ));
         }
@@ -198,7 +201,7 @@ public class SharingAgreementService {
         AccessGrant savedGrant = grantRepository.save(grant);
 
         // Cancel future bookings of this user under this agreement
-        LocalDateTime currentDateTime = LocalDateTime.now();
+        Instant currentDateTime = Instant.now();
         Set<BookingStatus> cancelableStatuses = Set.of(
                 BookingStatus.PENDING_APPROVAL,
                 BookingStatus.CONFIRMED
@@ -216,8 +219,8 @@ public class SharingAgreementService {
                     this,
                     b.getEquipment().getId(),
                     b.getId(),
-                    b.getStartTime(),
-                    b.getEndTime(),
+                    LocalDateTime.ofInstant(b.getStartTime(), IST_ZONE),
+                    LocalDateTime.ofInstant(b.getEndTime(), IST_ZONE),
                     b.getCancellationReason()
             ));
         }
@@ -328,4 +331,3 @@ public class SharingAgreementService {
         return user;
     }
 }
-
