@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Intelligent-Laboratory-Equipment-Sharing-and-Resource-Utilization-Optimization-Platform-TeamB.iml" filepath="$PROJECT_DIR$/.idea/Intelligent-Laboratory-Equipment-Sharing-and-Resource-Utilization-Optimization-Platform-TeamB.iml" />
+      <module fileurl="file://$PROJECT_DIR$/lab-resource-platform-backend/lab-resource-platform-backend.iml" filepath="$PROJECT_DIR$/lab-resource-platform-backend/lab-resource-platform-backend.iml" />
     </modules>
   </component>
 </project>
