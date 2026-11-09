@@ -5,16 +5,30 @@ import com.campus.lab_resource_platform.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
-@Table(name = "bookings")
+@Table(
+        name = "bookings",
+        indexes = {
+                @Index(name = "idx_booking_equipment_time",
+                        columnList = "equipment_id, start_time, end_time"),
+                @Index(name = "idx_booking_user", columnList = "user_id"),
+                @Index(name = "idx_booking_sharing_agreement",
+                        columnList = "sharing_agreement_id")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Booking {
+
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,7 +53,8 @@ public class Booking {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
-    private BookingStatus status;
+    @Builder.Default
+    private BookingStatus status = BookingStatus.PENDING_APPROVAL;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approver_id")
@@ -57,7 +72,24 @@ public class Booking {
     @Column(name = "cancellation_reason", length = 1000)
     private String cancellationReason;
 
-    // Recurring booking support
+    // T5: Inter-institution sharing and external booking
+    @Column(name = "is_external", nullable = false)
+    @Builder.Default
+    private boolean external = false;
+
+    @Column(name = "sharing_agreement_id")
+    private Long sharingAgreementId;
+
+    @Column(name = "fee_per_hour", precision = 12, scale = 2)
+    private BigDecimal feePerHour;
+
+    @Column(name = "estimated_fee", precision = 12, scale = 2)
+    private BigDecimal estimatedFee;
+
+    @Column(name = "actual_fee", precision = 12, scale = 2)
+    private BigDecimal actualFee;
+
+    // Origin: recurring booking support
     @Column(name = "is_recurring")
     @Builder.Default
     private Boolean isRecurring = false;
@@ -68,17 +100,40 @@ public class Booking {
     @Column(name = "recurrence_type", length = 32)
     private String recurrenceType;
 
+    @Version
+    private Long version;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    public void setStartTime(Instant startTime) {
+        this.startTime = startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime == null ? null : startTime.atZone(IST_ZONE).toInstant();
+    }
+
+    public void setEndTime(Instant endTime) {
+        this.endTime = endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime == null ? null : endTime.atZone(IST_ZONE).toInstant();
+    }
+
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
+
+        if (status == null) {
+            status = BookingStatus.PENDING_APPROVAL;
+        }
         if (isRecurring == null) {
             isRecurring = false;
         }

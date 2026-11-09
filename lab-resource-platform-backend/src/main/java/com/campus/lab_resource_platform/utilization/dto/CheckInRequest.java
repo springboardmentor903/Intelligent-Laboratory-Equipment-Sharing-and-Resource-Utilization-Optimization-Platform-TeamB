@@ -1,7 +1,12 @@
 package com.campus.lab_resource_platform.utilization.dto;
 
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -12,9 +17,9 @@ public class CheckInRequest {
 
     private Long bookingId;
 
-    @NotNull(message = "equipmentId is required")
     private Long equipmentId;
+
+    private LocalDateTime checkInTime;
 
     private String notes;
 }
-

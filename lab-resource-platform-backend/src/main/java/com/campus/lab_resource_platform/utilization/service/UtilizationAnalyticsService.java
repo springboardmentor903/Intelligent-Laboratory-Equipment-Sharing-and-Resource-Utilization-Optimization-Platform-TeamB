@@ -382,7 +382,9 @@ public class UtilizationAnalyticsService {
                     .equipmentId(eq.getId())
                     .equipmentName(eq.getName())
                     .assetTag(eq.getAssetTag() != null ? eq.getAssetTag() : "EQ-" + eq.getId())
-                    .category(eq.getCategory())
+                    .category(eq.getCategory() != null
+                            ? eq.getCategory().getName()
+                            : eq.getLegacyCategory())
                     .location(eq.getLocation())
                     .totalBookings(totalBookings)
                     .bookedMinutes(bookedMins)
@@ -588,7 +590,9 @@ public class UtilizationAnalyticsService {
                         .equipmentName(eq.getName())
                         .assetTag(eq.getAssetTag() != null ? eq.getAssetTag() : "EQ-" + eq.getId())
                         .model(eq.getModel())
-                        .category(eq.getCategory())
+                        .category(eq.getCategory() != null
+                                ? eq.getCategory().getName()
+                                : eq.getLegacyCategory())
                         .departmentId(eq.getDepartmentId())
                         .departmentName(deptName)
                         .collegeId(cId)

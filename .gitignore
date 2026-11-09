@@ -1,3 +1,7 @@
+# Local Postman files and settings
+/postman/
+/.postman/
+
 # Environment files containing local secrets
 .env
 .env*.local

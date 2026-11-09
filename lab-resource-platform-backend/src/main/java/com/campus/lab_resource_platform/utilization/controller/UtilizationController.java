@@ -3,7 +3,11 @@ package com.campus.lab_resource_platform.utilization.controller;
 import com.campus.lab_resource_platform.booking.service.BookingAutoScheduler;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
-import com.campus.lab_resource_platform.utilization.dto.*;
+import com.campus.lab_resource_platform.utilization.dto.CheckInRequest;
+import com.campus.lab_resource_platform.utilization.dto.CheckOutRequest;
+import com.campus.lab_resource_platform.utilization.dto.EquipmentLiveStatusDto;
+import com.campus.lab_resource_platform.utilization.dto.UtilizationResponse;
+import com.campus.lab_resource_platform.utilization.dto.UtilizationSummaryDto;
 import com.campus.lab_resource_platform.utilization.service.UtilizationService;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Lazy;
@@ -39,98 +43,73 @@ public class UtilizationController {
         this.bookingAutoScheduler = bookingAutoScheduler;
     }
 
-    /**
-     * Start session / Check-in
-     */
     @PostMapping("/check-in")
     public ResponseEntity<UtilizationResponse> checkIn(
             @Valid @RequestBody CheckInRequest request,
-            Authentication authentication
-    ) {
-        UtilizationResponse response = utilizationService.checkIn(request, authentication.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(utilizationService.checkIn(request, authentication.getName()));
     }
 
-    /**
-     * Stop session / Check-out by utilization ID
-     */
-    @PostMapping("/{id}/check-out")
+    @PostMapping("/check-out")
     public ResponseEntity<UtilizationResponse> checkOut(
+            @RequestBody CheckOutRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(utilizationService.checkOut(request, authentication.getName()));
+    }
+
+    @PostMapping("/{id}/check-out")
+    public ResponseEntity<UtilizationResponse> checkOutByUtilization(
             @PathVariable Long id,
             @RequestBody(required = false) CheckOutRequest request,
-            Authentication authentication
-    ) {
-        UtilizationResponse response = utilizationService.checkOut(id, request, authentication.getName());
-        return ResponseEntity.ok(response);
+            Authentication authentication) {
+        return ResponseEntity.ok(utilizationService.checkOut(id, request, authentication.getName()));
     }
 
-    /**
-     * Stop session / Check-out directly by booking ID
-     */
     @PostMapping("/booking/{bookingId}/check-out")
     public ResponseEntity<UtilizationResponse> checkOutByBooking(
             @PathVariable Long bookingId,
             @RequestBody(required = false) CheckOutRequest request,
-            Authentication authentication
-    ) {
-        UtilizationResponse response = utilizationService.checkOutByBooking(bookingId, request, authentication.getName());
-        return ResponseEntity.ok(response);
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                utilizationService.checkOutByBooking(bookingId, request, authentication.getName()));
     }
 
-    /**
-     * Real-time Live Status for all equipment (college-scoped for staff)
-     */
     @GetMapping("/live-status")
     public ResponseEntity<List<EquipmentLiveStatusDto>> getLiveStatus(
             @RequestParam(required = false) Long collegeId,
-            Authentication authentication
-    ) {
-        try {
-            bookingAutoScheduler.processBookingLifecycle();
-        } catch (Exception ignored) {}
-
-        Long targetCollegeId = resolveCollegeId(collegeId, authentication);
-        return ResponseEntity.ok(utilizationService.getLiveEquipmentStatuses(targetCollegeId));
+            Authentication authentication) {
+        bookingAutoScheduler.processBookingLifecycle();
+        return ResponseEntity.ok(
+                utilizationService.getLiveEquipmentStatuses(resolveCollegeId(collegeId, authentication)));
     }
 
-    /**
-     * Utilization Summary & Statistics
-     */
     @GetMapping("/summary")
     public ResponseEntity<UtilizationSummaryDto> getSummary(
             @RequestParam(required = false) Long collegeId,
-            Authentication authentication
-    ) {
-        try {
-            bookingAutoScheduler.processBookingLifecycle();
-        } catch (Exception ignored) {}
-
-        Long targetCollegeId = resolveCollegeId(collegeId, authentication);
-        return ResponseEntity.ok(utilizationService.getUtilizationSummary(targetCollegeId));
+            Authentication authentication) {
+        bookingAutoScheduler.processBookingLifecycle();
+        return ResponseEntity.ok(
+                utilizationService.getUtilizationSummary(resolveCollegeId(collegeId, authentication)));
     }
 
-    /**
-     * Equipment Usage History Logs
-     */
     @GetMapping("/equipment/{equipmentId}/logs")
     public ResponseEntity<List<UtilizationResponse>> getEquipmentLogs(@PathVariable Long equipmentId) {
         return ResponseEntity.ok(utilizationService.getEquipmentUsageHistory(equipmentId));
     }
 
-    /**
-     * My Personal Usage Logs
-     */
     @GetMapping("/my-logs")
     public ResponseEntity<List<UtilizationResponse>> getMyLogs(Authentication authentication) {
         return ResponseEntity.ok(utilizationService.getMyUsageHistory(authentication.getName()));
     }
 
     private Long resolveCollegeId(Long requestedCollegeId, Authentication authentication) {
-        if (authentication != null && authentication.getName() != null) {
-            User user = userRepository.findByEmail(authentication.getName()).orElse(null);
-            if (user != null && COLLEGE_STAFF_ROLES.contains(user.getRole())) {
-                return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
-            }
+        if (authentication == null || authentication.getName() == null) {
+            return requestedCollegeId;
+        }
+        User user = userRepository.findByEmail(authentication.getName()).orElse(null);
+        if (user != null && COLLEGE_STAFF_ROLES.contains(user.getRole())) {
+            return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
         }
         return requestedCollegeId;
     }

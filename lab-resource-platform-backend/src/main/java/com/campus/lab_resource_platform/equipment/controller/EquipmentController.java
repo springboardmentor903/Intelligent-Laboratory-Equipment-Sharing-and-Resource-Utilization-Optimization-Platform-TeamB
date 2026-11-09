@@ -5,11 +5,16 @@ import com.campus.lab_resource_platform.booking.dto.SlotRecommendationResponse;
 import com.campus.lab_resource_platform.booking.service.BookingAutoScheduler;
 import com.campus.lab_resource_platform.booking.service.BookingOptimizationService;
 import com.campus.lab_resource_platform.booking.service.BookingService;
+import com.campus.lab_resource_platform.equipment.dto.EquipmentRequest;
+import com.campus.lab_resource_platform.equipment.dto.EquipmentResponse;
+import com.campus.lab_resource_platform.equipment.dto.EquipmentStatusRequest;
 import com.campus.lab_resource_platform.equipment.entity.Equipment;
+import com.campus.lab_resource_platform.equipment.entity.EquipmentStatus;
 import com.campus.lab_resource_platform.equipment.service.EquipmentService;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -52,6 +58,157 @@ public class EquipmentController {
         this.bookingAutoScheduler = bookingAutoScheduler;
     }
 
+    @GetMapping
+    public ResponseEntity<?> getEquipment(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) EquipmentStatus status,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long tagId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long collegeId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            Authentication authentication) {
+        bookingAutoScheduler.processBookingLifecycle();
+        User user = getAuthenticatedUser(authentication);
+        Long staffCollegeId = getStaffEnforcedCollegeId(user);
+        Long targetCollegeId = staffCollegeId != null ? staffCollegeId : collegeId;
+
+        boolean paginatedQuery = page != null || size != null || status != null
+                || categoryId != null || tagId != null || departmentId != null
+                || (keyword != null && !keyword.isBlank());
+        if (paginatedQuery) {
+            Page<EquipmentResponse> result = equipmentService.getEquipment(
+                    page != null ? page : 0,
+                    size != null ? size : 10,
+                    status,
+                    categoryId,
+                    tagId,
+                    departmentId,
+                    keyword,
+                    targetCollegeId
+            );
+            return ResponseEntity.ok(result);
+        }
+
+        if (user != null && COLLEGE_STAFF_ROLES.contains(user.getRole()) && targetCollegeId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<Equipment> equipment = equipmentService.getAllEquipment().stream()
+                .filter(Equipment::isActive)
+                .filter(item -> targetCollegeId == null
+                        || targetCollegeId.equals(item.getCollegeId())
+                        || targetCollegeId.equals(item.getInstitutionId()))
+                .filter(item -> category == null || category.isBlank()
+                        || categoryMatches(item, category))
+                .filter(item -> search == null || search.isBlank()
+                        || matchesSearch(item, search))
+                .toList();
+        return ResponseEntity.ok(equipment);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<EquipmentResponse> getEquipmentById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        bookingAutoScheduler.processBookingLifecycle();
+        Equipment equipment = equipmentService.getEquipmentById(id);
+        enforceCollegeAccess(equipment, getAuthenticatedUser(authentication));
+        return ResponseEntity.ok(equipmentService.getEquipmentResponseById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<EquipmentResponse> createEquipment(
+            @RequestBody EquipmentRequest request,
+            Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+        applyStaffInstitution(request, user);
+        if (request.getAssetTag() == null || request.getAssetTag().isBlank()) {
+            request.setAssetTag("EQ-" + java.util.UUID.randomUUID().toString().substring(0, 12));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(equipmentService.createEquipment(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<EquipmentResponse> updateEquipment(
+            @PathVariable Long id,
+            @RequestBody EquipmentRequest request,
+            Authentication authentication) {
+        Equipment existing = equipmentService.getEquipmentById(id);
+        User user = getAuthenticatedUser(authentication);
+        enforceCollegeAccess(existing, user);
+        if (request.getAssetTag() == null || request.getAssetTag().isBlank()) {
+            request.setAssetTag(existing.getAssetTag());
+        }
+        if (request.getInstitutionId() == null) {
+            request.setInstitutionId(existing.getInstitutionId());
+        }
+        if (request.getCollegeId() == null) {
+            request.setCollegeId(existing.getCollegeId());
+        }
+        applyStaffInstitution(request, user);
+        return ResponseEntity.ok(equipmentService.updateEquipment(id, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<EquipmentResponse> updateEquipmentStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication authentication) {
+        Equipment equipment = equipmentService.getEquipmentById(id);
+        enforceCollegeAccess(equipment, getAuthenticatedUser(authentication));
+        String status = body == null ? null : body.get("status");
+        if (status == null || status.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+        }
+        try {
+            EquipmentStatusRequest request = new EquipmentStatusRequest();
+            request.setStatus(EquipmentStatus.valueOf(status.trim().toUpperCase()));
+            return ResponseEntity.ok(equipmentService.updateEquipmentStatus(id, request));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status: " + status, e);
+        }
+    }
+
+    @PatchMapping("/{id}/shareable")
+    public EquipmentResponse updateEquipmentShareable(
+            @PathVariable Long id,
+            @RequestParam boolean shareable) {
+        return equipmentService.updateEquipmentShareable(id, shareable);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEquipment(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Equipment equipment = equipmentService.getEquipmentById(id);
+        enforceCollegeAccess(equipment, getAuthenticatedUser(authentication));
+        equipmentService.deleteEquipment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<List<AvailabilitySlotResponse>> getEquipmentAvailability(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
+        if (!startDate.isBefore(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be before endDate");
+        }
+        return ResponseEntity.ok(bookingService.getEquipmentAvailability(id, startDate, endDate));
+    }
+
+    @GetMapping("/{id}/recommend-slots")
+    public ResponseEntity<SlotRecommendationResponse> getRecommendedSlots(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "120") int durationMinutes) {
+        return ResponseEntity.ok(bookingOptimizationService.recommendSlots(id, date, durationMinutes));
+    }
+
     private User getAuthenticatedUser(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             return null;
@@ -66,189 +223,47 @@ public class EquipmentController {
         return null;
     }
 
-    @GetMapping
-    public ResponseEntity<List<Equipment>> getAllEquipment(
-            @RequestParam(required = false) Long collegeId,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String category,
-            Authentication authentication) {
-
-        try {
-            bookingAutoScheduler.processBookingLifecycle();
-        } catch (Exception ignored) {}
-
-        User currentUser = getAuthenticatedUser(authentication);
-        final Long targetCollegeId;
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            if (staffCollegeId == null) {
-                return ResponseEntity.ok(List.of());
-            }
-            targetCollegeId = staffCollegeId;
-        } else {
-            targetCollegeId = collegeId;
-        }
-
-        List<Equipment> list = equipmentService.getAllEquipment()
-                .stream()
-                .filter(Equipment::isActive)
-                .toList();
-        if (targetCollegeId != null) {
-            list = list.stream()
-                    .filter(e -> targetCollegeId.equals(e.getCollegeId()) || targetCollegeId.equals(e.getInstitutionId()))
-                    .toList();
-        }
-        if (category != null && !category.isBlank()) {
-            list = list.stream()
-                    .filter(e -> e.getCategory() != null && e.getCategory().equalsIgnoreCase(category.trim()))
-                    .toList();
-        }
-        if (search != null && !search.isBlank()) {
-            String q = search.trim().toLowerCase();
-            list = list.stream()
-                    .filter(e -> (e.getName() != null && e.getName().toLowerCase().contains(q))
-                            || (e.getModel() != null && e.getModel().toLowerCase().contains(q))
-                            || (e.getManufacturer() != null && e.getManufacturer().toLowerCase().contains(q))
-                            || (e.getCategory() != null && e.getCategory().toLowerCase().contains(q))
-                            || (e.getSpecifications() != null && e.getSpecifications().toLowerCase().contains(q))
-                            || (e.getTags() != null && e.getTags().toLowerCase().contains(q)))
-                    .toList();
-        }
-        return ResponseEntity.ok(list);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Equipment> getEquipmentById(
-            @PathVariable Long id,
-            Authentication authentication) {
-        try {
-            bookingAutoScheduler.processBookingLifecycle();
-        } catch (Exception ignored) {}
-
-        Equipment equipment = equipmentService.getEquipmentById(id);
-        User currentUser = getAuthenticatedUser(authentication);
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            Long eqCollegeId = equipment.getCollegeId() != null ? equipment.getCollegeId() : equipment.getInstitutionId();
-            if (staffCollegeId == null || !staffCollegeId.equals(eqCollegeId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only view equipment belonging to your college.");
+    private void enforceCollegeAccess(Equipment equipment, User user) {
+        Long staffCollegeId = getStaffEnforcedCollegeId(user);
+        if (staffCollegeId != null) {
+            Long equipmentCollegeId = equipment.getCollegeId() != null
+                    ? equipment.getCollegeId()
+                    : equipment.getInstitutionId();
+            if (!staffCollegeId.equals(equipmentCollegeId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Access denied. You can only manage equipment belonging to your college."
+                );
             }
         }
-
-        return ResponseEntity.ok(equipment);
     }
 
-    @PostMapping
-    public ResponseEntity<Equipment> createEquipment(
-            @RequestBody Equipment equipment,
-            Authentication authentication) {
-        User currentUser = getAuthenticatedUser(authentication);
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            if (staffCollegeId == null) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to any college. Cannot register equipment.");
-            }
-            equipment.setCollegeId(staffCollegeId);
-            equipment.setInstitutionId(staffCollegeId);
+    private void applyStaffInstitution(EquipmentRequest request, User user) {
+        Long staffCollegeId = getStaffEnforcedCollegeId(user);
+        if (staffCollegeId != null) {
+            request.setCollegeId(staffCollegeId);
+            request.setInstitutionId(staffCollegeId);
         }
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(equipmentService.createEquipment(equipment));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Equipment> updateEquipment(
-            @PathVariable Long id,
-            @RequestBody Equipment equipment,
-            Authentication authentication) {
-        Equipment existing = equipmentService.getEquipmentById(id);
-        User currentUser = getAuthenticatedUser(authentication);
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            Long eqCollegeId = existing.getCollegeId() != null ? existing.getCollegeId() : existing.getInstitutionId();
-            if (staffCollegeId == null || !staffCollegeId.equals(eqCollegeId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only update equipment belonging to your college.");
-            }
-            equipment.setCollegeId(staffCollegeId);
-            equipment.setInstitutionId(staffCollegeId);
-        }
-
-        return ResponseEntity.ok(equipmentService.updateEquipment(id, equipment));
+    private boolean categoryMatches(Equipment equipment, String requestedCategory) {
+        String category = equipment.getCategory() != null
+                ? equipment.getCategory().getName()
+                : equipment.getLegacyCategory();
+        return category != null && category.equalsIgnoreCase(requestedCategory.trim());
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Equipment> updateEquipmentStatus(
-            @PathVariable Long id,
-            @RequestBody java.util.Map<String, String> body,
-            Authentication authentication) {
-        String statusStr = body != null ? body.get("status") : null;
-        if (statusStr == null || statusStr.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
-        }
-        Equipment existing = equipmentService.getEquipmentById(id);
-        User currentUser = getAuthenticatedUser(authentication);
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            Long eqCollegeId = existing.getCollegeId() != null ? existing.getCollegeId() : existing.getInstitutionId();
-            if (staffCollegeId == null || !staffCollegeId.equals(eqCollegeId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only update equipment belonging to your college.");
-            }
-        }
-
-        try {
-            existing.setStatus(com.campus.lab_resource_platform.equipment.entity.EquipmentStatus.valueOf(statusStr.trim().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status: " + statusStr);
-        }
-        return ResponseEntity.ok(equipmentService.updateEquipment(id, existing));
+    private boolean matchesSearch(Equipment equipment, String search) {
+        String query = search.trim().toLowerCase();
+        return contains(equipment.getName(), query)
+                || contains(equipment.getModel(), query)
+                || contains(equipment.getManufacturer(), query)
+                || contains(equipment.getLegacyCategory(), query)
+                || contains(equipment.getSpecifications(), query)
+                || contains(equipment.getLegacyTags(), query);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEquipment(
-            @PathVariable Long id,
-            Authentication authentication) {
-        Equipment existing = equipmentService.getEquipmentById(id);
-        User currentUser = getAuthenticatedUser(authentication);
-
-        System.out.println("EquipmentID:"+id);
-
-        if (currentUser != null && COLLEGE_STAFF_ROLES.contains(currentUser.getRole())) {
-            Long staffCollegeId = getStaffEnforcedCollegeId(currentUser);
-            Long eqCollegeId = existing.getCollegeId() != null ? existing.getCollegeId() : existing.getInstitutionId();
-            if (staffCollegeId == null || !staffCollegeId.equals(eqCollegeId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. You can only delete equipment belonging to your college.");
-            }
-        }
-
-        equipmentService.deleteEquipment(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{id}/availability")
-    public ResponseEntity<List<AvailabilitySlotResponse>> getEquipmentAvailability(
-            @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
-
-        if (!startDate.isBefore(endDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be before endDate");
-        }
-
-        List<AvailabilitySlotResponse> slots = bookingService.getEquipmentAvailability(id, startDate, endDate);
-        return ResponseEntity.ok(slots);
-    }
-
-    @GetMapping("/{id}/recommend-slots")
-    public ResponseEntity<SlotRecommendationResponse> getRecommendedSlots(
-            @PathVariable Long id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(defaultValue = "120") int durationMinutes) {
-        SlotRecommendationResponse recommendations = bookingOptimizationService.recommendSlots(id, date, durationMinutes);
-        return ResponseEntity.ok(recommendations);
+    private boolean contains(String value, String query) {
+        return value != null && value.toLowerCase().contains(query);
     }
 }

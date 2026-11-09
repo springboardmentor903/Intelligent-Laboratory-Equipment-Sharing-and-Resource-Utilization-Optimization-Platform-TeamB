@@ -2,18 +2,28 @@ package com.campus.lab_resource_platform.equipment.repository;
 
 import com.campus.lab_resource_platform.equipment.entity.Equipment;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
+public interface EquipmentRepository extends JpaRepository<Equipment, Long>, JpaSpecificationExecutor<Equipment> {
+
+    boolean existsByAssetTagIgnoreCase(String assetTag);
+
+    Optional<Equipment> findByAssetTagIgnoreCase(String assetTag);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM Equipment e WHERE e.id = :id")
     Optional<Equipment> findByIdWithLock(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"category"})
+    List<Equipment> findByInstitutionIdOrCollegeId(Long institutionId, Long collegeId);
 }
