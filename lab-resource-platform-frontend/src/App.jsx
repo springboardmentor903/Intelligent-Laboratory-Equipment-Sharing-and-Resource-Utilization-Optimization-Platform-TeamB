@@ -29,6 +29,7 @@ import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
 import LiveUtilizationPage from "./pages/utilization/LiveUtilizationPage";
 import UtilizationAnalyticsPage from "./pages/analytics/UtilizationAnalyticsPage";
+import SharingAnalyticsPage from "./pages/analytics/SharingAnalyticsPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -208,6 +209,21 @@ function AppRoutes() {
               ]}
             >
               <UtilizationAnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Inter-Institution Sharing Analytics & Partnership Reports (Milestone 2 - Task T13) */}
+        <Route
+          path="sharing/analytics"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <SharingAnalyticsPage />
             </ProtectedRoute>
           }
         />

@@ -22,6 +22,7 @@ function DashboardLayout() {
   const isLabManager = user?.role === "LAB_MANAGER";
   const isTechnician = user?.role === "LAB_TECHNICIAN";
   const canAccessAnalytics = isSystemAdmin || isInstitutionAdmin || isDepartmentHead || isLabManager;
+  const canAccessSharingAnalytics = isSystemAdmin || isInstitutionAdmin;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -319,6 +320,20 @@ function DashboardLayout() {
                   </NavLink>
                 )}
 
+                {canAccessSharingAnalytics && (
+                  <NavLink
+                    to="/dashboard/sharing/analytics"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Partnership Analytics"
+                  >
+                    <span className="nav-icon">🤝</span>
+                    <span className="nav-text">Partnership Analytics</span>
+                  </NavLink>
+                )}
+
                 <NavLink
                   to="/dashboard/admin/accounts"
                   className={({ isActive }) =>
@@ -420,6 +435,20 @@ function DashboardLayout() {
                   >
                     <span className="nav-icon">📊</span>
                     <span className="nav-text">Analytics Engine</span>
+                  </NavLink>
+                )}
+
+                {canAccessSharingAnalytics && (
+                  <NavLink
+                    to="/dashboard/sharing/analytics"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Partnership Analytics"
+                  >
+                    <span className="nav-icon">🤝</span>
+                    <span className="nav-text">Partnership Analytics</span>
                   </NavLink>
                 )}
               </>
