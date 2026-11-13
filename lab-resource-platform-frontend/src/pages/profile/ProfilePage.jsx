@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { FiKey, FiSettings } from "react-icons/fi";
 
 export default function ProfilePage() {
     const { user, loading } = useAuth();
@@ -57,8 +58,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="profile-actions-group" style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", marginTop: "24px" }}>
-                    <Link to="/dashboard/account-settings" className="profile-button">
-                        Account Settings
+                    <Link to="/dashboard/account-settings" className="profile-button" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                        <FiSettings size={16} /> Account Settings
                     </Link>
 
                     <Link
@@ -75,10 +76,13 @@ export default function ProfilePage() {
                             fontWeight: "600",
                             fontSize: "0.92rem",
                             transition: "all 0.2s ease",
-                            display: "inline-block"
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px"
                         }}
                     >
-                        🔑 Forgot Password? Reset Password
+                        <FiKey size={16} /> Forgot Password? Reset Password
                     </Link>
                 </div>
             </section>

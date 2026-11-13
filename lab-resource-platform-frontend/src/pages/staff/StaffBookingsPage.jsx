@@ -4,6 +4,18 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import {
+  FiCalendar,
+  FiClock,
+  FiZap,
+  FiTrash2,
+  FiRepeat,
+  FiCheck,
+  FiX,
+  FiCheckCircle,
+  FiPlay,
+  FiSquare,
+} from "react-icons/fi";
 
 const STATUS_CONFIG = {
   PENDING_APPROVAL: { bg: "#fef3c7", text: "#b45309", label: "Pending Approval" },
@@ -363,8 +375,9 @@ export default function StaffBookingsPage() {
             setActiveTab("bookings");
             setStatusFilter("");
           }}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📅 All Bookings ({bookings.length})
+          <FiCalendar size={15} /> All Bookings ({bookings.length})
         </button>
 
         <button
@@ -374,9 +387,9 @@ export default function StaffBookingsPage() {
             setActiveTab("approvals");
             setStatusFilter("");
           }}
-          style={{ position: "relative" }}
+          style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          ⏳ Pending Approvals ({pendingBookings.length})
+          <FiClock size={15} /> Pending Approvals ({pendingBookings.length})
           {pendingBookings.length > 0 && (
             <span
               style={{
@@ -395,8 +408,9 @@ export default function StaffBookingsPage() {
           type="button"
           className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
           onClick={() => setActiveTab("waitlist")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📋 Waitlist Queue ({activeWaitlists.length} Waiting)
+          <FiZap size={15} /> Waitlist Queue ({activeWaitlists.length} Waiting)
         </button>
       </div>
 
@@ -495,8 +509,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handlePromoteWaitlist(w)}
                               title="Promote directly into a confirmed reservation"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ⚡ Promote
+                              <FiZap size={14} /> Promote
                             </button>
                           )}
                           <button
@@ -505,8 +520,9 @@ export default function StaffBookingsPage() {
                             disabled={isUpdating}
                             onClick={() => handleRemoveWaitlist(w)}
                             title="Remove from waitlist"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
-                            🗑️ Remove
+                            <FiTrash2 size={14} /> Remove
                           </button>
                         </div>
                       </td>
@@ -569,8 +585,8 @@ export default function StaffBookingsPage() {
                           </span>
                         )}
                         {b.isRecurring && (
-                          <span className="staff-recurring-badge">
-                            🔁 Recurring ({b.recurrenceType || "Weekly"})
+                          <span className="staff-recurring-badge" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <FiRepeat size={13} /> Recurring ({b.recurrenceType || "Weekly"})
                           </span>
                         )}
                       </td>
@@ -594,8 +610,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handleApproveBooking(b)}
                               title="Approve booking request"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ✅ Approve
+                              <FiCheck size={14} /> Approve
                             </button>
 
                             <button
@@ -604,8 +621,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handleRejectBooking(b)}
                               title="Reject booking request with reason"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ❌ Reject
+                              <FiX size={14} /> Reject
                             </button>
                           </div>
                         ) : (
@@ -639,8 +657,9 @@ export default function StaffBookingsPage() {
                             disabled={isUpdating}
                             onClick={() => handleBookingCheckIn(b)}
                             title="Start live session and mark equipment IN USE"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
-                            ▶️ Check-In
+                            <FiPlay size={13} /> Check-In
                           </button>
                         ) : b.status === "IN_USE" ? (
                           <button
@@ -649,12 +668,19 @@ export default function StaffBookingsPage() {
                             disabled={isUpdating}
                             onClick={() => handleBookingCheckOut(b)}
                             title="Stop session and record duration"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
-                            ⏹️ Check-Out
+                            <FiSquare size={13} /> Check-Out
                           </button>
                         ) : (
-                          <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
-                            {b.status === "COMPLETED" ? "Logged ✓" : "—"}
+                          <span style={{ fontSize: "0.78rem", color: "#9ca3af", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                            {b.status === "COMPLETED" ? (
+                              <>
+                                Logged <FiCheckCircle size={12} color="#16a34a" />
+                              </>
+                            ) : (
+                              "—"
+                            )}
                           </span>
                         )}
                       </td>
