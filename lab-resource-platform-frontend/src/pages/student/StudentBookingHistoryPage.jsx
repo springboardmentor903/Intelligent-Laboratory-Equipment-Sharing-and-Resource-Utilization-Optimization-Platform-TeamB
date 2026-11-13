@@ -4,6 +4,17 @@ import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import {
+  FiCalendar,
+  FiClock,
+  FiRepeat,
+  FiAlertCircle,
+  FiX,
+  FiInbox,
+  FiPlay,
+  FiSquare,
+  FiBell,
+} from "react-icons/fi";
 
 const STATUS_META = {
   PENDING_APPROVAL: { label: "Pending Approval", color: "status-pending" },
@@ -284,15 +295,17 @@ function StudentBookingHistoryPage() {
           type="button"
           className={`bh-nav-tab ${activeTab === "bookings" ? "active" : ""}`}
           onClick={() => setActiveTab("bookings")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📋 Reservations ({stats.total})
+          <FiCalendar size={15} /> Reservations ({stats.total})
         </button>
         <button
           type="button"
           className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
           onClick={() => setActiveTab("waitlist")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          ⏳ Active Waitlists ({stats.waitlistCount})
+          <FiClock size={15} /> Active Waitlists ({stats.waitlistCount})
         </button>
       </div>
 
@@ -352,7 +365,9 @@ function StudentBookingHistoryPage() {
           {/* Bookings List */}
           {filtered.length === 0 ? (
             <div className="bh-empty">
-              <div className="bh-empty-icon">📋</div>
+              <div className="bh-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <FiInbox size={36} color="#9ca3af" />
+              </div>
               <h3>
                 {statusFilter === "ALL"
                   ? "No bookings found"
@@ -394,8 +409,8 @@ function StudentBookingHistoryPage() {
                           </span>
                         )}
                         {booking.isRecurring && (
-                          <span className="bh-recurring-badge">
-                            🔁 Recurring ({booking.recurrenceType || "Weekly"})
+                          <span className="bh-recurring-badge" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <FiRepeat size={12} /> Recurring ({booking.recurrenceType || "Weekly"})
                           </span>
                         )}
                       </div>

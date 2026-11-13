@@ -29,6 +29,9 @@ import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
 import LiveUtilizationPage from "./pages/utilization/LiveUtilizationPage";
 import UtilizationAnalyticsPage from "./pages/analytics/UtilizationAnalyticsPage";
+import CrossInstitutionDiscoveryPage from "./pages/sharing/CrossInstitutionDiscoveryPage";
+import SharingAgreementsPage from "./pages/sharing/SharingAgreementsPage";
+import SharingAnalyticsPage from "./pages/sharing/SharingAnalyticsPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -208,6 +211,39 @@ function AppRoutes() {
               ]}
             >
               <UtilizationAnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Cross-Institution Equipment Sharing & External Booking */}
+        <Route
+          path="sharing/discovery"
+          element={
+            <ProtectedRoute>
+              <CrossInstitutionDiscoveryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sharing/agreements"
+          element={
+            <ProtectedRoute>
+              <SharingAgreementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sharing/analytics"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "LAB_MANAGER",
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <SharingAnalyticsPage />
             </ProtectedRoute>
           }
         />
