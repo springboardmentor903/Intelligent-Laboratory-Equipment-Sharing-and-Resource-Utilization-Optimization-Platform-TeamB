@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { FiCheck, FiX } from "react-icons/fi";
 
 const ROLE_LABELS = {
   SYSTEM_ADMINISTRATOR: "System Administrator",
@@ -238,8 +239,9 @@ export default function AdminRoleRequestsPage() {
               type="button"
               className="admin-clear-btn"
               onClick={() => setSearchTerm("")}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
-              ✕
+              <FiX size={14} />
             </button>
           )}
         </div>
@@ -326,7 +328,9 @@ export default function AdminRoleRequestsPage() {
                   {/* History details */}
                   {req.status === "APPROVED" && (
                     <div className="admin-history-badge-row approved">
-                      <span>✓ APPROVED</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <FiCheck size={14} /> APPROVED
+                      </span>
                       {req.reviewedAt && (
                         <small>
                           on {new Date(req.reviewedAt).toLocaleDateString()}
@@ -337,7 +341,9 @@ export default function AdminRoleRequestsPage() {
 
                   {req.status === "REJECTED" && (
                     <div className="admin-history-badge-row rejected">
-                      <span>✕ REJECTED</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <FiX size={14} /> REJECTED
+                      </span>
                       {req.rejectionReason && (
                         <p className="admin-rejection-msg">
                           Reason: {req.rejectionReason}
@@ -395,8 +401,9 @@ export default function AdminRoleRequestsPage() {
                 type="button"
                 className="admin-modal-close"
                 onClick={() => setRejectModalItem(null)}
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
               >
-                ✕
+                <FiX size={16} />
               </button>
             </div>
 

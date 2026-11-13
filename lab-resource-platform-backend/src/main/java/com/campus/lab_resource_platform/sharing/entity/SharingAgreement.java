@@ -89,7 +89,19 @@ public class SharingAgreement {
     private Instant updatedAt;
 
     public boolean isExpired() {
-        return endDate != null && LocalDate.now().isAfter(endDate);
+        if (endDate == null) {
+            return false;
+        }
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        LocalDate today = LocalDate.now(istZone);
+        if (today.isAfter(endDate)) {
+            return true;
+        }
+        if (today.isEqual(endDate) && allowedEndTime != null) {
+            java.time.LocalTime nowTime = java.time.LocalTime.now(istZone);
+            return nowTime.isAfter(allowedEndTime);
+        }
+        return false;
     }
 
     public boolean isCurrentlyActive() {
@@ -99,7 +111,8 @@ public class SharingAgreement {
         if (isExpired()) {
             return false;
         }
-        LocalDate today = LocalDate.now();
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        LocalDate today = LocalDate.now(istZone);
         return startDate == null || !today.isBefore(startDate);
     }
 

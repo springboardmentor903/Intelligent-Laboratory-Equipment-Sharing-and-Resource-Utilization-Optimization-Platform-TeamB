@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { FiX } from "react-icons/fi";
 
 const ROLE_OPTIONS = [
   { value: "SYSTEM_ADMINISTRATOR", label: "System Administrator", color: "#6d28d9" },
@@ -282,8 +283,9 @@ export default function AdminAccountsPage() {
               type="button"
               className="admin-clear-btn"
               onClick={() => setSearchTerm("")}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
-              ✕
+              <FiX size={14} />
             </button>
           )}
         </div>
@@ -421,8 +423,9 @@ export default function AdminAccountsPage() {
                 type="button"
                 className="admin-modal-close"
                 onClick={() => setShowModal(false)}
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
               >
-                ✕
+                <FiX size={16} />
               </button>
             </div>
 

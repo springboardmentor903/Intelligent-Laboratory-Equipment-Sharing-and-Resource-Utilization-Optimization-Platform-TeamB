@@ -20,6 +20,8 @@ public class SharingListingDiscoveryResponse {
     private String equipmentName;
     private String assetTag;
     private String description;
+    private String specifications;
+    private String location;
 
     private Long categoryId;
     private String categoryName;

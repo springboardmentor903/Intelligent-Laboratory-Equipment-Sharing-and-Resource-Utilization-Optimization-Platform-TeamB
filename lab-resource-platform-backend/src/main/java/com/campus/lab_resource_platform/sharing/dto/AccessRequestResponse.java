@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -32,6 +33,11 @@ public class AccessRequestResponse {
     private String purpose;
     private LocalDate startDate;
     private LocalDate endDate;
+    private LocalTime allowedStartTime;
+    private LocalTime allowedEndTime;
+    private Double estimatedUsageHours;
+    private java.math.BigDecimal hourlyRate;
+    private java.math.BigDecimal estimatedCost;
     private AccessRequestStatus status;
 
     // First reviewer's details
