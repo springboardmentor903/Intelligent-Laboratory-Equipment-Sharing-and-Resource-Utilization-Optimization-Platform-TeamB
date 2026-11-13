@@ -25,5 +25,13 @@ public class SharingTrendItem {
     private BigDecimal feesEarned;
     private BigDecimal feesOwed;
     private BigDecimal netBalance; // feesEarned - feesOwed
+
+    public String getPeriod() {
+        return periodLabel;
+    }
+
+    public BigDecimal getSharedHours() {
+        return hoursProvided;
+    }
 }
 

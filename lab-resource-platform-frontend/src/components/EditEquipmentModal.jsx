@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../services/api";
 import { useToast } from "../context/ToastContext";
+import { FiEdit2, FiX, FiSave } from "react-icons/fi";
 
 export default function EditEquipmentModal({ equipment, onClose, onSuccess }) {
   const toast = useToast();
@@ -62,7 +63,9 @@ export default function EditEquipmentModal({ equipment, onClose, onSuccess }) {
       >
         <div className="avail-modal-header">
           <div>
-            <h2 className="avail-modal-title">✏️ Edit Equipment Details</h2>
+            <h2 className="avail-modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <FiEdit2 size={20} color="#2563eb" /> Edit Equipment Details
+            </h2>
             <p className="avail-modal-subtitle">
               Modify catalog specifications, reservation limits, and active status for #{equipment.id}
             </p>
@@ -72,8 +75,9 @@ export default function EditEquipmentModal({ equipment, onClose, onSuccess }) {
             className="avail-modal-close"
             onClick={onClose}
             aria-label="Close"
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
           >
-            ✕
+            <FiX size={16} />
           </button>
         </div>
 
@@ -204,10 +208,14 @@ export default function EditEquipmentModal({ equipment, onClose, onSuccess }) {
             <button
               type="submit"
               className="student-book-btn"
-              style={{ width: "auto", padding: "8px 24px" }}
+              style={{ width: "auto", padding: "8px 24px", display: "inline-flex", alignItems: "center", gap: "6px" }}
               disabled={saving}
             >
-              {saving ? "Saving Changes..." : "💾 Save Changes"}
+              {saving ? "Saving Changes..." : (
+                <>
+                  <FiSave size={15} /> Save Changes
+                </>
+              )}
             </button>
           </div>
         </form>

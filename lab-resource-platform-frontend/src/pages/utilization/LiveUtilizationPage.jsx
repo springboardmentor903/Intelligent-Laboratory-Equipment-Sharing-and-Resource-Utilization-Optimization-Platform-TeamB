@@ -4,6 +4,22 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import {
+  FiRefreshCw,
+  FiZap,
+  FiCheckCircle,
+  FiTrendingUp,
+  FiClock,
+  FiFolder,
+  FiTag,
+  FiMapPin,
+  FiFileText,
+  FiX,
+  FiUser,
+  FiPlay,
+  FiSquare,
+  FiMoon,
+} from "react-icons/fi";
 
 function toISTTime(iso) {
   if (!iso) return "—";
@@ -256,8 +272,9 @@ export default function LiveUtilizationPage() {
             className="admin-btn-secondary"
             onClick={fetchSummary}
             title="Refresh Data"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            🔄 Refresh
+            <FiRefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>
@@ -266,7 +283,9 @@ export default function LiveUtilizationPage() {
       <div className="util-kpi-grid">
         <div className="util-kpi-card util-kpi-active">
           <div className="util-kpi-header">
-            <span className="util-kpi-icon">⚡</span>
+            <span className="util-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiZap size={18} />
+            </span>
             <span className="util-kpi-title">In Active Use</span>
           </div>
           <div className="util-kpi-num">
@@ -280,7 +299,9 @@ export default function LiveUtilizationPage() {
 
         <div className="util-kpi-card util-kpi-avail">
           <div className="util-kpi-header">
-            <span className="util-kpi-icon">✅</span>
+            <span className="util-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiCheckCircle size={18} />
+            </span>
             <span className="util-kpi-title">Available for Booking</span>
           </div>
           <div className="util-kpi-num">{summary?.availableCount || 0}</div>
@@ -289,7 +310,9 @@ export default function LiveUtilizationPage() {
 
         <div className="util-kpi-card util-kpi-rate">
           <div className="util-kpi-header">
-            <span className="util-kpi-icon">📈</span>
+            <span className="util-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiTrendingUp size={18} />
+            </span>
             <span className="util-kpi-title">Average Utilization</span>
           </div>
           <div className="util-kpi-num">{summary?.overallUtilizationRatePercent || 0}%</div>
@@ -298,7 +321,9 @@ export default function LiveUtilizationPage() {
 
         <div className="util-kpi-card util-kpi-hours">
           <div className="util-kpi-header">
-            <span className="util-kpi-icon">⏱️</span>
+            <span className="util-kpi-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiClock size={18} />
+            </span>
             <span className="util-kpi-title">Usage Logged Today</span>
           </div>
           <div className="util-kpi-num">{formatDuration(summary?.totalUsageMinutesToday || 0)}</div>
@@ -345,10 +370,19 @@ export default function LiveUtilizationPage() {
                 <div className="util-card-body">
                   <h3 className="util-card-title">{item.equipmentName}</h3>
                   <div className="util-meta-row">
-                    <span>📁 {item.category || "General"}</span>
-                    <span>🏷️ {item.model || "Standard"}</span>
+                    <span>
+                      <FiFolder style={{ marginRight: "4px" }} />
+                      {item.category || "General"}
+                    </span>
+                    <span>
+                      <FiTag style={{ marginRight: "4px" }} />
+                      {item.model || "Standard"}
+                    </span>
                   </div>
-                  <div className="util-location">📍 {item.location || "Main Lab"}</div>
+                  <div className="util-location">
+                    <FiMapPin style={{ marginRight: "4px" }} />
+                    {item.location || "Main Lab"}
+                  </div>
 
                   {/* Active Session Telemetry */}
                   {inUse ? (
@@ -361,12 +395,18 @@ export default function LiveUtilizationPage() {
                       </div>
                       <div className="util-active-time">
                         <span>Started: {toISTTime(item.sessionStartTime)}</span>
-                        <span className="util-elapsed-badge">⏱ {item.elapsedMinutes || 0}m elapsed</span>
+                        <span className="util-elapsed-badge">
+                          <FiClock style={{ marginRight: "3px" }} />
+                          {item.elapsedMinutes || 0}m elapsed
+                        </span>
                       </div>
                     </div>
                   ) : (
                     <div className="util-idle-box">
-                      <span>💤 Instrument is currently idle and ready for check-in.</span>
+                      <span>
+                        <FiMoon style={{ marginRight: "4px" }} />
+                        Instrument is currently idle and ready for check-in.
+                      </span>
                     </div>
                   )}
 
@@ -419,8 +459,9 @@ export default function LiveUtilizationPage() {
                     className="util-logs-btn"
                     onClick={() => handleOpenLogs(item)}
                     title="View historical check-in/out logs"
+                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                   >
-                    📋 Logs
+                    <FiFileText size={13} /> Logs
                   </button>
                 </div>
               </div>
@@ -435,7 +476,9 @@ export default function LiveUtilizationPage() {
           <div className="avail-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="avail-modal-header">
               <div className="avail-modal-title-group">
-                <span className="avail-modal-icon">▶️</span>
+                <span className="avail-modal-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                  <FiPlay size={18} color="#2563eb" />
+                </span>
                 <div>
                   <h2 className="avail-modal-title">Equipment Session Check-In</h2>
                   <p className="avail-modal-subtitle">{checkInModal.equipmentName}</p>
@@ -446,7 +489,7 @@ export default function LiveUtilizationPage() {
                 className="avail-modal-close"
                 onClick={() => setCheckInModal(null)}
               >
-                ✕
+                <FiX size={18} />
               </button>
             </div>
 
@@ -498,7 +541,9 @@ export default function LiveUtilizationPage() {
           <div className="avail-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 680 }}>
             <div className="avail-modal-header">
               <div className="avail-modal-title-group">
-                <span className="avail-modal-icon">📋</span>
+                <span className="avail-modal-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                  <FiFileText size={18} color="#2563eb" />
+                </span>
                 <div>
                   <h2 className="avail-modal-title">Equipment Usage Logs</h2>
                   <p className="avail-modal-subtitle">{selectedLogsEquipment.equipmentName}</p>
@@ -509,7 +554,7 @@ export default function LiveUtilizationPage() {
                 className="avail-modal-close"
                 onClick={() => setSelectedLogsEquipment(null)}
               >
-                ✕
+                <FiX size={18} />
               </button>
             </div>
 
@@ -533,8 +578,8 @@ export default function LiveUtilizationPage() {
                           {log.actualDurationMinutes ? `${log.actualDurationMinutes} mins` : "In Progress"}
                         </span>
                       </div>
-                      <div className="util-log-user">
-                        👤 <strong>{log.userName || "Student"}</strong> ({log.userEmail})
+                      <div className="util-log-user" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <FiUser size={14} /> <strong>{log.userName || "Student"}</strong> ({log.userEmail})
                       </div>
                       <div className="util-log-times">
                         <div>

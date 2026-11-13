@@ -159,12 +159,19 @@ public class SharingListingService {
             Pageable pageable) {
 
         User currentUser = findAuthenticatedUserOrNull();
-        Long excludeInstitutionId = (currentUser != null && currentUser.getInstitutionId() != null)
-                ? currentUser.getInstitutionId()
+        Long excludeInstitutionId = null;
+        if (currentUser != null) {
+            excludeInstitutionId = currentUser.getCollegeId() != null 
+                    ? currentUser.getCollegeId() 
+                    : currentUser.getInstitutionId();
+        }
+
+        String searchPattern = (keyword != null && !keyword.isBlank())
+                ? "%" + keyword.trim().toLowerCase() + "%"
                 : null;
 
         Page<SharingListing> listings = listingRepository.discoverListings(
-                excludeInstitutionId, filterInstitutionId, categoryId, keyword, pageable);
+                excludeInstitutionId, filterInstitutionId, categoryId, searchPattern, pageable);
 
         if (listings.isEmpty()) {
             return Page.empty(pageable);
@@ -212,14 +219,21 @@ public class SharingListingService {
         resp.setEquipmentName(listing.getEquipment().getName());
         resp.setAssetTag(listing.getEquipment().getAssetTag());
         resp.setDescription(listing.getEquipment().getDescription());
+        resp.setSpecifications(listing.getEquipment().getSpecifications());
+        resp.setLocation(listing.getEquipment().getLocation());
 
         if (listing.getEquipment().getCategory() != null) {
             resp.setCategoryId(listing.getEquipment().getCategory().getId());
             resp.setCategoryName(listing.getEquipment().getCategory().getName());
+        } else if (listing.getEquipment().getLegacyCategory() != null) {
+            resp.setCategoryName(listing.getEquipment().getLegacyCategory());
         }
 
-        resp.setOwnerInstitutionId(listing.getOwnerInstitutionId());
-        resp.setOwnerInstitutionName(institutionService.getInstitutionName(listing.getOwnerInstitutionId()));
+        Long ownerInstId = listing.getEquipment().getCollegeId() != null
+                ? listing.getEquipment().getCollegeId()
+                : (listing.getEquipment().getInstitutionId() != null ? listing.getEquipment().getInstitutionId() : listing.getOwnerInstitutionId());
+        resp.setOwnerInstitutionId(ownerInstId);
+        resp.setOwnerInstitutionName(institutionService.getInstitutionName(ownerInstId));
 
         resp.setFeePerHour(listing.getFeePerHour());
         resp.setExternalSharePercentage(listing.getExternalSharePercentage());

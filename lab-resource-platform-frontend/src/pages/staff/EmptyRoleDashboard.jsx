@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
+import { FiLayers, FiClock, FiCalendar, FiInfo, FiArrowRight } from "react-icons/fi";
 
 function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsPath }) {
   const { user } = useAuth();
@@ -43,7 +44,9 @@ function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsP
       {/* Real-time Metrics Row */}
       <section className="std-stats-row" aria-label="Overview metrics">
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-blue">🔬</span>
+          <span className="std-stat-icon std-icon-blue" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiLayers size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.totalEquipments)}</span>
             <span className="std-stat-label">Colleges Equipments</span>
@@ -51,7 +54,9 @@ function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsP
         </div>
 
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-yellow">⏳</span>
+          <span className="std-stat-icon std-icon-yellow" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiClock size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.pendingBookings)}</span>
             <span className="std-stat-label">Pending Approval (Default)</span>
@@ -59,7 +64,9 @@ function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsP
         </div>
 
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-green">📅</span>
+          <span className="std-stat-icon std-icon-green" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiCalendar size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.totalBookings)}</span>
             <span className="std-stat-label">Total Student Bookings</span>
@@ -81,7 +88,9 @@ function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsP
               <h3>Colleges Equipments</h3>
               <p>Filter by college, register new equipment, update specs, and manage catalog.</p>
             </div>
-            <span className="std-action-arrow">→</span>
+            <span className="std-action-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiArrowRight size={16} />
+            </span>
           </Link>
 
           <Link to={bookingsPath} className="std-action-card">
@@ -96,14 +105,18 @@ function EmptyRoleDashboard({ roleTitle, roleSubtitle, equipmentsPath, bookingsP
               <h3>Student Bookings &amp; Lifecycle</h3>
               <p>Manage student reservations: Confirm, set In Use, Complete, Cancel, or No Show.</p>
             </div>
-            <span className="std-action-arrow">→</span>
+            <span className="std-action-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiArrowRight size={16} />
+            </span>
           </Link>
         </div>
       </section>
 
       {/* Info Notice Banner */}
       <div className="std-info-banner">
-        <span className="std-info-icon">💡</span>
+        <span className="std-info-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+          <FiInfo size={18} />
+        </span>
         <p>
           New student booking requests appear as <strong>PENDING_APPROVAL</strong> by default.
           You have full authorization to modify booking statuses and register laboratory instruments.

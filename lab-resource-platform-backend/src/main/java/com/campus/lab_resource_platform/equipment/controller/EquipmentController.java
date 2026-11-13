@@ -193,12 +193,31 @@ public class EquipmentController {
     @GetMapping("/{id}/availability")
     public ResponseEntity<List<AvailabilitySlotResponse>> getEquipmentAvailability(
             @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
-        if (!startDate.isBefore(endDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must be before endDate");
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        Instant start = parseFlexibleInstant(startDate, Instant.now().minus(7, java.time.temporal.ChronoUnit.DAYS));
+        Instant end = parseFlexibleInstant(endDate, Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS));
+        if (!start.isBefore(end)) {
+            end = start.plus(7, java.time.temporal.ChronoUnit.DAYS);
         }
-        return ResponseEntity.ok(bookingService.getEquipmentAvailability(id, startDate, endDate));
+        return ResponseEntity.ok(bookingService.getEquipmentAvailability(id, start, end));
+    }
+
+    private Instant parseFlexibleInstant(String val, Instant fallback) {
+        if (val == null || val.isBlank()) return fallback;
+        try {
+            return Instant.parse(val.trim());
+        } catch (Exception e1) {
+            try {
+                return java.time.ZonedDateTime.parse(val.trim()).toInstant();
+            } catch (Exception e2) {
+                try {
+                    return java.time.LocalDateTime.parse(val.trim()).atZone(java.time.ZoneId.of("Asia/Kolkata")).toInstant();
+                } catch (Exception e3) {
+                    return fallback;
+                }
+            }
+        }
     }
 
     @GetMapping("/{id}/recommend-slots")
@@ -239,10 +258,14 @@ public class EquipmentController {
     }
 
     private void applyStaffInstitution(EquipmentRequest request, User user) {
-        Long staffCollegeId = getStaffEnforcedCollegeId(user);
-        if (staffCollegeId != null) {
-            request.setCollegeId(staffCollegeId);
-            request.setInstitutionId(staffCollegeId);
+        if (request.getCollegeId() == null) {
+            Long staffCollegeId = getStaffEnforcedCollegeId(user);
+            if (staffCollegeId != null) {
+                request.setCollegeId(staffCollegeId);
+                request.setInstitutionId(staffCollegeId);
+            }
+        } else if (request.getInstitutionId() == null) {
+            request.setInstitutionId(request.getCollegeId());
         }
     }
 

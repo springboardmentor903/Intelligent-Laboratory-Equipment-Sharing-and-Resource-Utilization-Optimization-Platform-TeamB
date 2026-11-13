@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import * as d3 from "d3";
 import {
   ResponsiveContainer,
   BarChart,
@@ -15,6 +16,20 @@ import {
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import {
+  FiBarChart2,
+  FiGlobe,
+  FiTrendingUp,
+  FiCalendar,
+  FiClock,
+  FiZap,
+  FiMoon,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiList,
+  FiArrowLeft,
+  FiArrowRight,
+} from "react-icons/fi";
 
 // Format helper
 function fmtHours(mins) {
@@ -249,7 +264,11 @@ export default function UtilizationAnalyticsPage() {
     updateParams({ period: "CUSTOM", startDate: customStart, endDate: customEnd });
   };
 
-  // Heatmap Color Scale Calculator
+  // D3 Heatmap Color Scale Calculator
+  const heatmapColorScale = useMemo(() => {
+    return d3.scaleSequential(d3.interpolateBlues).domain([0, 100]);
+  }, []);
+
   const getHeatmapColor = (pct) => {
     if (pct === null || pct === undefined) {
       return "#f1f5f9"; // Closed / Unavailable (Slate 100)
@@ -257,10 +276,7 @@ export default function UtilizationAnalyticsPage() {
     if (pct === 0) {
       return "#ffffff"; // Open but unused (White)
     }
-    if (pct < 25) return "#bae6fd"; // Light Sky
-    if (pct < 50) return "#38bdf8"; // Sky Blue
-    if (pct < 75) return "#0284c7"; // Blue
-    return "#1e3a8a"; // Dark Navy
+    return heatmapColorScale(Math.min(100, Math.max(10, pct)));
   };
 
   // Day rows for heatmap
@@ -291,13 +307,15 @@ export default function UtilizationAnalyticsPage() {
       {/* Page Header */}
       <div className="analytics-header">
         <div>
-          <h1 className="analytics-title">📊 Utilization Analytics & Capacity Engine</h1>
+          <h1 className="analytics-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <FiBarChart2 color="#2563eb" /> Utilization Analytics &amp; Capacity Engine
+          </h1>
           <p className="analytics-subtitle">
             Comprehensive lab utilization, capacity benchmarks, idle detection, peak usage, and demand analytics.
           </p>
         </div>
-        <div className="analytics-tz-badge">
-          🌐 Time Zone: <strong>Asia/Kolkata (IST)</strong>
+        <div className="analytics-tz-badge" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <FiGlobe /> Time Zone: <strong>Asia/Kolkata (IST)</strong>
         </div>
       </div>
 
@@ -445,7 +463,9 @@ export default function UtilizationAnalyticsPage() {
         {/* Summary Card */}
         <div className="analytics-card flex-2">
           <div className="analytics-card-header">
-            <h2 className="analytics-card-title">📈 Utilization Summary & Capacity Targets</h2>
+            <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiTrendingUp color="#2563eb" /> Utilization Summary &amp; Capacity Targets
+            </h2>
             {summary.loading && <span className="analytics-spinner" />}
           </div>
 
@@ -576,7 +596,9 @@ export default function UtilizationAnalyticsPage() {
       <div className="analytics-card">
         <div className="analytics-card-header">
           <div>
-            <h2 className="analytics-card-title">🗓 Weekly Utilization Heatmap (168 Slots)</h2>
+            <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiCalendar color="#2563eb" /> Weekly Utilization Heatmap (168 Slots)
+            </h2>
             <p className="analytics-card-sub">
               Hourly utilization across Monday to Sunday. Closed operating hours appear in grey, open slots scale light to dark.
             </p>
@@ -677,7 +699,9 @@ export default function UtilizationAnalyticsPage() {
         {/* Peak Usage Day of Week Chart */}
         <div className="analytics-card flex-1">
           <div className="analytics-card-header">
-            <h2 className="analytics-card-title">📊 Usage Across Days of the Week</h2>
+            <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiBarChart2 color="#2563eb" /> Usage Across Days of the Week
+            </h2>
             {peakUsage.loading && <span className="analytics-spinner" />}
           </div>
 
@@ -720,7 +744,9 @@ export default function UtilizationAnalyticsPage() {
         {/* Peak Usage Hourly Chart & Top 5 Slots */}
         <div className="analytics-card flex-1">
           <div className="analytics-card-header">
-            <h2 className="analytics-card-title">🕒 Hourly Distribution & Top 5 Slots</h2>
+            <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiClock color="#2563eb" /> Hourly Distribution &amp; Top 5 Slots
+            </h2>
             {peakUsage.loading && <span className="analytics-spinner" />}
           </div>
 
@@ -756,7 +782,9 @@ export default function UtilizationAnalyticsPage() {
 
               {/* Top 5 Slots List */}
               <div className="top-slots-container">
-                <h3 className="top-slots-title">🔥 Top 5 Busiest Day-and-Hour Slots:</h3>
+                <h3 className="top-slots-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <FiZap color="#f59e0b" /> Top 5 Busiest Day-and-Hour Slots:
+                </h3>
                 <div className="top-slots-grid">
                   {(peakUsage.data.top5Slots || []).map((slot, i) => (
                     <div key={i} className="top-slot-badge">
@@ -782,7 +810,9 @@ export default function UtilizationAnalyticsPage() {
         <div className="analytics-card flex-2">
           <div className="analytics-card-header">
             <div>
-              <h2 className="analytics-card-title">💤 Daily Idle Time Breakdown</h2>
+              <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FiMoon color="#f59e0b" /> Daily Idle Time Breakdown
+              </h2>
               <p className="analytics-card-sub">
                 Idle time is open operating hours with no booking (Available - Booked).
               </p>
@@ -837,7 +867,9 @@ export default function UtilizationAnalyticsPage() {
         <div className="analytics-card flex-1">
           <div className="analytics-card-header">
             <div>
-              <h2 className="analytics-card-title">⚠️ Idle Alerts (Last 7 Days)</h2>
+              <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FiAlertTriangle color="#dc2626" /> Idle Alerts (Last 7 Days)
+              </h2>
               <p className="analytics-card-sub">
                 Instruments with ≥ 90% idle time over the last 7 completed days.
               </p>
@@ -855,8 +887,8 @@ export default function UtilizationAnalyticsPage() {
           ) : idleAlerts.loading ? (
             <div className="analytics-skeleton-box">Scanning for low-utilization equipment...</div>
           ) : !idleAlerts.data || idleAlerts.data.length === 0 ? (
-            <div className="analytics-empty-box" style={{ padding: "40px 16px" }}>
-              ✅ No instruments with ≥ 90% idle time in the last 7 days.
+            <div className="analytics-empty-box" style={{ padding: "40px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              <FiCheckCircle color="#16a34a" size={18} /> No instruments with ≥ 90% idle time in the last 7 days.
             </div>
           ) : (
             <div className="idle-alerts-list">
@@ -882,8 +914,9 @@ export default function UtilizationAnalyticsPage() {
                       type="button"
                       className="alert-link-btn"
                       onClick={() => navigate(`/dashboard/student/equipments`)}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                     >
-                      View Instrument →
+                      View Instrument <FiArrowRight size={14} />
                     </button>
                   </div>
                 </div>
@@ -897,7 +930,9 @@ export default function UtilizationAnalyticsPage() {
       <div className="analytics-card">
         <div className="analytics-card-header">
           <div>
-            <h2 className="analytics-card-title">📋 Instrument Demand Analysis & Waitlist Tracking</h2>
+            <h2 className="analytics-card-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiList color="#2563eb" /> Instrument Demand Analysis &amp; Waitlist Tracking
+            </h2>
             <p className="analytics-card-sub">
               Calculates booking rates, no-show rates, cancellations, and active waitlists. Equipment with ≥ 80% booking rate is flagged as High Demand.
             </p>
@@ -985,7 +1020,9 @@ export default function UtilizationAnalyticsPage() {
                       </td>
                       <td>
                         {item.highDemand ? (
-                          <span className="badge-high-demand">🔥 High Demand</span>
+                          <span className="badge-high-demand" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <FiZap size={12} /> High Demand
+                          </span>
                         ) : (
                           <span className="badge-normal-demand">Normal</span>
                         )}
@@ -1008,16 +1045,18 @@ export default function UtilizationAnalyticsPage() {
                   disabled={page <= 0}
                   onClick={() => updateParams({ page: page - 1 })}
                   className="analytics-page-btn"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  ← Previous
+                  <FiArrowLeft size={14} /> Previous
                 </button>
                 <button
                   type="button"
                   disabled={page + 1 >= (demand.data.totalPages || 1)}
                   onClick={() => updateParams({ page: page + 1 })}
                   className="analytics-page-btn"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  Next →
+                  Next <FiArrowRight size={14} />
                 </button>
               </div>
             </div>

@@ -21,19 +21,23 @@ public class SharingAnalyticsSummaryResponse {
     // Actual usage hours (based on usage logs, not booked time)
     private BigDecimal totalHoursProvided;
     private BigDecimal totalHoursUsed;
+    private BigDecimal totalSharedHours; // Alias for totalHoursProvided
 
     // Fees
     private BigDecimal feesEarned;
+    private BigDecimal totalFeesEarned; // Alias for feesEarned
     private BigDecimal feesOwed;
     private BigDecimal netBalance; // feesEarned - feesOwed
     private BigDecimal expectedFees; // Expected from upcoming/active external bookings
 
     // Counts & Metrics
     private Long totalBookings;
+    private Long totalSharedSessions; // Alias for totalBookings
     private Long noShowCount;
     private BigDecimal noShowRate; // Percentage (e.g. 5.50%)
 
     private Long activeAgreements;
+    private Long activePartnersCount; // Alias for totalPartners
     private Long totalPartners;
     private Long expiringAgreementsCount; // Expiring in next 30 days
 

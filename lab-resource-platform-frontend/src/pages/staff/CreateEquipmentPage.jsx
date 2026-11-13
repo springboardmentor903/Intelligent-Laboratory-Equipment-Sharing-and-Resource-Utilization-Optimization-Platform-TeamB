@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { FiShield, FiArrowLeft } from "react-icons/fi";
 
 export default function CreateEquipmentPage() {
   const navigate = useNavigate();
@@ -22,35 +23,35 @@ export default function CreateEquipmentPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    collegeId: isStaff && user?.collegeId ? String(user.collegeId) : "",
+    collegeId: user?.collegeId ? String(user.collegeId) : "",
     category: "",
     model: "",
     manufacturer: "",
     status: "AVAILABLE",
     maxBookingHours: 8,
+    hourlyCost: 250,
+    isShareable: true,
     specifications: "",
     description: "",
   });
 
   useEffect(() => {
-    if (!isStaff) {
-      api
-        .get("/api/colleges")
-        .then((res) => {
-          setColleges(res.data || []);
-          if (res.data && res.data.length > 0) {
-            setFormData((prev) => ({ ...prev, collegeId: String(res.data[0].id) }));
-          }
-        })
-        .catch(() => toast.error("Could not load colleges list."))
-        .finally(() => setLoadingColleges(false));
-    } else {
-      setLoadingColleges(false);
-      if (user?.collegeId) {
-        setFormData((prev) => ({ ...prev, collegeId: String(user.collegeId) }));
-      }
-    }
-  }, [isStaff, user?.collegeId, toast]);
+    api
+      .get("/api/colleges")
+      .then((res) => {
+        const list = res.data || [];
+        setColleges(list);
+        if (list.length > 0) {
+          const matched = list.find((c) => String(c.id) === String(user?.collegeId));
+          setFormData((prev) => ({
+            ...prev,
+            collegeId: prev.collegeId || (matched ? String(matched.id) : String(list[0].id)),
+          }));
+        }
+      })
+      .catch(() => toast.error("Could not load colleges list."))
+      .finally(() => setLoadingColleges(false));
+  }, [user?.collegeId, toast]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -59,7 +60,7 @@ export default function CreateEquipmentPage() {
       return;
     }
 
-    const targetCollegeId = isStaff ? user?.collegeId : formData.collegeId;
+    const targetCollegeId = formData.collegeId || user?.collegeId;
     if (!targetCollegeId) {
       toast.error("Please assign a college / institution.");
       return;
@@ -75,6 +76,8 @@ export default function CreateEquipmentPage() {
         status: formData.status,
         collegeId: Number(targetCollegeId),
         institutionId: Number(targetCollegeId),
+        isShareable: Boolean(formData.isShareable),
+        hourlyCost: Number(formData.hourlyCost) || 250,
         // By default Approval Required
         requiresApproval: true,
         maxBookingHours: Number(formData.maxBookingHours) || 8,
@@ -99,8 +102,9 @@ export default function CreateEquipmentPage() {
         type="button"
         className="booking-back-link"
         onClick={() => navigate(-1)}
+        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
       >
-        ← Back to Equipments
+        <FiArrowLeft size={16} /> Back to Equipments
       </button>
 
       <div className="create-equipment-wrapper">
@@ -138,33 +142,26 @@ export default function CreateEquipmentPage() {
                 <label htmlFor="eq-college" className="booking-label">
                   Assigned College / Institution <span className="booking-required">*</span>
                 </label>
-                {isStaff ? (
-                  <input
-                    id="eq-college"
-                    type="text"
-                    className="booking-input"
-                    readOnly
-                    disabled
-                    value={`${user?.collegeName || "Assigned College"} (Locked to your institution)`}
-                    style={{ backgroundColor: "#f3f4f6", cursor: "not-allowed", fontWeight: 600, color: "#1e3a8a" }}
-                  />
-                ) : (
-                  <select
-                    id="eq-college"
-                    required
-                    className="booking-input"
-                    value={formData.collegeId}
-                    onChange={(e) => setFormData({ ...formData, collegeId: e.target.value })}
-                    disabled={loadingColleges}
-                  >
-                    <option value="">Select College</option>
-                    {colleges.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.code || "COL"})
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <select
+                  id="eq-college"
+                  required
+                  className="booking-input"
+                  value={formData.collegeId}
+                  onChange={(e) => setFormData({ ...formData, collegeId: e.target.value })}
+                  disabled={loadingColleges}
+                  style={{ fontWeight: 600, color: "#1e293b" }}
+                >
+                  <option value="">Select College</option>
+                  {colleges.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code || "COL"})
+                      {String(c.id) === String(user?.collegeId) ? " — (Your College)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "4px", display: "block" }}>
+                  Select your college or a partner college to catalog this equipment.
+                </span>
               </div>
 
               <div className="booking-field">
@@ -250,8 +247,47 @@ export default function CreateEquipmentPage() {
               </div>
             </div>
 
-            <div className="approval-default-badge">
-              🛡️ <strong>Default Rule:</strong> Student bookings on this equipment always require administrative approval from the Lab Manager, Department Head, or Institution Administrator before confirmation.
+            <div className="approval-default-badge" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <FiShield size={16} /> <span><strong>Default Rule:</strong> Student bookings on this equipment always require administrative approval from the Lab Manager, Department Head, or Institution Administrator before confirmation.</span>
+            </div>
+          </div>
+
+          <div className="create-form-section">
+            <h3 className="create-section-title">Inter-Institution Sharing Settings</h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "#f0fdf4", padding: "16px", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: 600, color: "#166534" }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isShareable}
+                  onChange={(e) => setFormData({ ...formData, isShareable: e.target.checked })}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+                <span>Enable Cross-Institution Equipment Sharing</span>
+              </label>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#15803d" }}>
+                When enabled, this equipment will be published to <strong>Cross-Institution Equipment Discovery</strong> so researchers and department heads from other colleges can request access.
+              </p>
+
+              {formData.isShareable && (
+                <div className="booking-datetime-row" style={{ marginTop: "6px" }}>
+                  <div className="booking-field" style={{ maxWidth: "260px" }}>
+                    <label htmlFor="eq-hourly-cost" className="booking-label">
+                      Hourly Sharing Rate (₹/hr)
+                    </label>
+                    <input
+                      id="eq-hourly-cost"
+                      type="number"
+                      min="0"
+                      step="10"
+                      className="booking-input"
+                      placeholder="250"
+                      value={formData.hourlyCost}
+                      onChange={(e) => setFormData({ ...formData, hourlyCost: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
