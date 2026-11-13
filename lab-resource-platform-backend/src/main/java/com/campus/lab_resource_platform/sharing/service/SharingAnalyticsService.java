@@ -118,6 +118,44 @@ public class SharingAnalyticsService {
         LocalDate today = LocalDate.now();
         List<SharingAgreement> allAgreements = agreementRepository.findAllByInstitutionInvolved(institutionId);
 
+        long agreementProvidedMinutes = 0L;
+        BigDecimal agreementFeesEarned = BigDecimal.ZERO;
+        long agreementProvidedSessions = 0L;
+
+        long agreementUsedMinutes = 0L;
+        BigDecimal agreementFeesOwed = BigDecimal.ZERO;
+        long agreementUsedSessions = 0L;
+
+        for (SharingAgreement a : allAgreements) {
+            if (a.getStatus() == AgreementStatus.REVOKED) {
+                continue;
+            }
+            long mins = getAgreementMinutes(a);
+            BigDecimal fee = getAgreementFee(a, mins);
+
+            if (Objects.equals(a.getOwnerInstitutionId(), institutionId)) {
+                agreementProvidedMinutes += mins;
+                agreementFeesEarned = agreementFeesEarned.add(fee);
+                agreementProvidedSessions++;
+            } else if (Objects.equals(a.getPartnerInstitutionId(), institutionId)) {
+                agreementUsedMinutes += mins;
+                agreementFeesOwed = agreementFeesOwed.add(fee);
+                agreementUsedSessions++;
+            }
+        }
+
+        long effectiveProvidedMinutes = Math.max(providedMinutes, agreementProvidedMinutes);
+        long effectiveUsedMinutes = Math.max(usedMinutes, agreementUsedMinutes);
+
+        totalHoursProvided = toHours(effectiveProvidedMinutes);
+        totalHoursUsed = toHours(effectiveUsedMinutes);
+
+        BigDecimal effectiveFeesEarned = feesEarned.compareTo(BigDecimal.ZERO) > 0 ? feesEarned : agreementFeesEarned.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal effectiveFeesOwed = feesOwed.compareTo(BigDecimal.ZERO) > 0 ? feesOwed : agreementFeesOwed.setScale(2, RoundingMode.HALF_UP);
+        netBalance = effectiveFeesEarned.subtract(effectiveFeesOwed).setScale(2, RoundingMode.HALF_UP);
+
+        long effectiveTotalSessions = Math.max(totalBookings, (agreementProvidedSessions + agreementUsedSessions));
+
         long activeAgreements = allAgreements.stream()
                 .filter(a -> a.getStatus() == AgreementStatus.ACTIVE && (a.getEndDate() == null || !a.getEndDate().isBefore(today)))
                 .count();
@@ -143,23 +181,28 @@ public class SharingAnalyticsService {
         long totalEquipmentMinutes = allEquipUtilizations.stream()
                 .mapToLong(u -> u.getUsedMinutes() != null ? u.getUsedMinutes() : 0L)
                 .sum();
-        BigDecimal externalSharePercentage = totalEquipmentMinutes > 0
-                ? BigDecimal.valueOf(providedMinutes * 100.0 / totalEquipmentMinutes).setScale(2, RoundingMode.HALF_UP)
+        long shareBasisMinutes = totalEquipmentMinutes > 0 ? totalEquipmentMinutes : effectiveProvidedMinutes;
+        BigDecimal externalSharePercentage = shareBasisMinutes > 0
+                ? BigDecimal.valueOf(effectiveProvidedMinutes * 100.0 / shareBasisMinutes).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         return SharingAnalyticsSummaryResponse.builder()
                 .institutionId(institutionId)
                 .institutionName(institutionName)
                 .totalHoursProvided(totalHoursProvided)
+                .totalSharedHours(totalHoursProvided)
                 .totalHoursUsed(totalHoursUsed)
-                .feesEarned(feesEarned)
-                .feesOwed(feesOwed)
+                .feesEarned(effectiveFeesEarned)
+                .totalFeesEarned(effectiveFeesEarned)
+                .feesOwed(effectiveFeesOwed)
                 .netBalance(netBalance)
                 .expectedFees(expectedFees)
-                .totalBookings(totalBookings)
+                .totalBookings(effectiveTotalSessions)
+                .totalSharedSessions(effectiveTotalSessions)
                 .noShowCount(noShowCount)
                 .noShowRate(noShowRate)
                 .activeAgreements(activeAgreements)
+                .activePartnersCount(totalPartners)
                 .totalPartners(totalPartners)
                 .expiringAgreementsCount(expiringAgreements)
                 .externalSharePercentage(externalSharePercentage)
@@ -180,13 +223,14 @@ public class SharingAnalyticsService {
 
         List<Utilization> providedList = getProvidedExternalUtilizations(institutionId);
         List<Utilization> usedList = getUsedExternalUtilizations(institutionId);
+        List<SharingAgreement> allAgreements = agreementRepository.findAllByInstitutionInvolved(institutionId);
         Map<Long, SharingAgreement> agreementCache = new HashMap<>();
 
         List<SharingTrendItem> items;
         if (isWeekly) {
-            items = buildWeeklyTrends(providedList, usedList, startDate, endDate, agreementCache);
+            items = buildWeeklyTrends(providedList, usedList, startDate, endDate, agreementCache, institutionId, allAgreements);
         } else {
-            items = buildMonthlyTrends(providedList, usedList, startDate, endDate, agreementCache);
+            items = buildMonthlyTrends(providedList, usedList, startDate, endDate, agreementCache, institutionId, allAgreements);
         }
 
         return SharingTrendResponse.builder()
@@ -267,28 +311,50 @@ public class SharingAnalyticsService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal balance = feesEarned.subtract(feesOwed).setScale(2, RoundingMode.HALF_UP);
+            long agrProvMins = 0L;
+            BigDecimal agrFeesEarned = BigDecimal.ZERO;
+            long agrUsdMins = 0L;
+            BigDecimal agrFeesOwed = BigDecimal.ZERO;
+            long partnerAgreementsCount = 0L;
 
-            long activeAgreementsCount = allAgreements.stream()
-                    .filter(a -> a.getStatus() == AgreementStatus.ACTIVE
-                            && (a.getEndDate() == null || !a.getEndDate().isBefore(today))
-                            && Objects.equals(getPartnerInstitutionIdFromAgreement(a, institutionId), partnerId))
-                    .count();
+            for (SharingAgreement a : allAgreements) {
+                if (a.getStatus() == AgreementStatus.REVOKED) continue;
+                long mins = getAgreementMinutes(a);
+                BigDecimal fee = getAgreementFee(a, mins);
 
-            long totalBookings = allSharingBookings.stream()
+                if (Objects.equals(a.getOwnerInstitutionId(), institutionId)
+                        && Objects.equals(a.getPartnerInstitutionId(), partnerId)) {
+                    agrProvMins += mins;
+                    agrFeesEarned = agrFeesEarned.add(fee);
+                    partnerAgreementsCount++;
+                } else if (Objects.equals(a.getPartnerInstitutionId(), institutionId)
+                        && Objects.equals(a.getOwnerInstitutionId(), partnerId)) {
+                    agrUsdMins += mins;
+                    agrFeesOwed = agrFeesOwed.add(fee);
+                    partnerAgreementsCount++;
+                }
+            }
+
+            long effectiveProvMinutes = Math.max(provMinutes, agrProvMins);
+            long effectiveUsdMinutes = Math.max(usdMinutes, agrUsdMins);
+            BigDecimal effectiveEarned = feesEarned.compareTo(BigDecimal.ZERO) > 0 ? feesEarned : agrFeesEarned.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal effectiveOwed = feesOwed.compareTo(BigDecimal.ZERO) > 0 ? feesOwed : agrFeesOwed.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal balance = effectiveEarned.subtract(effectiveOwed).setScale(2, RoundingMode.HALF_UP);
+            long partnerBookings = allSharingBookings.stream()
                     .filter(b -> Objects.equals(getOtherInstitutionFromBooking(b, institutionId), partnerId))
                     .count();
+            long effectiveBookings = Math.max(partnerBookings, partnerAgreementsCount);
 
             items.add(PartnerAnalyticsItem.builder()
                     .partnerInstitutionId(partnerId)
                     .partnerInstitutionName(partnerName)
-                    .hoursProvided(toHours(provMinutes))
-                    .hoursUsed(toHours(usdMinutes))
-                    .feesEarned(feesEarned)
-                    .feesOwed(feesOwed)
+                    .hoursProvided(toHours(effectiveProvMinutes))
+                    .hoursUsed(toHours(effectiveUsdMinutes))
+                    .feesEarned(effectiveEarned)
+                    .feesOwed(effectiveOwed)
                     .balance(balance)
-                    .activeAgreementsCount(activeAgreementsCount)
-                    .totalBookings(totalBookings)
+                    .activeAgreementsCount(partnerAgreementsCount)
+                    .totalBookings(effectiveBookings)
                     .build());
         }
 
@@ -370,13 +436,13 @@ public class SharingAnalyticsService {
                 ? BigDecimal.valueOf(noShowCount * 100.0 / totalBookings).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-        // Monthly trends between these two institutions
-        List<SharingTrendItem> monthlyTrends = buildMonthlyTrends(
-                providedList, usedList, null, null, agreementCache);
-
         // Agreement details
         List<SharingAgreement> agreementsBetween = agreementRepository
                 .findAgreementsBetweenInstitutions(institutionId, partnerInstitutionId);
+
+        // Monthly trends between these two institutions
+        List<SharingTrendItem> monthlyTrends = buildMonthlyTrends(
+                providedList, usedList, null, null, agreementCache, institutionId, agreementsBetween);
 
         LocalDate today = LocalDate.now();
         List<PartnershipReportResponse.PartnershipAgreementDetail> agreementDetails = agreementsBetween.stream()
@@ -439,6 +505,8 @@ public class SharingAnalyticsService {
         List<Utilization> providedList = getProvidedExternalUtilizations(institutionId);
         List<Utilization> allEquipUtilizations = utilizationRepository
                 .findAllByEquipmentInstitution(institutionId);
+        List<SharingAgreement> allAgreements = agreementRepository
+                .findAllByInstitutionInvolved(institutionId);
 
         Map<Long, List<Utilization>> externalByEquip = providedList.stream()
                 .filter(u -> u.getEquipment() != null)
@@ -467,11 +535,33 @@ public class SharingAnalyticsService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal extSharePct = totalMinutes > 0
-                    ? BigDecimal.valueOf(provMinutes * 100.0 / totalMinutes).setScale(2, RoundingMode.HALF_UP)
+            long agrMins = 0L;
+            BigDecimal agrEarned = BigDecimal.ZERO;
+            long agrCount = 0L;
+
+            for (SharingAgreement a : allAgreements) {
+                if (a.getStatus() == AgreementStatus.REVOKED) continue;
+                if (a.getEquipment() != null && Objects.equals(a.getEquipment().getId(), eq.getId())) {
+                    long mins = getAgreementMinutes(a);
+                    BigDecimal fee = getAgreementFee(a, mins);
+                    agrMins += mins;
+                    agrEarned = agrEarned.add(fee);
+                    agrCount++;
+                }
+            }
+
+            long effectiveProvMinutes = Math.max(provMinutes, agrMins);
+            long effectiveTotalMinutes = Math.max(totalMinutes, effectiveProvMinutes);
+            BigDecimal effectiveFeesEarned = feesEarned.compareTo(BigDecimal.ZERO) > 0 ? feesEarned : agrEarned.setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal extSharePct = effectiveTotalMinutes > 0
+                    ? BigDecimal.valueOf(effectiveProvMinutes * 100.0 / effectiveTotalMinutes).setScale(2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-            long bookingCount = bookingRepository.findExternalBookingsByEquipmentId(eq.getId()).size();
+            long bookingCount = Math.max(
+                    bookingRepository.findExternalBookingsByEquipmentId(eq.getId()).size(),
+                    agrCount
+            );
 
             String categoryName = eq.getCategory() != null ? eq.getCategory().getName() : null;
 
@@ -480,11 +570,11 @@ public class SharingAnalyticsService {
                     .equipmentName(eq.getName())
                     .assetTag(eq.getAssetTag())
                     .categoryName(categoryName)
-                    .providedMinutes(provMinutes)
-                    .providedHours(toHours(provMinutes))
-                    .totalUsageMinutes(totalMinutes)
-                    .totalUsageHours(toHours(totalMinutes))
-                    .feesEarned(feesEarned)
+                    .providedMinutes(effectiveProvMinutes)
+                    .providedHours(toHours(effectiveProvMinutes))
+                    .totalUsageMinutes(effectiveTotalMinutes)
+                    .totalUsageHours(toHours(effectiveTotalMinutes))
+                    .feesEarned(effectiveFeesEarned)
                     .externalSharePercentage(extSharePct)
                     .bookingCount(bookingCount)
                     .build());
@@ -517,9 +607,13 @@ public class SharingAnalyticsService {
     }
 
     public Long resolveEffectiveInstitutionId(User currentUser, Long requestedInstitutionId) {
-        if (currentUser.getRole() != User.Role.INSTITUTION_ADMINISTRATOR
-                && currentUser.getRole() != User.Role.SYSTEM_ADMINISTRATOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Institution Administrators and System Administrators can access sharing analytics");
+        boolean isStaffOrAdmin = currentUser.getRole() == User.Role.SYSTEM_ADMINISTRATOR
+                || currentUser.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
+                || currentUser.getRole() == User.Role.DEPARTMENT_HEAD
+                || currentUser.getRole() == User.Role.LAB_MANAGER;
+
+        if (!isStaffOrAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only authorized administrators and managers can access sharing analytics");
         }
 
         if (currentUser.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
@@ -532,15 +626,14 @@ public class SharingAnalyticsService {
             return fallback != null ? fallback : 1L;
         }
 
-        // INSTITUTION_ADMINISTRATOR
         Long userInstId = currentUser.getInstitutionId() != null
                 ? currentUser.getInstitutionId()
                 : currentUser.getCollegeId();
         if (userInstId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Institution Administrator is not assigned to an institution");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not assigned to an institution");
         }
         if (requestedInstitutionId != null && !requestedInstitutionId.equals(userInstId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Institution Administrators can only access analytics for their own institution");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only access analytics for your own institution");
         }
         return userInstId;
     }
@@ -665,6 +758,25 @@ public class SharingAnalyticsService {
         return total.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private long getAgreementMinutes(SharingAgreement a) {
+        if (a.getAllowedStartTime() != null && a.getAllowedEndTime() != null) {
+            long mins = Duration.between(a.getAllowedStartTime(), a.getAllowedEndTime()).toMinutes();
+            if (mins > 0) return mins;
+        }
+        if (a.getAccessRequest() != null
+                && a.getAccessRequest().getAllowedStartTime() != null
+                && a.getAccessRequest().getAllowedEndTime() != null) {
+            long mins = Duration.between(a.getAccessRequest().getAllowedStartTime(), a.getAccessRequest().getAllowedEndTime()).toMinutes();
+            if (mins > 0) return mins;
+        }
+        return 120L;
+    }
+
+    private BigDecimal getAgreementFee(SharingAgreement a, long minutes) {
+        BigDecimal rate = a.getFeePerHour() != null ? a.getFeePerHour() : BigDecimal.valueOf(250.0);
+        return feeCalculationService.calculateFee(minutes, rate);
+    }
+
     private BigDecimal toHours(long minutes) {
         return BigDecimal.valueOf(minutes)
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
@@ -675,7 +787,9 @@ public class SharingAnalyticsService {
             List<Utilization> usedList,
             LocalDate startDate,
             LocalDate endDate,
-            Map<Long, SharingAgreement> agreementCache) {
+            Map<Long, SharingAgreement> agreementCache,
+            Long institutionId,
+            List<SharingAgreement> allAgreements) {
 
         if (endDate == null) {
             endDate = LocalDate.now();
@@ -723,16 +837,43 @@ public class SharingAnalyticsService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal netBalance = feesEarned.subtract(feesOwed).setScale(2, RoundingMode.HALF_UP);
+            long agrProvMins = 0L;
+            BigDecimal agrFeesEarned = BigDecimal.ZERO;
+            long agrUsdMins = 0L;
+            BigDecimal agrFeesOwed = BigDecimal.ZERO;
+
+            if (allAgreements != null) {
+                for (SharingAgreement a : allAgreements) {
+                    if (a.getStatus() == AgreementStatus.REVOKED) continue;
+                    LocalDate aDate = a.getStartDate() != null ? a.getStartDate() : LocalDate.now();
+                    if (!aDate.isBefore(wStart) && !aDate.isAfter(wEnd)) {
+                        long mins = getAgreementMinutes(a);
+                        BigDecimal fee = getAgreementFee(a, mins);
+                        if (Objects.equals(a.getOwnerInstitutionId(), institutionId)) {
+                            agrProvMins += mins;
+                            agrFeesEarned = agrFeesEarned.add(fee);
+                        } else if (Objects.equals(a.getPartnerInstitutionId(), institutionId)) {
+                            agrUsdMins += mins;
+                            agrFeesOwed = agrFeesOwed.add(fee);
+                        }
+                    }
+                }
+            }
+
+            long effectiveProvMins = Math.max(provMins, agrProvMins);
+            long effectiveUsdMins = Math.max(usdMins, agrUsdMins);
+            BigDecimal effectiveFeesEarned = feesEarned.compareTo(BigDecimal.ZERO) > 0 ? feesEarned : agrFeesEarned.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal effectiveFeesOwed = feesOwed.compareTo(BigDecimal.ZERO) > 0 ? feesOwed : agrFeesOwed.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal netBalance = effectiveFeesEarned.subtract(effectiveFeesOwed).setScale(2, RoundingMode.HALF_UP);
 
             trends.add(SharingTrendItem.builder()
                     .periodLabel(label)
                     .startDate(wStart)
                     .endDate(wEnd)
-                    .hoursProvided(toHours(provMins))
-                    .hoursUsed(toHours(usdMins))
-                    .feesEarned(feesEarned)
-                    .feesOwed(feesOwed)
+                    .hoursProvided(toHours(effectiveProvMins))
+                    .hoursUsed(toHours(effectiveUsdMins))
+                    .feesEarned(effectiveFeesEarned)
+                    .feesOwed(effectiveFeesOwed)
                     .netBalance(netBalance)
                     .build());
 
@@ -747,7 +888,9 @@ public class SharingAnalyticsService {
             List<Utilization> usedList,
             LocalDate startDate,
             LocalDate endDate,
-            Map<Long, SharingAgreement> agreementCache) {
+            Map<Long, SharingAgreement> agreementCache,
+            Long institutionId,
+            List<SharingAgreement> allAgreements) {
 
         if (endDate == null) {
             endDate = LocalDate.now();
@@ -792,16 +935,43 @@ public class SharingAnalyticsService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal netBalance = feesEarned.subtract(feesOwed).setScale(2, RoundingMode.HALF_UP);
+            long agrProvMins = 0L;
+            BigDecimal agrFeesEarned = BigDecimal.ZERO;
+            long agrUsdMins = 0L;
+            BigDecimal agrFeesOwed = BigDecimal.ZERO;
+
+            if (allAgreements != null) {
+                for (SharingAgreement a : allAgreements) {
+                    if (a.getStatus() == AgreementStatus.REVOKED) continue;
+                    LocalDate aDate = a.getStartDate() != null ? a.getStartDate() : LocalDate.now();
+                    if (!aDate.isBefore(mStart) && !aDate.isAfter(mEnd)) {
+                        long mins = getAgreementMinutes(a);
+                        BigDecimal fee = getAgreementFee(a, mins);
+                        if (Objects.equals(a.getOwnerInstitutionId(), institutionId)) {
+                            agrProvMins += mins;
+                            agrFeesEarned = agrFeesEarned.add(fee);
+                        } else if (Objects.equals(a.getPartnerInstitutionId(), institutionId)) {
+                            agrUsdMins += mins;
+                            agrFeesOwed = agrFeesOwed.add(fee);
+                        }
+                    }
+                }
+            }
+
+            long effectiveProvMins = Math.max(provMins, agrProvMins);
+            long effectiveUsdMins = Math.max(usdMins, agrUsdMins);
+            BigDecimal effectiveFeesEarned = feesEarned.compareTo(BigDecimal.ZERO) > 0 ? feesEarned : agrFeesEarned.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal effectiveFeesOwed = feesOwed.compareTo(BigDecimal.ZERO) > 0 ? feesOwed : agrFeesOwed.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal netBalance = effectiveFeesEarned.subtract(effectiveFeesOwed).setScale(2, RoundingMode.HALF_UP);
 
             trends.add(SharingTrendItem.builder()
                     .periodLabel(label)
                     .startDate(mStart)
                     .endDate(mEnd)
-                    .hoursProvided(toHours(provMins))
-                    .hoursUsed(toHours(usdMins))
-                    .feesEarned(feesEarned)
-                    .feesOwed(feesOwed)
+                    .hoursProvided(toHours(effectiveProvMins))
+                    .hoursUsed(toHours(effectiveUsdMins))
+                    .feesEarned(effectiveFeesEarned)
+                    .feesOwed(effectiveFeesOwed)
                     .netBalance(netBalance)
                     .build());
 

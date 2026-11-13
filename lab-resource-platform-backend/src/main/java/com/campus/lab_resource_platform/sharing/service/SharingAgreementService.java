@@ -59,19 +59,48 @@ public class SharingAgreementService {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<SharingAgreementResponse> getAgreements(Pageable pageable) {
+        syncExpiredAgreements();
+
         User user = getAuthenticatedUser();
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return agreementRepository.findAll(pageable).map(this::toResponse);
         }
 
-        if (user.getInstitutionId() == null) {
+        Long instId = getUserInstitutionId(user);
+        if (instId == null) {
             return Page.empty(pageable);
         }
 
         return agreementRepository.findByOwnerInstitutionIdOrPartnerInstitutionId(
-                user.getInstitutionId(), user.getInstitutionId(), pageable).map(this::toResponse);
+                instId, instId, pageable).map(this::toResponse);
+    }
+
+    @Transactional
+    public void syncExpiredAgreements() {
+        try {
+            List<SharingAgreement> activeList = agreementRepository.findAllByStatus(AgreementStatus.ACTIVE);
+            boolean changed = false;
+            for (SharingAgreement sa : activeList) {
+                if (sa.isExpired()) {
+                    sa.setStatus(AgreementStatus.EXPIRED);
+                    changed = true;
+                    if (sa.getGrants() != null) {
+                        for (AccessGrant g : sa.getGrants()) {
+                            if (g.getStatus() == GrantStatus.ACTIVE) {
+                                g.setStatus(GrantStatus.REVOKED);
+                                g.setRevocationReason("Agreement validity period completed");
+                            }
+                        }
+                    }
+                }
+            }
+            if (changed) {
+                agreementRepository.saveAll(activeList);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     @Transactional(readOnly = true)
@@ -116,10 +145,13 @@ public class SharingAgreementService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agreement not found: " + agreementId));
 
         User user = getAuthenticatedUser();
-        authorizeOwnerAdmin(agreement.getOwnerInstitutionId(), user);
+        authorizeRevokeAgreement(agreement, user);
 
         if (agreement.getStatus() == AgreementStatus.REVOKED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Agreement is already revoked");
+        }
+        if (agreement.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Agreement has already expired and cannot be revoked");
         }
 
         Instant now = Instant.now();
@@ -186,7 +218,7 @@ public class SharingAgreementService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grant not found: " + grantId));
 
         User user = getAuthenticatedUser();
-        authorizeOwnerAdmin(grant.getAgreement().getOwnerInstitutionId(), user);
+        authorizeRevokeGrant(grant, user);
 
         if (grant.getStatus() == GrantStatus.REVOKED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Grant is already revoked");
@@ -233,9 +265,10 @@ public class SharingAgreementService {
             return;
         }
 
-        if (user.getInstitutionId() != null
-                && (user.getInstitutionId().equals(agreement.getOwnerInstitutionId())
-                || user.getInstitutionId().equals(agreement.getPartnerInstitutionId()))) {
+        Long userInstId = getUserInstitutionId(user);
+        if (userInstId != null
+                && (userInstId.equals(agreement.getOwnerInstitutionId())
+                || userInstId.equals(agreement.getPartnerInstitutionId()))) {
             return;
         }
 
@@ -248,16 +281,61 @@ public class SharingAgreementService {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to view this agreement");
     }
 
-    private void authorizeOwnerAdmin(Long ownerInstitutionId, User user) {
+    private void authorizeRevokeAgreement(SharingAgreement agreement, User user) {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return;
         }
-        if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                && user.getInstitutionId() != null
-                && user.getInstitutionId().equals(ownerInstitutionId)) {
+
+        Long userInstId = getUserInstitutionId(user);
+        boolean isOwnerOrPartnerAdminOrHead = (
+                user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR ||
+                user.getRole() == User.Role.DEPARTMENT_HEAD
+        ) && userInstId != null && (
+                userInstId.equals(agreement.getOwnerInstitutionId()) ||
+                userInstId.equals(agreement.getPartnerInstitutionId())
+        );
+
+        if (isOwnerOrPartnerAdminOrHead) {
             return;
         }
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner institution administrator can revoke agreements or grants");
+
+        if (agreement.getAccessRequest() != null
+                && agreement.getAccessRequest().getRequester() != null
+                && agreement.getAccessRequest().getRequester().getId().equals(user.getId())) {
+            return;
+        }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only authorized administrators or department heads involved in this agreement can revoke it");
+    }
+
+    private void authorizeRevokeGrant(AccessGrant grant, User user) {
+        if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
+            return;
+        }
+        Long userInstId = getUserInstitutionId(user);
+        Long ownerInstId = grant.getAgreement() != null ? grant.getAgreement().getOwnerInstitutionId() : null;
+        Long partnerInstId = grant.getAgreement() != null ? grant.getAgreement().getPartnerInstitutionId() : null;
+
+        boolean isAuthorized = (
+                user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR ||
+                user.getRole() == User.Role.DEPARTMENT_HEAD
+        ) && userInstId != null && (
+                userInstId.equals(ownerInstId) || userInstId.equals(partnerInstId)
+        );
+
+        if (isAuthorized) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only authorized administrators or department heads can revoke grants");
+    }
+
+    /**
+     * Returns the institution ID for the user, falling back from collegeId to institutionId.
+     * This handles the case where a user has college_id set but institution_id is null (or vice versa).
+     */
+    private Long getUserInstitutionId(User user) {
+        if (user == null) return null;
+        return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
     }
 
     public SharingAgreementResponse toResponse(SharingAgreement sa) {
@@ -283,8 +361,14 @@ public class SharingAgreementService {
         resp.setAllowedEndTime(sa.getAllowedEndTime());
 
         resp.setFeePerHour(sa.getFeePerHour());
-        resp.setStatus(sa.getStatus());
-        resp.setExpired(sa.isExpired()); // Calculated dynamically!
+        // Auto-compute EXPIRED status on-read without touching the DB record
+        boolean expired = sa.isExpired();
+        if (sa.getStatus() == AgreementStatus.ACTIVE && expired) {
+            resp.setStatus(AgreementStatus.EXPIRED);
+        } else {
+            resp.setStatus(sa.getStatus());
+        }
+        resp.setExpired(expired);
 
         resp.setApprovedByUserId(sa.getApprovedByUserId());
         resp.setApprovedAt(sa.getApprovedAt());

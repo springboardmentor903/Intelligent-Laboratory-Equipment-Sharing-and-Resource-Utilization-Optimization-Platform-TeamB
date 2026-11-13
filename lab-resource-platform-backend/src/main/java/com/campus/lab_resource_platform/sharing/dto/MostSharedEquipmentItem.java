@@ -30,5 +30,26 @@ public class MostSharedEquipmentItem {
     private BigDecimal externalSharePercentage; // (providedMinutes / totalUsageMinutes) * 100
 
     private Long bookingCount;
+
+    public BigDecimal getSharedHours() {
+        return providedHours;
+    }
+
+    public Long getSessionsCount() {
+        return bookingCount;
+    }
+
+    public BigDecimal getRevenue() {
+        return feesEarned;
+    }
+
+    public String getDemandLevel() {
+        if (bookingCount != null && bookingCount >= 3) {
+            return "High Demand";
+        } else if (bookingCount != null && bookingCount >= 1) {
+            return "Optimal Utilization";
+        }
+        return "Normal";
+    }
 }
 

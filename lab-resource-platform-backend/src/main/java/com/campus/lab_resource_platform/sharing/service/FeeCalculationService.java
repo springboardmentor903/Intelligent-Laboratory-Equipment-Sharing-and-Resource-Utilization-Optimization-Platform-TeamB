@@ -97,10 +97,14 @@ public class FeeCalculationService {
         List<Booking> bookings = bookingRepository.findAgreementBookingsInPeriod(
                 agreementId, startDateTime, endDateTime);
 
-        List<Long> bookingIds = bookings.stream().map(Booking::getId).toList();
-        Map<Long, Utilization> utilizationMap = utilizationRepository.findByBookingIdIn(bookingIds).stream()
-                .filter(u -> u.getBooking() != null)
-                .collect(Collectors.toMap(u -> u.getBooking().getId(), u -> u, (a, b) -> a));
+        List<Long> bookingIds = (bookings != null && !bookings.isEmpty())
+                ? bookings.stream().map(Booking::getId).toList()
+                : java.util.Collections.emptyList();
+        Map<Long, Utilization> utilizationMap = bookingIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : utilizationRepository.findByBookingIdIn(bookingIds).stream()
+                        .filter(u -> u.getBooking() != null)
+                        .collect(Collectors.toMap(u -> u.getBooking().getId(), u -> u, (a, b) -> a));
 
         AgreementUsageFeesResponse response = new AgreementUsageFeesResponse();
         response.setAgreementId(agreement.getId());
@@ -156,6 +160,24 @@ public class FeeCalculationService {
             response.getItems().add(item);
         }
 
+        if (bookings.isEmpty()) {
+            long agreedMinutes = 0L;
+            if (agreement.getAllowedStartTime() != null && agreement.getAllowedEndTime() != null) {
+                agreedMinutes = Math.max(0, Duration.between(agreement.getAllowedStartTime(), agreement.getAllowedEndTime()).toMinutes());
+            } else if (agreement.getAccessRequest() != null
+                    && agreement.getAccessRequest().getAllowedStartTime() != null
+                    && agreement.getAccessRequest().getAllowedEndTime() != null) {
+                agreedMinutes = Math.max(0, Duration.between(
+                        agreement.getAccessRequest().getAllowedStartTime(),
+                        agreement.getAccessRequest().getAllowedEndTime()
+                ).toMinutes());
+            }
+            if (agreedMinutes > 0) {
+                totalBooked = agreedMinutes;
+                totalEstimated = calculateFee(agreedMinutes, agreement.getFeePerHour());
+            }
+        }
+
         response.setTotalBookedMinutes(totalBooked);
         response.setTotalUsedMinutes(totalUsed);
         response.setTotalEstimatedFee(totalEstimated.setScale(2, RoundingMode.HALF_UP));
@@ -164,18 +186,28 @@ public class FeeCalculationService {
         return response;
     }
 
+    private Long getUserInstitutionId(User user) {
+        if (user == null) {
+            return null;
+        }
+        return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
+    }
+
     private void authorizeUsageFeesAccess(SharingAgreement agreement, User user) {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return;
         }
 
-        // Owner Institution Admin or Partner Institution Admin
-        if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR) {
-            if (user.getInstitutionId() != null
-                    && (user.getInstitutionId().equals(agreement.getOwnerInstitutionId())
-                    || user.getInstitutionId().equals(agreement.getPartnerInstitutionId()))) {
-                return;
-            }
+        Long userInstId = getUserInstitutionId(user);
+        if (userInstId != null && (userInstId.equals(agreement.getOwnerInstitutionId())
+                || userInstId.equals(agreement.getPartnerInstitutionId()))) {
+            return;
+        }
+
+        // Check if user is requester of the linked access request
+        if (agreement.getAccessRequest() != null && agreement.getAccessRequest().getRequester() != null
+                && agreement.getAccessRequest().getRequester().getId().equals(user.getId())) {
+            return;
         }
 
         // Check if user is a grantee on this agreement

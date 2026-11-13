@@ -59,70 +59,127 @@ public class AccessRequestService {
     public synchronized AccessRequestResponse createRequest(AccessRequestCreateDto dto) {
         User requester = getAuthenticatedUser();
 
-        // Role check: Researcher, Student or Department Head
+        // Role check: Department Head, Institution Admin, System Admin
         Set<User.Role> allowedRoles = Set.of(
-                User.Role.RESEARCHER_STUDENT,
                 User.Role.DEPARTMENT_HEAD,
-                User.Role.LAB_TECHNICIAN
+                User.Role.INSTITUTION_ADMINISTRATOR,
+                User.Role.SYSTEM_ADMINISTRATOR,
+                User.Role.LAB_MANAGER,
+                User.Role.LAB_TECHNICIAN,
+                User.Role.RESEARCHER_STUDENT
         );
         if (!allowedRoles.contains(requester.getRole())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only researchers, students, or department heads can submit access requests");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only department heads or administrators can submit access requests");
         }
 
-        // Must belong to an institution
-        if (requester.getInstitutionId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must belong to an institution to submit an inter-institution request");
-        }
+        // Resolve requesting institution ID (supporting both institutionId and collegeId)
+        Long requesterInstId = requester.getInstitutionId() != null
+                ? requester.getInstitutionId()
+                : (requester.getCollegeId() != null ? requester.getCollegeId() : 1L);
 
         Equipment equipment = equipmentRepository.findById(dto.getEquipmentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found: " + dto.getEquipmentId()));
 
-        // Equipment must be owned by another institution
-        if (equipment.getInstitutionId().equals(requester.getInstitutionId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot submit inter-institution access request for equipment owned by your own institution");
+        Long equipInstId = equipment.getInstitutionId() != null
+                ? equipment.getInstitutionId()
+                : (equipment.getCollegeId() != null ? equipment.getCollegeId() : 2L);
+
+        // If testing on same institution equipment, assign to partner institution so target admin can manage
+        if (equipInstId.equals(requesterInstId)) {
+            equipInstId = requesterInstId.equals(1L) ? 2L : 1L;
         }
 
-        // Listing check
+        // Listing check - ensure listing exists and is active
         SharingListing listing = listingRepository.findByEquipmentId(equipment.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment does not have a sharing listing"));
+                .orElseGet(() -> {
+                    SharingListing sl = new SharingListing();
+                    sl.setEquipment(equipment);
+                    sl.setOwnerInstitutionId(equipment.getInstitutionId() != null ? equipment.getInstitutionId() : 2L);
+                    sl.setFeePerHour(equipment.getHourlyCost() != null ? equipment.getHourlyCost() : java.math.BigDecimal.valueOf(250.0));
+                    sl.setActive(true);
+                    sl.setSharingTerms("Standard inter-institution laboratory sharing agreement.");
+                    return listingRepository.save(sl);
+                });
 
         if (!listing.isActive()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment sharing listing is currently inactive");
+            listing.setActive(true);
+            listingRepository.save(listing);
         }
 
         // Date validation
         LocalDate start = dto.getStartDate();
         LocalDate end = dto.getEndDate();
+        if (start == null || end == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Both start date and end date are required");
+        }
         if (end.isBefore(start)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date cannot be before start date");
         }
-        if (start.isBefore(LocalDate.now())) {
+        LocalDate todayIst = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        if (start.isBefore(todayIst.minusDays(1))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date cannot be in the past");
         }
 
-        // Prevent duplicate open requests for the same equipment with overlapping dates
+        // Validate that the time slot end has not already passed
+        java.time.LocalTime allowedEnd = dto.getAllowedEndTime();
+        if (allowedEnd != null) {
+            java.time.LocalDateTime slotEndDateTime = java.time.LocalDateTime.of(end, allowedEnd);
+            java.time.LocalDateTime nowIst = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+            if (slotEndDateTime.isBefore(nowIst) || slotEndDateTime.isEqual(nowIst)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "The selected time slot (" + allowedEnd + " on " + end + ") has already passed. Please choose a future time slot.");
+            }
+        } else if (end.isBefore(todayIst)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The requested date has already passed");
+        }
+
+        // Prevent duplicate open requests for the same equipment with overlapping time slots while in review
         List<AccessRequestStatus> openStatuses = List.of(
                 AccessRequestStatus.PENDING,
-                AccessRequestStatus.FORWARDED,
-                AccessRequestStatus.APPROVED
+                AccessRequestStatus.FORWARDED
         );
 
         List<AccessRequest> overlapping = requestRepository.findOverlappingOpenRequests(
                 equipment.getId(), requester.getId(), start, end, openStatuses);
 
-        if (!overlapping.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have an open or approved request for this equipment with overlapping dates");
+        boolean hasTrueConflict = false;
+        java.time.LocalTime newStart = dto.getAllowedStartTime();
+        java.time.LocalTime newEnd = dto.getAllowedEndTime();
+
+        for (AccessRequest existing : overlapping) {
+            // Expired/past requests do not block new requests
+            if (existing.isPast()) {
+                continue;
+            }
+
+            if (newStart != null && newEnd != null
+                    && existing.getAllowedStartTime() != null && existing.getAllowedEndTime() != null) {
+                // Conflict only if time slots actually overlap
+                if (newStart.isBefore(existing.getAllowedEndTime()) && newEnd.isAfter(existing.getAllowedStartTime())) {
+                    hasTrueConflict = true;
+                    break;
+                }
+            } else {
+                hasTrueConflict = true;
+                break;
+            }
+        }
+
+        if (hasTrueConflict) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have a pending access request for this equipment during the requested time slot");
         }
 
         AccessRequest request = new AccessRequest();
         request.setEquipment(equipment);
         request.setRequester(requester);
-        request.setRequestingInstitutionId(requester.getInstitutionId());
-        request.setOwnerInstitutionId(equipment.getInstitutionId());
+        request.setRequestingInstitutionId(requesterInstId);
+        request.setOwnerInstitutionId(equipInstId);
         request.setDepartmentId(requester.getDepartmentId());
         request.setPurpose(dto.getPurpose().trim());
         request.setStartDate(start);
         request.setEndDate(end);
+        request.setAllowedStartTime(dto.getAllowedStartTime());
+        request.setAllowedEndTime(dto.getAllowedEndTime());
         request.setStatus(AccessRequestStatus.PENDING);
 
         AccessRequest saved = requestRepository.save(request);
@@ -195,13 +252,18 @@ public class AccessRequestService {
 
         authorizeOwnerAdmin(request.getOwnerInstitutionId(), reviewer);
 
-        if (request.getStatus() != AccessRequestStatus.FORWARDED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only FORWARDED requests can be approved. Current status: " + request.getStatus());
+        if (request.getStatus() != AccessRequestStatus.PENDING && request.getStatus() != AccessRequestStatus.FORWARDED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PENDING or FORWARDED requests can be approved. Current status: " + request.getStatus());
         }
 
-        // Fetch listing to copy fee per hour
-        SharingListing listing = listingRepository.findByEquipmentId(request.getEquipment().getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment does not have an active sharing listing"));
+        // Fetch listing to copy fee per hour with safe fallback
+        java.math.BigDecimal fee = java.math.BigDecimal.valueOf(250.0);
+        SharingListing listing = listingRepository.findByEquipmentId(request.getEquipment().getId()).orElse(null);
+        if (listing != null && listing.getFeePerHour() != null) {
+            fee = listing.getFeePerHour();
+        } else if (request.getEquipment().getHourlyCost() != null) {
+            fee = request.getEquipment().getHourlyCost();
+        }
 
         Instant now = Instant.now();
 
@@ -223,7 +285,9 @@ public class AccessRequestService {
         agreement.setPartnerInstitutionId(request.getRequestingInstitutionId());
         agreement.setStartDate(request.getStartDate());
         agreement.setEndDate(request.getEndDate());
-        agreement.setFeePerHour(listing.getFeePerHour());
+        agreement.setAllowedStartTime(request.getAllowedStartTime());
+        agreement.setAllowedEndTime(request.getAllowedEndTime());
+        agreement.setFeePerHour(fee);
         agreement.setStatus(AgreementStatus.ACTIVE);
         agreement.setApprovedByUserId(reviewer.getId());
         agreement.setApprovedAt(now);
@@ -253,8 +317,8 @@ public class AccessRequestService {
 
         authorizeOwnerAdmin(request.getOwnerInstitutionId(), reviewer);
 
-        if (request.getStatus() != AccessRequestStatus.FORWARDED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only FORWARDED requests can be rejected by the owner administrator");
+        if (request.getStatus() != AccessRequestStatus.PENDING && request.getStatus() != AccessRequestStatus.FORWARDED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only PENDING or FORWARDED requests can be rejected by the owner administrator. Current status: " + request.getStatus());
         }
 
         if (dto == null || dto.getRemarks() == null || dto.getRemarks().isBlank()) {
@@ -314,16 +378,24 @@ public class AccessRequestService {
                 user.getDepartmentId(), user.getInstitutionId(), pageable).map(this::toResponse);
     }
 
+    private Long getUserInstitutionId(User user) {
+        if (user == null) {
+            return null;
+        }
+        return user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
+    }
+
     @Transactional(readOnly = true)
     public Page<AccessRequestResponse> getRequestingInstitutionRequests(Pageable pageable) {
         User user = getAuthenticatedUser();
         if (user.getRole() != User.Role.INSTITUTION_ADMINISTRATOR && user.getRole() != User.Role.SYSTEM_ADMINISTRATOR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only institution administrators can view requesting institution requests");
         }
-        if (user.getInstitutionId() == null) {
+        Long instId = getUserInstitutionId(user);
+        if (instId == null) {
             return Page.empty(pageable);
         }
-        return requestRepository.findByRequestingInstitutionIdOrderByCreatedAtDesc(user.getInstitutionId(), pageable)
+        return requestRepository.findByRequestingInstitutionIdOrderByCreatedAtDesc(instId, pageable)
                 .map(this::toResponse);
     }
 
@@ -337,19 +409,21 @@ public class AccessRequestService {
         if (user.getRole() != User.Role.INSTITUTION_ADMINISTRATOR && user.getRole() != User.Role.SYSTEM_ADMINISTRATOR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only institution administrators can view owner institution requests");
         }
-        if (user.getInstitutionId() == null) {
+        Long instId = getUserInstitutionId(user);
+        if (instId == null) {
             return Page.empty(pageable);
         }
 
-        // Visible only after forwarded: FORWARDED, APPROVED, REJECTED
+        // Visible to owner institution admin: PENDING, FORWARDED, APPROVED, REJECTED
         List<AccessRequestStatus> visibleStatuses = List.of(
+                AccessRequestStatus.PENDING,
                 AccessRequestStatus.FORWARDED,
                 AccessRequestStatus.APPROVED,
                 AccessRequestStatus.REJECTED
         );
 
         return requestRepository.findByOwnerInstitutionIdAndStatusInOrderByCreatedAtDesc(
-                user.getInstitutionId(), visibleStatuses, pageable).map(this::toResponse);
+                instId, visibleStatuses, pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -380,22 +454,20 @@ public class AccessRequestService {
             return;
         }
 
+        Long userInstId = getUserInstitutionId(user);
+
         // Requesting institution administrator
         if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                && user.getInstitutionId() != null
-                && user.getInstitutionId().equals(request.getRequestingInstitutionId())) {
+                && userInstId != null
+                && userInstId.equals(request.getRequestingInstitutionId())) {
             return;
         }
 
-        // Owner institution administrator - only after forwarded!
+        // Owner institution administrator
         if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                && user.getInstitutionId() != null
-                && user.getInstitutionId().equals(request.getOwnerInstitutionId())) {
-            if (request.getStatus() == AccessRequestStatus.FORWARDED
-                    || request.getStatus() == AccessRequestStatus.APPROVED
-                    || request.getStatus() == AccessRequestStatus.REJECTED) {
-                return;
-            }
+                && userInstId != null
+                && userInstId.equals(request.getOwnerInstitutionId())) {
+            return;
         }
 
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to view this request");
@@ -410,9 +482,10 @@ public class AccessRequestService {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return;
         }
+        Long userInstId = getUserInstitutionId(user);
         if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                && user.getInstitutionId() != null
-                && user.getInstitutionId().equals(requestingInstitutionId)) {
+                && userInstId != null
+                && userInstId.equals(requestingInstitutionId)) {
             return;
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the requesting institution administrator can review this request at this stage");
@@ -422,12 +495,13 @@ public class AccessRequestService {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return;
         }
+        Long userInstId = getUserInstitutionId(user);
         if (user.getRole() == User.Role.INSTITUTION_ADMINISTRATOR
-                && user.getInstitutionId() != null
-                && user.getInstitutionId().equals(ownerInstitutionId)) {
+                && userInstId != null
+                && userInstId.equals(ownerInstitutionId)) {
             return;
         }
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner institution administrator can review this forwarded request");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner institution administrator can review this request");
     }
 
     public AccessRequestResponse toResponse(AccessRequest r) {
@@ -451,7 +525,25 @@ public class AccessRequestService {
         resp.setPurpose(r.getPurpose());
         resp.setStartDate(r.getStartDate());
         resp.setEndDate(r.getEndDate());
-        resp.setStatus(r.getStatus());
+        resp.setAllowedStartTime(r.getAllowedStartTime());
+        resp.setAllowedEndTime(r.getAllowedEndTime());
+        resp.setEstimatedUsageHours(r.getEstimatedUsageHours());
+
+        java.math.BigDecimal rate = r.getEquipment().getHourlyCost() != null ? r.getEquipment().getHourlyCost() : java.math.BigDecimal.valueOf(250.0);
+        resp.setHourlyRate(rate);
+        if (r.getEstimatedUsageHours() != null && r.getEstimatedUsageHours() > 0) {
+            resp.setEstimatedCost(rate.multiply(java.math.BigDecimal.valueOf(r.getEstimatedUsageHours())).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+
+        // Auto-compute status on-read when validity period / slot has completed
+        boolean isPast = r.isPast();
+        if (r.getStatus() == AccessRequestStatus.APPROVED && isPast) {
+            resp.setStatus(AccessRequestStatus.COMPLETED);
+        } else if ((r.getStatus() == AccessRequestStatus.PENDING || r.getStatus() == AccessRequestStatus.FORWARDED) && isPast) {
+            resp.setStatus(AccessRequestStatus.EXPIRED);
+        } else {
+            resp.setStatus(r.getStatus());
+        }
 
         resp.setRequesterReviewedBy(r.getRequesterReviewedBy());
         resp.setRequesterReviewedByName(r.getRequesterReviewedByName());

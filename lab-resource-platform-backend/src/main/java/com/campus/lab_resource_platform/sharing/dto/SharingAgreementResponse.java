@@ -49,5 +49,13 @@ public class SharingAgreementResponse {
 
     private Instant createdAt;
     private Instant updatedAt;
+
+    public Double getTotalUsageHours() {
+        if (allowedStartTime != null && allowedEndTime != null) {
+            long minutes = java.time.Duration.between(allowedStartTime, allowedEndTime).toMinutes();
+            return minutes > 0 ? Math.round((minutes / 60.0) * 10.0) / 10.0 : 0.0;
+        }
+        return null;
+    }
 }
 

@@ -167,8 +167,8 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
-                        // Booking APIs
-                        .requestMatchers("/api/bookings/**")
+                        // Booking and Waitlist APIs
+                        .requestMatchers("/api/bookings/**", "/api/waitlist/**")
                         .hasAnyRole(
                                 "RESEARCHER_STUDENT",
                                 "LAB_TECHNICIAN",
@@ -181,6 +181,8 @@ public class SecurityConfig {
                         // Sharing Analytics APIs (T6)
                         .requestMatchers("/api/sharing/analytics/**")
                         .hasAnyRole(
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
                                 "INSTITUTION_ADMINISTRATOR",
                                 "SYSTEM_ADMINISTRATOR"
                         )
