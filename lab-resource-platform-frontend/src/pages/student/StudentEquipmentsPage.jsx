@@ -5,6 +5,15 @@ import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
 import EquipmentAvailabilityModal from "../../components/EquipmentAvailabilityModal";
+import {
+  FiFolder,
+  FiTag,
+  FiCpu,
+  FiMapPin,
+  FiClock,
+  FiShield,
+  FiCalendar,
+} from "react-icons/fi";
 
 const STATUS_CONFIG = {
   AVAILABLE: { bg: "#dcfce7", text: "#15803d", label: "Available" },
@@ -192,22 +201,26 @@ export default function StudentEquipmentsPage() {
                   <div className="student-equipment-meta">
                     {item.category && (
                       <span className="student-meta-item">
-                        📁 <strong>Category:</strong> {item.category}
+                        <FiFolder style={{ marginRight: "4px" }} />
+                        <strong>Category:</strong> {item.category}
                       </span>
                     )}
                     {item.model && (
                       <span className="student-meta-item">
-                        🏷️ <strong>Model:</strong> {item.model}
+                        <FiTag style={{ marginRight: "4px" }} />
+                        <strong>Model:</strong> {item.model}
                       </span>
                     )}
                     {item.manufacturer && (
                       <span className="student-meta-item">
-                        🏭 <strong>Mfr:</strong> {item.manufacturer}
+                        <FiCpu style={{ marginRight: "4px" }} />
+                        <strong>Mfr:</strong> {item.manufacturer}
                       </span>
                     )}
                     {item.location && (
                       <span className="student-meta-item">
-                        📍 <strong>Location:</strong> {item.location}
+                        <FiMapPin style={{ marginRight: "4px" }} />
+                        <strong>Location:</strong> {item.location}
                       </span>
                     )}
                   </div>
@@ -224,11 +237,11 @@ export default function StudentEquipmentsPage() {
 
                   <div className="student-equipment-features">
                     <span className="student-feature-pill">
-                      ⏱️ Max {item.maxBookingHours || 8} hrs/session
+                      <FiClock style={{ marginRight: "4px" }} /> Max {item.maxBookingHours || 8} hrs/session
                     </span>
                     {item.requiresApproval && (
                       <span className="student-feature-pill approval">
-                        🛡️ Manager Approval Required
+                        <FiShield style={{ marginRight: "4px" }} /> Manager Approval Required
                       </span>
                     )}
                   </div>
@@ -240,8 +253,10 @@ export default function StudentEquipmentsPage() {
                     className="student-book-btn"
                     disabled={!isBookable}
                     onClick={() => navigate(`/dashboard/student/book/${item.id}`)}
+                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                   >
-                    {isBookable ? "📅 Book This Equipment" : "Unavailable for Booking"}
+                    <FiCalendar size={15} />
+                    {isBookable ? "Book This Equipment" : "Unavailable for Booking"}
                   </button>
 
                   <button
@@ -249,8 +264,9 @@ export default function StudentEquipmentsPage() {
                     className="student-availability-btn"
                     onClick={() => setSelectedEquipmentForAvail(item)}
                     title="View occupied time slots and availability"
+                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                   >
-                    🗓️ View Schedule &amp; Slots
+                    <FiClock size={15} /> View Schedule &amp; Slots
                   </button>
                 </div>
               </article>

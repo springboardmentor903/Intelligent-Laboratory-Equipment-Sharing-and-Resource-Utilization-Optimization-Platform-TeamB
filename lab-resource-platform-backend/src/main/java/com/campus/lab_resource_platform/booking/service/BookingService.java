@@ -102,9 +102,7 @@ public class BookingService {
 
         ExternalAccessValidator.ValidationResult access =
                 accessValidator.validate(equipment, user, request.getStartTime(), request.getEndTime());
-        BookingStatus status = Boolean.TRUE.equals(equipment.getRequiresApproval())
-                ? BookingStatus.PENDING_APPROVAL
-                : BookingStatus.CONFIRMED;
+        BookingStatus status = BookingStatus.PENDING_APPROVAL;
         Booking booking = Booking.builder()
                 .equipment(equipment)
                 .user(user)
@@ -176,9 +174,7 @@ public class BookingService {
 
             ExternalAccessValidator.ValidationResult access =
                     accessValidator.validate(equipment, user, occurrenceStart, occurrenceEnd);
-            BookingStatus status = Boolean.TRUE.equals(equipment.getRequiresApproval())
-                    ? BookingStatus.PENDING_APPROVAL
-                    : BookingStatus.CONFIRMED;
+            BookingStatus status = BookingStatus.PENDING_APPROVAL;
             Booking booking = Booking.builder()
                     .equipment(equipment)
                     .user(user)
@@ -375,7 +371,9 @@ public class BookingService {
         if (!equipmentRepository.existsById(equipmentId)) {
             throw new ResourceNotFoundException("Equipment not found with ID: " + equipmentId);
         }
-        validateTimeRange(startDate, endDate);
+        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
+            throw new BadRequestException("Start date and end date are required, and end date must be after start date");
+        }
         return bookingRepository.findOccupiedSlots(equipmentId, startDate, endDate, BLOCKING_STATUSES)
                 .stream()
                 .map(booking -> AvailabilitySlotResponse.builder()

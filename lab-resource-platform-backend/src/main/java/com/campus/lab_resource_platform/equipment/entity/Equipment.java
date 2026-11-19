@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "equipment")
+@Table(name = "equipments")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -63,11 +63,9 @@ public class Equipment {
     @Builder.Default
     private Set<Tag> tagEntities = new HashSet<>();
 
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
     @JsonProperty("tags")
     @Column(name = "tags", length = 255)
-    private String legacyTags;
+    private String tags;
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
@@ -102,7 +100,7 @@ public class Equipment {
     @Column(name = "department_id")
     private Long departmentId;
 
-    @Column(name = "is_shareable", nullable = false)
+    @Column(name = "is_shareable", columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isShareable = false;
 
@@ -132,6 +130,14 @@ public class Equipment {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private Instant createdAt = Instant.now();
+
+    @Column(name = "updated_at")
+    @Builder.Default
+    private Instant updatedAt = Instant.now();
+
     @JsonProperty("category")
     public String getLegacyCategory() {
         if (legacyCategory != null) {
@@ -145,14 +151,12 @@ public class Equipment {
         this.legacyCategory = legacyCategory;
     }
 
-    @JsonProperty("tags")
     public String getLegacyTags() {
-        return legacyTags;
+        return tags;
     }
 
-    @JsonProperty("tags")
     public void setLegacyTags(String legacyTags) {
-        this.legacyTags = legacyTags;
+        this.tags = legacyTags;
     }
 
     @PrePersist
@@ -182,5 +186,9 @@ public class Equipment {
         if (tagEntities == null) {
             tagEntities = new HashSet<>();
         }
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+        updatedAt = Instant.now();
     }
 }

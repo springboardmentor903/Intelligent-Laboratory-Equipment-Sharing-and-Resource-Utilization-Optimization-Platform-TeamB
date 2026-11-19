@@ -26,6 +26,8 @@ public interface SharingAgreementRepository extends JpaRepository<SharingAgreeme
     Page<SharingAgreement> findByOwnerInstitutionIdOrPartnerInstitutionId(
             Long ownerInstitutionId, Long partnerInstitutionId, Pageable pageable);
 
+    List<SharingAgreement> findAllByStatus(AgreementStatus status);
+
     @Query("""
         SELECT sa FROM SharingAgreement sa
         JOIN sa.grants g

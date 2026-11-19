@@ -9,6 +9,8 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.Duration;
 
 @Entity
 @Table(
@@ -54,6 +56,35 @@ public class AccessRequest {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    @Column(name = "allowed_start_time")
+    private LocalTime allowedStartTime;
+
+    @Column(name = "allowed_end_time")
+    private LocalTime allowedEndTime;
+
+    @Transient
+    public Double getEstimatedUsageHours() {
+        if (allowedStartTime != null && allowedEndTime != null) {
+            long minutes = Duration.between(allowedStartTime, allowedEndTime).toMinutes();
+            return minutes > 0 ? Math.round((minutes / 60.0) * 10.0) / 10.0 : 0.0;
+        }
+        return null;
+    }
+
+    @Transient
+    public boolean isPast() {
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        LocalDate today = LocalDate.now(istZone);
+        if (endDate != null && endDate.isBefore(today)) {
+            return true;
+        }
+        if (endDate != null && endDate.isEqual(today) && allowedEndTime != null) {
+            LocalTime now = LocalTime.now(istZone);
+            return now.isAfter(allowedEndTime);
+        }
+        return false;
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private AccessRequestStatus status = AccessRequestStatus.PENDING;
@@ -85,7 +116,8 @@ public class AccessRequest {
     private String finalReviewRemarks;
 
     @Version
-    private Long version;
+    @Column(name = "version", columnDefinition = "bigint default 0")
+    private Long version = 0L;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

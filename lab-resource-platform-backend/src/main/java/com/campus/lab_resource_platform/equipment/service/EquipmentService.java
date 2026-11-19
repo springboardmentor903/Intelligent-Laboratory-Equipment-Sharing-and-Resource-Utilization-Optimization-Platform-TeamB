@@ -11,8 +11,12 @@ import com.campus.lab_resource_platform.equipment.entity.Tag;
 import com.campus.lab_resource_platform.equipment.repository.CalibrationRecordRepository;
 import com.campus.lab_resource_platform.equipment.repository.EquipmentCategoryRepository;
 import com.campus.lab_resource_platform.equipment.repository.EquipmentRepository;
+import com.campus.lab_resource_platform.sharing.entity.SharingListing;
+import com.campus.lab_resource_platform.sharing.repository.SharingListingRepository;
 import com.campus.lab_resource_platform.user.entity.User;
 import com.campus.lab_resource_platform.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -40,16 +45,22 @@ public class EquipmentService {
     private final EquipmentCategoryRepository categoryRepository;
     private final CalibrationRecordRepository calibrationRecordRepository;
     private final UserRepository userRepository;
+    private final SharingListingRepository sharingListingRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public EquipmentService(
             EquipmentRepository equipmentRepository,
             EquipmentCategoryRepository categoryRepository,
             CalibrationRecordRepository calibrationRecordRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            SharingListingRepository sharingListingRepository) {
         this.equipmentRepository = equipmentRepository;
         this.categoryRepository = categoryRepository;
         this.calibrationRecordRepository = calibrationRecordRepository;
         this.userRepository = userRepository;
+        this.sharingListingRepository = sharingListingRepository;
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +122,7 @@ public class EquipmentService {
                     cb.like(cb.lower(root.get("assetTag")), pattern),
                     cb.like(cb.lower(root.get("description")), pattern),
                     cb.like(cb.lower(root.get("legacyCategory")), pattern),
-                    cb.like(cb.lower(root.get("legacyTags")), pattern)
+                    cb.like(cb.lower(root.get("tags")), pattern)
             ));
         }
 
@@ -140,7 +151,11 @@ public class EquipmentService {
         validateRequest(request, null);
         Equipment equipment = new Equipment();
         applyRequest(equipment, request);
-        return toResponse(equipmentRepository.save(equipment));
+        Equipment saved = equipmentRepository.saveAndFlush(equipment);
+        if (Boolean.TRUE.equals(saved.getIsShareable())) {
+            autoProvisionSharingListing(saved);
+        }
+        return toResponse(saved);
     }
 
     @Transactional
@@ -151,7 +166,11 @@ public class EquipmentService {
         enforceCollegeScope(user, equipment);
         equipment.setId(null);
         equipment.setRequiresApproval(true);
-        return equipmentRepository.save(equipment);
+        Equipment saved = equipmentRepository.saveAndFlush(equipment);
+        if (Boolean.TRUE.equals(saved.getIsShareable())) {
+            autoProvisionSharingListing(saved);
+        }
+        return saved;
     }
 
     @Transactional
@@ -262,7 +281,16 @@ public class EquipmentService {
         Equipment equipment = findEquipment(id);
         authorizeEquipmentManagement(equipment.getInstitutionId());
         equipment.setIsShareable(shareable);
-        return toResponse(equipmentRepository.save(equipment));
+        Equipment saved = equipmentRepository.save(equipment);
+        if (shareable) {
+            autoProvisionSharingListing(saved);
+        } else {
+            sharingListingRepository.findByEquipmentId(id).ifPresent(l -> {
+                l.setActive(false);
+                sharingListingRepository.save(l);
+            });
+        }
+        return toResponse(saved);
     }
 
     public void authorizeEquipmentManagementFor(Long equipmentId) {
@@ -367,8 +395,11 @@ public class EquipmentService {
                 && role != User.Role.SYSTEM_ADMINISTRATOR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to manage equipment");
         }
-        if (role != User.Role.SYSTEM_ADMINISTRATOR
-                && (user.getInstitutionId() == null || institutionId == null
+        // Institution Administrators, Department Heads, and System Admins can onboard partner equipment for cross-institution sharing
+        boolean isLeadAdmin = role == User.Role.SYSTEM_ADMINISTRATOR
+                || role == User.Role.INSTITUTION_ADMINISTRATOR
+                || role == User.Role.DEPARTMENT_HEAD;
+        if (!isLeadAdmin && (user.getInstitutionId() == null || institutionId == null
                 || !user.getInstitutionId().equals(institutionId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can manage equipment only within your institution");
         }
@@ -378,12 +409,40 @@ public class EquipmentService {
         if (user.getRole() == User.Role.SYSTEM_ADMINISTRATOR) {
             return;
         }
+        if (equipment.getCollegeId() != null) {
+            if (equipment.getInstitutionId() == null) {
+                equipment.setInstitutionId(equipment.getCollegeId());
+            }
+            return;
+        }
         Long userCollegeId = user.getCollegeId() != null ? user.getCollegeId() : user.getInstitutionId();
         if (userCollegeId == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is not assigned to a college");
         }
         equipment.setCollegeId(userCollegeId);
         equipment.setInstitutionId(userCollegeId);
+    }
+
+    private void autoProvisionSharingListing(Equipment equipment) {
+        try {
+            if (!sharingListingRepository.existsByEquipmentId(equipment.getId())) {
+                SharingListing listing = new SharingListing();
+                listing.setEquipment(equipment);
+                Long ownerInst = equipment.getCollegeId() != null 
+                        ? equipment.getCollegeId() 
+                        : (equipment.getInstitutionId() != null ? equipment.getInstitutionId() : 1L);
+                listing.setOwnerInstitutionId(ownerInst);
+                listing.setFeePerHour(equipment.getHourlyCost() != null ? equipment.getHourlyCost() : new BigDecimal("250.00"));
+                listing.setExternalSharePercentage(new BigDecimal("100.00"));
+                listing.setMinNoticeHours(0);
+                listing.setMaxBookingDurationHours(equipment.getMaxBookingHours() > 0 ? equipment.getMaxBookingHours() : 8);
+                listing.setSharingTerms("Available for inter-institution research and laboratory sharing.");
+                listing.setActive(true);
+                sharingListingRepository.saveAndFlush(listing);
+            }
+        } catch (Exception ex) {
+            org.slf4j.LoggerFactory.getLogger(EquipmentService.class).warn("Failed to auto-provision sharing listing for equipment #{}: {}", equipment.getId(), ex.getMessage());
+        }
     }
 
     private Equipment findEquipment(Long id) {

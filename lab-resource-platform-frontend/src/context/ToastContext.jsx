@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { FiCheck, FiX, FiAlertTriangle, FiInfo } from "react-icons/fi";
 
 const ToastContext = createContext(null);
 
@@ -57,11 +58,11 @@ export function ToastProvider({ children }) {
             className={`toast-item toast-${toast.type}`}
             role="alert"
           >
-            <div className="toast-icon" aria-hidden="true">
-              {toast.type === "success" && "✓"}
-              {toast.type === "error" && "✕"}
-              {toast.type === "warning" && "⚠"}
-              {toast.type === "info" && "ℹ"}
+            <div className="toast-icon" aria-hidden="true" style={{ display: "inline-flex", alignItems: "center" }}>
+              {toast.type === "success" && <FiCheck size={16} />}
+              {toast.type === "error" && <FiX size={16} />}
+              {toast.type === "warning" && <FiAlertTriangle size={16} />}
+              {toast.type === "info" && <FiInfo size={16} />}
             </div>
             <div className="toast-message">{toast.message}</div>
             <button
@@ -69,8 +70,9 @@ export function ToastProvider({ children }) {
               className="toast-close"
               onClick={() => removeToast(toast.id)}
               aria-label="Dismiss notification"
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
-              ×
+              <FiX size={14} />
             </button>
           </div>
         ))}

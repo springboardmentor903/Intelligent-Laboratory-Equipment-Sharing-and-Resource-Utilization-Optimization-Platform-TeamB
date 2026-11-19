@@ -4,6 +4,18 @@ import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import {
+  FiCalendar,
+  FiClock,
+  FiRepeat,
+  FiAlertCircle,
+  FiX,
+  FiInbox,
+  FiPlay,
+  FiSquare,
+  FiBell,
+  FiArrowRight,
+} from "react-icons/fi";
 
 const STATUS_META = {
   PENDING_APPROVAL: { label: "Pending Approval", color: "status-pending" },
@@ -284,15 +296,17 @@ function StudentBookingHistoryPage() {
           type="button"
           className={`bh-nav-tab ${activeTab === "bookings" ? "active" : ""}`}
           onClick={() => setActiveTab("bookings")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📋 Reservations ({stats.total})
+          <FiCalendar size={15} /> Reservations ({stats.total})
         </button>
         <button
           type="button"
           className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
           onClick={() => setActiveTab("waitlist")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          ⏳ Active Waitlists ({stats.waitlistCount})
+          <FiClock size={15} /> Active Waitlists ({stats.waitlistCount})
         </button>
       </div>
 
@@ -328,14 +342,14 @@ function StudentBookingHistoryPage() {
 
           {cancelError && (
             <div className="toast-item toast-error" role="alert" style={{ margin: "16px 0" }}>
-              <div className="toast-icon">✕</div>
+              <div className="toast-icon" style={{ display: "inline-flex", alignItems: "center" }}><FiX size={16} /></div>
               <div className="toast-message">{cancelError}</div>
             </div>
           )}
 
           {error && (
             <div className="toast-item toast-error" role="alert" style={{ margin: "16px 0" }}>
-              <div className="toast-icon">✕</div>
+              <div className="toast-icon" style={{ display: "inline-flex", alignItems: "center" }}><FiX size={16} /></div>
               <div className="toast-message" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>{error}</span>
                 <button
@@ -352,7 +366,9 @@ function StudentBookingHistoryPage() {
           {/* Bookings List */}
           {filtered.length === 0 ? (
             <div className="bh-empty">
-              <div className="bh-empty-icon">📋</div>
+              <div className="bh-empty-icon" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <FiInbox size={36} color="#9ca3af" />
+              </div>
               <h3>
                 {statusFilter === "ALL"
                   ? "No bookings found"
@@ -377,7 +393,14 @@ function StudentBookingHistoryPage() {
                   booking.status === "PENDING_APPROVAL" ||
                   booking.status === "CONFIRMED";
 
-                const canCheckIn = booking.status === "CONFIRMED";
+                const now = new Date();
+                const bookingStart = booking.startTime ? new Date(booking.startTime) : null;
+                const bookingEnd = booking.endTime ? new Date(booking.endTime) : null;
+                // Check-in is only unlocked when the reserved start time has arrived and slot has not expired
+                const isTimeArrived = bookingStart ? now >= bookingStart : false;
+                const isExpired = bookingEnd ? now > bookingEnd : false;
+                const canCheckIn = booking.status === "CONFIRMED" && isTimeArrived && !isExpired;
+                const isWaitingForStartTime = booking.status === "CONFIRMED" && !isTimeArrived;
                 const canCheckOut = booking.status === "IN_USE";
 
                 return (
@@ -394,8 +417,8 @@ function StudentBookingHistoryPage() {
                           </span>
                         )}
                         {booking.isRecurring && (
-                          <span className="bh-recurring-badge">
-                            🔁 Recurring ({booking.recurrenceType || "Weekly"})
+                          <span className="bh-recurring-badge" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <FiRepeat size={12} /> Recurring ({booking.recurrenceType || "Weekly"})
                           </span>
                         )}
                       </div>
@@ -412,7 +435,9 @@ function StudentBookingHistoryPage() {
                             {formatDateTime(booking.startTime)}
                           </span>
                         </div>
-                        <span className="bh-time-arrow">→</span>
+                        <span className="bh-time-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+                          <FiArrowRight size={14} />
+                        </span>
                         <div className="bh-time-col">
                           <span className="bh-time-label">END (IST)</span>
                           <span className="bh-time-val">
@@ -460,8 +485,16 @@ function StudentBookingHistoryPage() {
                             onClick={() => handleStudentCheckIn(booking)}
                             title="Start laboratory session and mark equipment IN USE"
                           >
-                            {isActioning ? "Starting..." : "▶ Check-In (Start Session)"}
+                            <FiPlay size={13} style={{ marginRight: 6 }} />
+                            {isActioning ? "Starting..." : "Check-In (Start Session)"}
                           </button>
+                        )}
+
+                        {isWaitingForStartTime && (
+                          <div className="bh-session-locked-pill" title="Check-in unlocks when your reserved time slot arrives">
+                            <FiClock size={13} style={{ marginRight: 6 }} />
+                            <span>Check-in available at {formatDateTime(booking.startTime)}</span>
+                          </div>
                         )}
 
                         {canCheckOut && (
@@ -472,7 +505,8 @@ function StudentBookingHistoryPage() {
                             onClick={() => handleStudentCheckOut(booking)}
                             title="Complete laboratory session and log usage duration"
                           >
-                            {isActioning ? "Completing..." : "⏹ Check-Out (Complete Session)"}
+                            <FiSquare size={13} style={{ marginRight: 6 }} />
+                            {isActioning ? "Completing..." : "Check-Out (Complete Session)"}
                           </button>
                         )}
                       </div>
@@ -534,7 +568,9 @@ function StudentBookingHistoryPage() {
                           {formatDateTime(w.desiredStartTime)}
                         </span>
                       </div>
-                      <span className="bh-time-arrow">→</span>
+                      <span className="bh-time-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+                        <FiArrowRight size={14} />
+                      </span>
                       <div className="bh-time-col">
                         <span className="bh-time-label">DESIRED END</span>
                         <span className="bh-time-val">

@@ -2,6 +2,21 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import {
+  FiArrowLeft,
+  FiZap,
+  FiClock,
+  FiRepeat,
+  FiCheckCircle,
+  FiAlertTriangle,
+  FiX,
+  FiHome,
+  FiSettings,
+  FiMapPin,
+  FiShield,
+  FiArrowRight,
+  FiCpu,
+} from "react-icons/fi";
 
 function toISTTime(iso) {
   if (!iso) return "";
@@ -226,15 +241,18 @@ function StudentBookingPage() {
     return (
       <div className="booking-page-container">
         <div className="booking-error-state">
-          <span className="booking-error-icon">⚠️</span>
+          <span className="booking-error-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+            <FiAlertTriangle size={32} color="#dc2626" />
+          </span>
           <h2>Unable to Load Equipment</h2>
           <p>{loadingEquipmentError}</p>
           <button
             type="button"
             className="booking-back-btn"
             onClick={() => navigate("/dashboard/student/equipments")}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            ← Back to Equipments
+            <FiArrowLeft size={16} /> Back to Equipments
           </button>
         </div>
       </div>
@@ -264,8 +282,9 @@ function StudentBookingPage() {
         type="button"
         className="booking-back-link"
         onClick={() => navigate("/dashboard/student/equipments")}
+        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
       >
-        ← Back to Equipments
+        <FiArrowLeft size={16} /> Back to Equipments
       </button>
 
       <div className="booking-title-row">
@@ -282,8 +301,13 @@ function StudentBookingPage() {
           onClick={handleFetchRecommendations}
           disabled={loadingRecs}
           title="Analyze lab usage and suggest best conflict-free slots"
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          {loadingRecs ? "Analyzing Slots…" : "💡 Suggest Best Slots"}
+          {loadingRecs ? "Analyzing Slots…" : (
+            <>
+              <FiZap size={15} /> Suggest Best Slots
+            </>
+          )}
         </button>
       </div>
 
@@ -292,15 +316,18 @@ function StudentBookingPage() {
         <div className="booking-recommendations-box">
           <div className="booking-rec-header">
             <div>
-              <h3>💡 Conflict-Free Slot Recommendations (IST)</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <FiZap size={18} color="#2563eb" /> Conflict-Free Slot Recommendations (IST)
+              </h3>
               <p>Rule-based optimization to minimize lab idle time and peak contention.</p>
             </div>
             <button
               type="button"
               className="booking-rec-close"
               onClick={() => setShowRecs(false)}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
             >
-              ✕
+              <FiX size={16} />
             </button>
           </div>
 
@@ -312,7 +339,9 @@ function StudentBookingPage() {
                 <div key={i} className="booking-rec-card">
                   <div className="booking-rec-time">
                     <span className="booking-rec-badge">Score {rec.score}/100</span>
-                    <strong>{toISTTime(rec.startTime)} → {toISTTime(rec.endTime)}</strong>
+                    <strong>
+                      {toISTTime(rec.startTime)} <FiArrowRight size={13} style={{ display: "inline-block", margin: "0 4px", verticalAlign: "middle" }} /> {toISTTime(rec.endTime)}
+                    </strong>
                   </div>
                   <p className="booking-rec-reason">{rec.reason}</p>
                   <button
@@ -348,36 +377,46 @@ function StudentBookingPage() {
 
             {equipment?.collegeName && (
               <p className="booking-meta-item">
-                <span className="booking-meta-label">🏛️ College:</span>
+                <span className="booking-meta-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <FiHome size={14} /> College:
+                </span>
                 <span>{equipment.collegeName}</span>
               </p>
             )}
             {equipment?.model && (
               <p className="booking-meta-item">
-                <span className="booking-meta-label">🔧 Model:</span>
+                <span className="booking-meta-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <FiSettings size={14} /> Model:
+                </span>
                 <span>{equipment.model}</span>
               </p>
             )}
             {equipment?.manufacturer && (
               <p className="booking-meta-item">
-                <span className="booking-meta-label">🏭 Manufacturer:</span>
+                <span className="booking-meta-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <FiCpu size={14} /> Manufacturer:
+                </span>
                 <span>{equipment.manufacturer}</span>
               </p>
             )}
             {equipment?.location && (
               <p className="booking-meta-item">
-                <span className="booking-meta-label">📍 Location:</span>
+                <span className="booking-meta-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <FiMapPin size={14} /> Location:
+                </span>
                 <span>{equipment.location}</span>
               </p>
             )}
             {equipment?.maxBookingHours && (
               <p className="booking-meta-item">
-                <span className="booking-meta-label">⏱ Max Hours:</span>
+                <span className="booking-meta-label" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <FiClock size={14} /> Max Hours:
+                </span>
                 <span>{equipment.maxBookingHours}h per booking</span>
               </p>
             )}
-            <div className="booking-approval-notice">
-              🛡️ Student reservations start in Pending Approval status by default.
+            <div className="booking-approval-notice" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FiShield size={16} /> Student reservations start in Pending Approval status by default.
             </div>
             {equipment?.description && (
               <p className="booking-equipment-desc">{equipment.description}</p>
@@ -461,7 +500,9 @@ function StudentBookingPage() {
                   checked={isRecurring}
                   onChange={(e) => setIsRecurring(e.target.checked)}
                 />
-                <span>🔁 Repeat this booking (Recurring Series)</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <FiRepeat size={14} /> Repeat this booking (Recurring Series)
+                </span>
               </label>
 
               {isRecurring && (
@@ -518,8 +559,8 @@ function StudentBookingPage() {
             </div>
 
             {formError && (
-              <div className="booking-form-error" role="alert">
-                ⚠️ {formError}
+              <div className="booking-form-error" role="alert" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <FiAlertTriangle size={16} /> {formError}
               </div>
             )}
 
@@ -527,7 +568,9 @@ function StudentBookingPage() {
             {showWaitlistOption && (
               <div className="booking-waitlist-callout">
                 <div className="booking-waitlist-info">
-                  <strong>⏳ High-Demand Time Slot!</strong>
+                  <strong style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <FiClock size={16} color="#b45309" /> High-Demand Time Slot!
+                  </strong>
                   <p>
                     This time slot is already reserved by another session. You can join the equipment waitlist to be automatically promoted if the slot is cancelled or freed.
                   </p>
@@ -548,18 +591,22 @@ function StudentBookingPage() {
               <div className="booking-recurring-summary">
                 <h4>Recurring Booking Summary</h4>
                 <p>
-                  ✅ <strong>{recurringResult.totalBooked}</strong> session(s) booked.
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <FiCheckCircle size={14} color="#16a34a" /> <strong>{recurringResult.totalBooked}</strong> session(s) booked.
+                  </span>
                   {recurringResult.totalConflicted > 0 && (
-                    <span> ⚠️ <strong>{recurringResult.totalConflicted}</strong> session(s) had conflicting reservations.</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginLeft: "8px" }}>
+                      <FiAlertTriangle size={14} color="#ea580c" /> <strong>{recurringResult.totalConflicted}</strong> session(s) had conflicting reservations.
+                    </span>
                   )}
                 </p>
                 <button
                   type="button"
                   className="bh-browse-btn"
                   onClick={() => navigate("/dashboard/student/bookings")}
-                  style={{ marginTop: "10px" }}
+                  style={{ marginTop: "10px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  View My Bookings →
+                  View My Bookings <FiArrowRight size={14} />
                 </button>
               </div>
             )}

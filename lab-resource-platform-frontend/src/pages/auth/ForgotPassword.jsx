@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { FiCheck, FiX } from "react-icons/fi";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -129,8 +130,18 @@ export default function ForgotPassword() {
             required
           />
 
-          {error && <div className="toast-item toast-error" role="alert" style={{ margin: "12px 0" }}><div className="toast-icon">✕</div><div className="toast-message">{error}</div></div>}
-          {success && <div className="toast-item toast-success" role="alert" style={{ margin: "12px 0" }}><div className="toast-icon">✓</div><div className="toast-message">{success}</div></div>}
+          {error && (
+            <div className="toast-item toast-error" role="alert" style={{ margin: "12px 0" }}>
+              <div className="toast-icon" style={{ display: "inline-flex", alignItems: "center" }}><FiX size={16} /></div>
+              <div className="toast-message">{error}</div>
+            </div>
+          )}
+          {success && (
+            <div className="toast-item toast-success" role="alert" style={{ margin: "12px 0" }}>
+              <div className="toast-icon" style={{ display: "inline-flex", alignItems: "center" }}><FiCheck size={16} /></div>
+              <div className="toast-message">{success}</div>
+            </div>
+          )}
 
           <button
             type="submit"

@@ -7,6 +7,18 @@ import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
 import EquipmentAvailabilityModal from "../../components/EquipmentAvailabilityModal";
 import EditEquipmentModal from "../../components/EditEquipmentModal";
+import {
+  FiFolder,
+  FiTag,
+  FiCpu,
+  FiMapPin,
+  FiClock,
+  FiShield,
+  FiCalendar,
+  FiEdit3,
+  FiTrash2,
+  FiPlus,
+} from "react-icons/fi";
 
 const STATUS_CONFIG = {
   AVAILABLE: { bg: "#dcfce7", text: "#15803d", label: "Available" },
@@ -198,8 +210,9 @@ export default function StaffEquipmentsPage() {
             type="button"
             className="admin-btn-primary"
             onClick={() => navigate("/dashboard/equipment/create")}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
           >
-            + Register Equipment
+            <FiPlus size={16} /> Register Equipment
           </button>
         </div>
       </div>
@@ -262,16 +275,28 @@ export default function StaffEquipmentsPage() {
 
                   <div className="student-equipment-meta">
                     {item.category && (
-                      <span className="student-meta-item">📁 <strong>Category:</strong> {item.category}</span>
+                      <span className="student-meta-item">
+                        <FiFolder style={{ marginRight: "4px" }} />
+                        <strong>Category:</strong> {item.category}
+                      </span>
                     )}
                     {item.model && (
-                      <span className="student-meta-item">🏷️ <strong>Model:</strong> {item.model}</span>
+                      <span className="student-meta-item">
+                        <FiTag style={{ marginRight: "4px" }} />
+                        <strong>Model:</strong> {item.model}
+                      </span>
                     )}
                     {item.manufacturer && (
-                      <span className="student-meta-item">🏭 <strong>Mfr:</strong> {item.manufacturer}</span>
+                      <span className="student-meta-item">
+                        <FiCpu style={{ marginRight: "4px" }} />
+                        <strong>Mfr:</strong> {item.manufacturer}
+                      </span>
                     )}
                     {item.location && (
-                      <span className="student-meta-item">📍 <strong>Location:</strong> {item.location}</span>
+                      <span className="student-meta-item">
+                        <FiMapPin style={{ marginRight: "4px" }} />
+                        <strong>Location:</strong> {item.location}
+                      </span>
                     )}
                   </div>
 
@@ -286,9 +311,13 @@ export default function StaffEquipmentsPage() {
                   )}
 
                   <div className="student-equipment-features">
-                    <span className="student-feature-pill">⏱️ Max {item.maxBookingHours || 8} hrs/session</span>
+                    <span className="student-feature-pill">
+                      <FiClock style={{ marginRight: "4px" }} /> Max {item.maxBookingHours || 8} hrs/session
+                    </span>
                     {item.requiresApproval && (
-                      <span className="student-feature-pill approval">🛡️ Manager Approval Required</span>
+                      <span className="student-feature-pill approval">
+                        <FiShield style={{ marginRight: "4px" }} /> Manager Approval Required
+                      </span>
                     )}
                   </div>
                 </div>
@@ -299,30 +328,45 @@ export default function StaffEquipmentsPage() {
                     className="student-availability-btn"
                     onClick={() => setSelectedEquipmentForAvail(item)}
                     title="View occupied time slots and availability"
+                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                   >
-                    🗓️ View Slots &amp; Availability
+                    <FiCalendar size={15} /> View Slots &amp; Availability
                   </button>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                     <button
                       type="button"
                       className="student-book-btn"
-                      style={{ backgroundColor: "#2563eb", borderColor: "#2563eb" }}
+                      style={{
+                        backgroundColor: "#2563eb",
+                        borderColor: "#2563eb",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
                       onClick={() => setEditingEquipment(item)}
                       title="Edit equipment specifications and settings"
                     >
-                      ✏️ Edit
+                      <FiEdit3 size={15} /> Edit
                     </button>
 
                     <button
                       type="button"
                       className="student-book-btn"
-                      style={{ backgroundColor: "#ef4444", borderColor: "#ef4444" }}
+                      style={{
+                        backgroundColor: "#ef4444",
+                        borderColor: "#ef4444",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
                       disabled={isDeleting}
                       onClick={() => handleDeleteEquipment(item.id, item.name)}
                       title="Delete equipment from catalog"
                     >
-                      {isDeleting ? "Deleting..." : "🗑️ Delete"}
+                      <FiTrash2 size={15} /> {isDeleting ? "Deleting..." : "Delete"}
                     </button>
                   </div>
                 </div>

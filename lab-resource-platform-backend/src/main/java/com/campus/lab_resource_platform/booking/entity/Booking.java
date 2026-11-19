@@ -73,7 +73,7 @@ public class Booking {
     private String cancellationReason;
 
     // T5: Inter-institution sharing and external booking
-    @Column(name = "is_external", nullable = false)
+    @Column(name = "is_external", columnDefinition = "boolean default false")
     @Builder.Default
     private boolean external = false;
 
@@ -101,7 +101,9 @@ public class Booking {
     private String recurrenceType;
 
     @Version
-    private Long version;
+    @Column(name = "version", columnDefinition = "bigint default 0")
+    @Builder.Default
+    private Long version = 0L;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

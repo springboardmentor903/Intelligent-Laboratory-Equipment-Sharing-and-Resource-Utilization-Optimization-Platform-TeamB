@@ -125,13 +125,15 @@ public class WaitlistService {
             list = waitlistRepository.findAllByOrderByCreatedAtDesc();
         }
 
-        return list.stream().map(w -> {
-            long queuePos = 0;
-            if (w.getStatus() == WaitlistStatus.WAITING) {
-                queuePos = waitlistRepository.calculateQueuePosition(w.getEquipment().getId(), w.getPriority(), w.getCreatedAt());
-            }
-            return WaitlistResponse.fromEntity(w, queuePos);
-        }).collect(Collectors.toList());
+        // Waitlist queue displays active candidates waiting for equipment
+        return list.stream()
+                .filter(w -> w.getStatus() == WaitlistStatus.WAITING)
+                .map(w -> {
+                    long queuePos = waitlistRepository.calculateQueuePosition(
+                            w.getEquipment().getId(), w.getPriority(), w.getCreatedAt());
+                    return WaitlistResponse.fromEntity(w, queuePos);
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -180,9 +182,14 @@ public class WaitlistService {
             throw new ForbiddenException("You cannot cancel another user's waitlist entry");
         }
 
-        entry.setStatus(WaitlistStatus.CANCELLED);
-        waitlistRepository.save(entry);
-        log.info("Waitlist entry #{} cancelled by {}", id, user.getEmail());
+        if (isManager) {
+            waitlistRepository.delete(entry);
+            log.info("Waitlist entry #{} deleted by manager {}", id, user.getEmail());
+        } else {
+            entry.setStatus(WaitlistStatus.CANCELLED);
+            waitlistRepository.save(entry);
+            log.info("Waitlist entry #{} cancelled by user {}", id, user.getEmail());
+        }
     }
 
     /**

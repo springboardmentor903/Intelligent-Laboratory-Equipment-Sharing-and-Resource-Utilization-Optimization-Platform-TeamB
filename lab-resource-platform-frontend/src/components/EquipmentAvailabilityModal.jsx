@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../services/api";
+import { FiCalendar, FiX, FiAlertTriangle, FiCheckCircle, FiClock, FiArrowRight } from "react-icons/fi";
 
 // IST formatter helpers
 const IST_ZONE = "Asia/Kolkata";
@@ -102,9 +103,12 @@ export default function EquipmentAvailabilityModal({ equipmentId, equipmentName,
       const startISO = weekStart.toISOString();
       const endISO = endDate.toISOString();
 
-      const res = await api.get(
-        `/api/equipment/${equipmentId}/availability?startDate=${startISO}&endDate=${endISO}`
-      );
+      const res = await api.get(`/api/equipment/${equipmentId}/availability`, {
+        params: {
+          startDate: startISO,
+          endDate: endISO,
+        },
+      });
       setSlots(res.data || []);
     } catch (err) {
       setError("Could not load availability data. Please try again.");
@@ -184,7 +188,9 @@ export default function EquipmentAvailabilityModal({ equipmentId, equipmentName,
         {/* Header */}
         <div className="avail-modal-header">
           <div className="avail-modal-title-group">
-            <span className="avail-modal-icon">📅</span>
+            <span className="avail-modal-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiCalendar size={20} color="#2563eb" />
+            </span>
             <div>
               <h2 className="avail-modal-title">Booking Availability</h2>
               <p className="avail-modal-subtitle">{equipmentName}</p>
@@ -195,8 +201,9 @@ export default function EquipmentAvailabilityModal({ equipmentId, equipmentName,
             className="avail-modal-close"
             onClick={onClose}
             aria-label="Close"
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
           >
-            ✕
+            <FiX size={18} />
           </button>
         </div>
 
@@ -245,14 +252,18 @@ export default function EquipmentAvailabilityModal({ equipmentId, equipmentName,
             </div>
           ) : error ? (
             <div className="avail-error">
-              <span>⚠️ {error}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <FiAlertTriangle size={16} color="#dc2626" /> {error}
+              </span>
               <button type="button" className="avail-retry-btn" onClick={fetchSlots}>
                 Retry
               </button>
             </div>
           ) : slots.length === 0 ? (
             <div className="avail-empty">
-              <span className="avail-empty-icon">✅</span>
+              <span className="avail-empty-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                <FiCheckCircle size={36} color="#16a34a" />
+              </span>
               <h3>Fully Available This Week!</h3>
               <p>No bookings found for <strong>{weekLabel}</strong>. This equipment is free to book during this period.</p>
             </div>
@@ -280,12 +291,16 @@ export default function EquipmentAvailabilityModal({ equipmentId, equipmentName,
                           }}
                         >
                           <div className="avail-slot-time-block">
-                            <span className="avail-slot-time-icon">🕐</span>
+                            <span className="avail-slot-time-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                              <FiClock size={16} />
+                            </span>
                             <div className="avail-slot-times">
                               <span className="avail-slot-from">
                                 From: <strong>{toISTTimeOnly(slot.startTime)}</strong>
                               </span>
-                              <span className="avail-slot-sep">→</span>
+                              <span className="avail-slot-sep" style={{ display: "inline-flex", alignItems: "center", margin: "0 4px" }}>
+                                <FiArrowRight size={13} />
+                              </span>
                               <span className="avail-slot-to">
                                 To: <strong>{toISTTimeOnly(slot.endTime)}</strong>
                               </span>

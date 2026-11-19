@@ -26,5 +26,13 @@ public class PartnerAnalyticsItem {
 
     private Long activeAgreementsCount;
     private Long totalBookings;
+
+    public String getPartnerName() {
+        return partnerInstitutionName;
+    }
+
+    public BigDecimal getHoursConsumed() {
+        return hoursUsed;
+    }
 }
 

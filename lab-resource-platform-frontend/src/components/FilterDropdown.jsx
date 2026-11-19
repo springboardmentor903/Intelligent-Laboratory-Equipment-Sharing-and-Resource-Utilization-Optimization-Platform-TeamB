@@ -1,4 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import {
+  FiSliders,
+  FiHome,
+  FiFolder,
+  FiActivity,
+  FiCheck,
+  FiChevronDown,
+  FiChevronUp,
+} from "react-icons/fi";
 
 export default function FilterDropdown({
   colleges = [],
@@ -69,12 +78,16 @@ export default function FilterDropdown({
         aria-haspopup="true"
         title="Open filter menu"
       >
-        <span className="filter-icon">⚙️</span>
+        <span className="filter-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+          <FiSliders size={15} />
+        </span>
         <span className="filter-label">Filters</span>
         {activeFilterCount > 0 && (
           <span className="filter-count-badge">{activeFilterCount}</span>
         )}
-        <span className={`filter-arrow ${isOpen ? "open" : ""}`}>▾</span>
+        <span className="filter-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+          {isOpen ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
+        </span>
       </button>
 
       {isOpen && (
@@ -104,13 +117,15 @@ export default function FilterDropdown({
                   }
                 >
                   <div className="nested-trigger-left">
-                    <span className="nested-icon">🏛️</span>
+                    <span className="nested-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                      <FiHome size={15} />
+                    </span>
                     <span className="nested-title">Filter by College:</span>
                   </div>
                   <div className="nested-trigger-right">
                     <span className="nested-current-val">{selectedCollegeName}</span>
-                    <span className="nested-arrow">
-                      {activeSubmenu === "college" ? "▴" : "▾"}
+                    <span className="nested-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+                      {activeSubmenu === "college" ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
                     </span>
                   </div>
                 </button>
@@ -126,7 +141,11 @@ export default function FilterDropdown({
                       }}
                     >
                       <span>All Colleges ({colleges.length})</span>
-                      {!selectedCollegeId && <span className="submenu-check">✓</span>}
+                      {!selectedCollegeId && (
+                        <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                          <FiCheck size={14} color="#2563eb" />
+                        </span>
+                      )}
                     </button>
                     {colleges.map((col) => {
                       const isSelected = String(col.id) === String(selectedCollegeId);
@@ -143,7 +162,11 @@ export default function FilterDropdown({
                           <span>
                             {col.name} {col.code ? `(${col.code})` : ""}
                           </span>
-                          {isSelected && <span className="submenu-check">✓</span>}
+                          {isSelected && (
+                            <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                              <FiCheck size={14} color="#2563eb" />
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -163,13 +186,15 @@ export default function FilterDropdown({
                   }
                 >
                   <div className="nested-trigger-left">
-                    <span className="nested-icon">🏷️</span>
+                    <span className="nested-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                      <FiFolder size={15} />
+                    </span>
                     <span className="nested-title">Filter by Category:</span>
                   </div>
                   <div className="nested-trigger-right">
                     <span className="nested-current-val">{selectedCategoryName}</span>
-                    <span className="nested-arrow">
-                      {activeSubmenu === "category" ? "▴" : "▾"}
+                    <span className="nested-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+                      {activeSubmenu === "category" ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
                     </span>
                   </div>
                 </button>
@@ -185,7 +210,11 @@ export default function FilterDropdown({
                       }}
                     >
                       <span>All Categories ({categories.length})</span>
-                      {!selectedCategory && <span className="submenu-check">✓</span>}
+                      {!selectedCategory && (
+                        <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                          <FiCheck size={14} color="#2563eb" />
+                        </span>
+                      )}
                     </button>
                     {categories.map((cat) => {
                       const isSelected = cat === selectedCategory;
@@ -200,7 +229,11 @@ export default function FilterDropdown({
                           }}
                         >
                           <span>{cat}</span>
-                          {isSelected && <span className="submenu-check">✓</span>}
+                          {isSelected && (
+                            <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                              <FiCheck size={14} color="#2563eb" />
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -209,7 +242,7 @@ export default function FilterDropdown({
               </div>
             )}
 
-            {/* Filter by Status */}
+            {/* Filter by Status (Optional for Bookings / Telemetry) */}
             {showStatus && statuses.length > 0 && (
               <div className="filter-nested-section">
                 <button
@@ -220,13 +253,15 @@ export default function FilterDropdown({
                   }
                 >
                   <div className="nested-trigger-left">
-                    <span className="nested-icon">📌</span>
+                    <span className="nested-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                      <FiActivity size={15} />
+                    </span>
                     <span className="nested-title">Filter by Status:</span>
                   </div>
                   <div className="nested-trigger-right">
                     <span className="nested-current-val">{selectedStatusName}</span>
-                    <span className="nested-arrow">
-                      {activeSubmenu === "status" ? "▴" : "▾"}
+                    <span className="nested-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+                      {activeSubmenu === "status" ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
                     </span>
                   </div>
                 </button>
@@ -243,13 +278,14 @@ export default function FilterDropdown({
                     >
                       <span>All Statuses</span>
                       {(!selectedStatus || selectedStatus === "ALL") && (
-                        <span className="submenu-check">✓</span>
+                        <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                          <FiCheck size={14} color="#2563eb" />
+                        </span>
                       )}
                     </button>
                     {statuses.map((st) => {
-                      const isSelected = selectedStatus === st;
-                      const label =
-                        statusLabels[st]?.label || statusLabels[st] || st;
+                      const isSelected = st === selectedStatus;
+                      const label = statusLabels[st]?.label || statusLabels[st] || st;
                       return (
                         <button
                           key={st}
@@ -261,7 +297,11 @@ export default function FilterDropdown({
                           }}
                         >
                           <span>{label}</span>
-                          {isSelected && <span className="submenu-check">✓</span>}
+                          {isSelected && (
+                            <span className="submenu-check" style={{ display: "inline-flex", alignItems: "center" }}>
+                              <FiCheck size={14} color="#2563eb" />
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -275,4 +315,3 @@ export default function FilterDropdown({
     </div>
   );
 }
-

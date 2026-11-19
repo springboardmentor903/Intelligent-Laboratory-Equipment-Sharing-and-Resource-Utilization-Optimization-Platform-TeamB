@@ -13,7 +13,7 @@ import java.time.ZoneId;
 
 @Entity
 @Table(
-        name = "utilizations",
+        name = "utilization",
         indexes = {
                 @Index(name = "idx_util_booking", columnList = "booking_id"),
                 @Index(name = "idx_util_equipment", columnList = "equipment_id"),
@@ -46,7 +46,7 @@ public class Utilization {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "usage_type", nullable = false, length = 30)
+    @Column(name = "usage_type", columnDefinition = "varchar(30) default 'INTERNAL'")
     @Builder.Default
     private UsageType usageType = UsageType.INTERNAL;
 

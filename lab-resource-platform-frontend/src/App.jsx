@@ -34,6 +34,9 @@ import ExternalBookingPage from "./pages/sharing/ExternalBookingPage";
 import SharedResourceManagementPage from "./pages/sharing/SharedResourceManagementPage";
 import MyAccessRequestsPage from "./pages/sharing/MyAccessRequestsPage";
 import AccessRequestReviewsPage from "./pages/sharing/AccessRequestReviewsPage";
+import CrossInstitutionDiscoveryPage from "./pages/sharing/CrossInstitutionDiscoveryPage";
+import SharingAgreementsPage from "./pages/sharing/SharingAgreementsPage";
+import SharingAnalyticsOverviewPage from "./pages/sharing/SharingAnalyticsPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -217,7 +220,53 @@ function AppRoutes() {
           }
         />
 
-        {/* Inter-Institution Sharing Analytics & Partnership Reports (Milestone 2 - Task T13) */}
+        {/* Cross-Institution Equipment Sharing Discovery (Department Head / Admin) */}
+        <Route
+          path="sharing/cross-institution-discovery"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "DEPARTMENT_HEAD",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <CrossInstitutionDiscoveryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sharing/agreements"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "INSTITUTION_ADMINISTRATOR",
+                "DEPARTMENT_HEAD",
+                "LAB_MANAGER",
+                "LAB_TECHNICIAN",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <SharingAgreementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sharing/analytics-overview"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "LAB_MANAGER",
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <SharingAnalyticsOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Sharing Analytics & Partnership Reports (Milestone 2 - Task T13) */}
         <Route
           path="sharing/analytics"
           element={

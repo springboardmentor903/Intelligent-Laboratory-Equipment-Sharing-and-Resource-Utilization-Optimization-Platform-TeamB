@@ -4,6 +4,20 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import {
+  FiCalendar,
+  FiClock,
+  FiZap,
+  FiTrash2,
+  FiRepeat,
+  FiCheck,
+  FiX,
+  FiCheckCircle,
+  FiPlay,
+  FiSquare,
+  FiArrowUp,
+  FiList,
+} from "react-icons/fi";
 
 const STATUS_CONFIG = {
   PENDING_APPROVAL: { bg: "#fef3c7", text: "#b45309", label: "Pending Approval" },
@@ -363,8 +377,9 @@ export default function StaffBookingsPage() {
             setActiveTab("bookings");
             setStatusFilter("");
           }}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📅 All Bookings ({bookings.length})
+          <FiCalendar size={15} /> All Bookings ({bookings.length})
         </button>
 
         <button
@@ -374,9 +389,9 @@ export default function StaffBookingsPage() {
             setActiveTab("approvals");
             setStatusFilter("");
           }}
-          style={{ position: "relative" }}
+          style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          ⏳ Pending Approvals ({pendingBookings.length})
+          <FiClock size={15} /> Pending Approvals ({pendingBookings.length})
           {pendingBookings.length > 0 && (
             <span
               style={{
@@ -395,8 +410,9 @@ export default function StaffBookingsPage() {
           type="button"
           className={`bh-nav-tab ${activeTab === "waitlist" ? "active" : ""}`}
           onClick={() => setActiveTab("waitlist")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
         >
-          📋 Waitlist Queue ({activeWaitlists.length} Waiting)
+          <FiZap size={15} /> Waitlist Queue ({activeWaitlists.length} Active)
         </button>
       </div>
 
@@ -407,6 +423,7 @@ export default function StaffBookingsPage() {
           <div className="admin-loading-state">Loading waitlist entries...</div>
         ) : filteredWaitlist.length === 0 ? (
           <div className="admin-empty-card">
+            <FiList size={36} style={{ color: "#9ca3af", marginBottom: "12px" }} />
             <h3>No waitlist entries</h3>
             <p>
               There are currently no active waitlist requests for {currentCollegeName}. When high-demand slots are contested, students queuing will appear here.
@@ -479,8 +496,18 @@ export default function StaffBookingsPage() {
                         <span
                           className="admin-status-pill"
                           style={{
-                            backgroundColor: isWaiting ? "#fef3c7" : w.status === "CONVERTED" ? "#dcfce7" : "#fee2e2",
-                            color: isWaiting ? "#b45309" : w.status === "CONVERTED" ? "#15803d" : "#b91c1c",
+                            backgroundColor:
+                              w.status === "WAITING"
+                                ? "#fef3c7"
+                                : w.status === "PROMOTED"
+                                ? "#dcfce7"
+                                : "#f3f4f6",
+                            color:
+                              w.status === "WAITING"
+                                ? "#b45309"
+                                : w.status === "PROMOTED"
+                                ? "#15803d"
+                                : "#6b7280",
                           }}
                         >
                           {w.status}
@@ -495,8 +522,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handlePromoteWaitlist(w)}
                               title="Promote directly into a confirmed reservation"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ⚡ Promote
+                              <FiArrowUp size={14} /> Promote
                             </button>
                           )}
                           <button
@@ -505,8 +533,9 @@ export default function StaffBookingsPage() {
                             disabled={isUpdating}
                             onClick={() => handleRemoveWaitlist(w)}
                             title="Remove from waitlist"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
-                            🗑️ Remove
+                            <FiTrash2 size={14} /> Remove
                           </button>
                         </div>
                       </td>
@@ -569,8 +598,8 @@ export default function StaffBookingsPage() {
                           </span>
                         )}
                         {b.isRecurring && (
-                          <span className="staff-recurring-badge">
-                            🔁 Recurring ({b.recurrenceType || "Weekly"})
+                          <span className="staff-recurring-badge" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <FiRepeat size={13} /> Recurring ({b.recurrenceType || "Weekly"})
                           </span>
                         )}
                       </td>
@@ -594,8 +623,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handleApproveBooking(b)}
                               title="Approve booking request"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ✅ Approve
+                              <FiCheck size={14} /> Approve
                             </button>
 
                             <button
@@ -604,8 +634,9 @@ export default function StaffBookingsPage() {
                               disabled={isUpdating}
                               onClick={() => handleRejectBooking(b)}
                               title="Reject booking request with reason"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              ❌ Reject
+                              <FiX size={14} /> Reject
                             </button>
                           </div>
                         ) : (
@@ -633,15 +664,22 @@ export default function StaffBookingsPage() {
                       <td>
                         {/* Check-in / Check-out session buttons */}
                         {b.status === "CONFIRMED" ? (
-                          <button
-                            type="button"
-                            className="staff-checkin-btn"
-                            disabled={isUpdating}
-                            onClick={() => handleBookingCheckIn(b)}
-                            title="Start live session and mark equipment IN USE"
-                          >
-                            ▶️ Check-In
-                          </button>
+                          new Date() >= new Date(b.startTime) ? (
+                            <button
+                              type="button"
+                              className="staff-checkin-btn"
+                              disabled={isUpdating}
+                              onClick={() => handleBookingCheckIn(b)}
+                              title="Start live session and mark equipment IN USE"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <FiPlay size={13} /> Check-In
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: "0.75rem", color: "#64748b", display: "inline-flex", alignItems: "center", gap: "4px" }} title="Session time has not arrived yet">
+                              <FiClock size={12} /> Starts {new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )
                         ) : b.status === "IN_USE" ? (
                           <button
                             type="button"
@@ -649,12 +687,19 @@ export default function StaffBookingsPage() {
                             disabled={isUpdating}
                             onClick={() => handleBookingCheckOut(b)}
                             title="Stop session and record duration"
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
-                            ⏹️ Check-Out
+                            <FiSquare size={13} /> Check-Out
                           </button>
                         ) : (
-                          <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
-                            {b.status === "COMPLETED" ? "Logged ✓" : "—"}
+                          <span style={{ fontSize: "0.78rem", color: "#9ca3af", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                            {b.status === "COMPLETED" ? (
+                              <>
+                                Logged <FiCheckCircle size={12} color="#16a34a" />
+                              </>
+                            ) : (
+                              "—"
+                            )}
                           </span>
                         )}
                       </td>

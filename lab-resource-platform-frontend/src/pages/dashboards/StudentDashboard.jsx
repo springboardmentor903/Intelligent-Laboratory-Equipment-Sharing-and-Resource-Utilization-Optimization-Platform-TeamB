@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { FiCalendar, FiClock, FiCheckCircle, FiCheck, FiInfo, FiArrowRight } from "react-icons/fi";
 
 function StudentDashboard() {
   const [stats, setStats] = useState({
@@ -41,28 +42,36 @@ function StudentDashboard() {
       {/* Stats Row */}
       <section className="std-stats-row" aria-label="Booking summary">
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-blue">📋</span>
+          <span className="std-stat-icon std-icon-blue" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiCalendar size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.total)}</span>
             <span className="std-stat-label">Total Bookings</span>
           </div>
         </div>
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-yellow">⏳</span>
+          <span className="std-stat-icon std-icon-yellow" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiClock size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.pending)}</span>
             <span className="std-stat-label">Pending Approval</span>
           </div>
         </div>
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-green">✅</span>
+          <span className="std-stat-icon std-icon-green" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiCheckCircle size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.confirmed)}</span>
             <span className="std-stat-label">Confirmed</span>
           </div>
         </div>
         <div className="std-stat-card">
-          <span className="std-stat-icon std-icon-gray">🏁</span>
+          <span className="std-stat-icon std-icon-gray" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <FiCheck size={20} />
+          </span>
           <div className="std-stat-content">
             <span className="std-stat-num">{statNum(stats.completed)}</span>
             <span className="std-stat-label">Completed</span>
@@ -84,7 +93,9 @@ function StudentDashboard() {
               <h3>Browse Equipment</h3>
               <p>Explore lab resources across all colleges and place a booking.</p>
             </div>
-            <span className="std-action-arrow">→</span>
+            <span className="std-action-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiArrowRight size={16} />
+            </span>
           </Link>
 
           <Link to="/dashboard/student/bookings" className="std-action-card">
@@ -99,14 +110,18 @@ function StudentDashboard() {
               <h3>My Bookings</h3>
               <p>Review all your booking requests and their current statuses.</p>
             </div>
-            <span className="std-action-arrow">→</span>
+            <span className="std-action-arrow" style={{ display: "inline-flex", alignItems: "center" }}>
+              <FiArrowRight size={16} />
+            </span>
           </Link>
         </div>
       </section>
 
       {/* Info Banner */}
       <div className="std-info-banner">
-        <span className="std-info-icon">💡</span>
+        <span className="std-info-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+          <FiInfo size={18} />
+        </span>
         <p>
           Equipment availability is updated in real-time. Some equipment may
           require admin approval before your booking is confirmed.

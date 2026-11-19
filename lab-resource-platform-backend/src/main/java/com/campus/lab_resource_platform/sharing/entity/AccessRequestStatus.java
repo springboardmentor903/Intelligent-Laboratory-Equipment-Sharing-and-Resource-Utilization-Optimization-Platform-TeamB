@@ -5,6 +5,8 @@ public enum AccessRequestStatus {
     FORWARDED,
     APPROVED,
     REJECTED,
-    WITHDRAWN
+    WITHDRAWN,
+    EXPIRED,
+    COMPLETED
 }
 
