@@ -13,7 +13,6 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 
 import ProfilePage from "./pages/profile/ProfilePage";
 import AccountSettings from "./pages/profile/AccountSettings";
-import RoleBasedAccess from "./components/RoleBasedAccess";
 
 import StudentEquipmentsPage from "./pages/student/StudentEquipmentsPage";
 import StudentBookingPage from "./pages/student/StudentBookingPage";
@@ -30,6 +29,11 @@ import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
 import LiveUtilizationPage from "./pages/utilization/LiveUtilizationPage";
 import UtilizationAnalyticsPage from "./pages/analytics/UtilizationAnalyticsPage";
 import SharingAnalyticsPage from "./pages/analytics/SharingAnalyticsPage";
+import ResourceSharingDiscoveryPage from "./pages/sharing/ResourceSharingDiscoveryPage";
+import ExternalBookingPage from "./pages/sharing/ExternalBookingPage";
+import SharedResourceManagementPage from "./pages/sharing/SharedResourceManagementPage";
+import MyAccessRequestsPage from "./pages/sharing/MyAccessRequestsPage";
+import AccessRequestReviewsPage from "./pages/sharing/AccessRequestReviewsPage";
 
 import "./App.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
@@ -224,6 +228,77 @@ function AppRoutes() {
               ]}
             >
               <SharingAnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Resource Sharing Discovery & Catalog (Milestone 2 - Task T11) */}
+        <Route
+          path="sharing/discovery"
+          element={
+            <ProtectedRoute>
+              <ResourceSharingDiscoveryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* External Equipment Booking & Scheduling (Milestone 2 - Task T12) */}
+        <Route
+          path="sharing/external-booking"
+          element={
+            <ProtectedRoute>
+              <ExternalBookingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="sharing/book/:id"
+          element={
+            <ProtectedRoute>
+              <ExternalBookingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* My Inter-Institution Access Requests (Milestone 2 - Task T11/T12/T14) */}
+        <Route
+          path="sharing/my-requests"
+          element={
+            <ProtectedRoute>
+              <MyAccessRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Access Request Reviews - Multi-level Review Workflow (Milestone 2 - Task T11) */}
+        <Route
+          path="sharing/reviews"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <AccessRequestReviewsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Shared Resource Management (Milestone 2 - Task T12) */}
+        <Route
+          path="sharing/manage"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "LAB_MANAGER",
+                "DEPARTMENT_HEAD",
+                "INSTITUTION_ADMINISTRATOR",
+                "SYSTEM_ADMINISTRATOR",
+              ]}
+            >
+              <SharedResourceManagementPage />
             </ProtectedRoute>
           }
         />

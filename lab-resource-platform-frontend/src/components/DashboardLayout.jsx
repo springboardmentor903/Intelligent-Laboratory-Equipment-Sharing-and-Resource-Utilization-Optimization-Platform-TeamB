@@ -23,6 +23,8 @@ function DashboardLayout() {
   const isTechnician = user?.role === "LAB_TECHNICIAN";
   const canAccessAnalytics = isSystemAdmin || isInstitutionAdmin || isDepartmentHead || isLabManager;
   const canAccessSharingAnalytics = isSystemAdmin || isInstitutionAdmin;
+  const canManageSharedResources = isSystemAdmin || isInstitutionAdmin || isDepartmentHead || isLabManager;
+  const canReviewAccessRequests = isSystemAdmin || isInstitutionAdmin || isDepartmentHead;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -334,6 +336,68 @@ function DashboardLayout() {
                   </NavLink>
                 )}
 
+                {canManageSharedResources && (
+                  <NavLink
+                    to="/dashboard/sharing/manage"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Shared Resources"
+                  >
+                    <span className="nav-icon">🔄</span>
+                    <span className="nav-text">Shared Resources</span>
+                  </NavLink>
+                )}
+
+                <NavLink
+                  to="/dashboard/sharing/reviews"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Access Reviews"
+                >
+                  <span className="nav-icon">📬</span>
+                  <span className="nav-text">Access Reviews</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/discovery"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Sharing Discovery"
+                >
+                  <span className="nav-icon">🌐</span>
+                  <span className="nav-text">Sharing Discovery</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/external-booking"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="External Booking"
+                >
+                  <span className="nav-icon">🗓️</span>
+                  <span className="nav-text">External Booking</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/my-requests"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="My Access Requests"
+                >
+                  <span className="nav-icon">📑</span>
+                  <span className="nav-text">My Access Requests</span>
+                </NavLink>
+
                 <NavLink
                   to="/dashboard/admin/accounts"
                   className={({ isActive }) =>
@@ -371,6 +435,42 @@ function DashboardLayout() {
                 >
                   <span className="nav-icon">📅</span>
                   <span className="nav-text">Booking History</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/discovery"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Sharing Discovery"
+                >
+                  <span className="nav-icon">🌐</span>
+                  <span className="nav-text">Sharing Discovery</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/external-booking"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="External Booking"
+                >
+                  <span className="nav-icon">🗓️</span>
+                  <span className="nav-text">External Booking</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/my-requests"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="My Access Requests"
+                >
+                  <span className="nav-icon">📑</span>
+                  <span className="nav-text">My Access Requests</span>
                 </NavLink>
 
                 <NavLink
@@ -451,6 +551,70 @@ function DashboardLayout() {
                     <span className="nav-text">Partnership Analytics</span>
                   </NavLink>
                 )}
+
+                {canManageSharedResources && (
+                  <NavLink
+                    to="/dashboard/sharing/manage"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Shared Resources"
+                  >
+                    <span className="nav-icon">🔄</span>
+                    <span className="nav-text">Shared Resources</span>
+                  </NavLink>
+                )}
+
+                {canReviewAccessRequests && (
+                  <NavLink
+                    to="/dashboard/sharing/reviews"
+                    className={({ isActive }) =>
+                      `sidebar-nav-item ${isActive ? "active" : ""}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                    title="Access Reviews"
+                  >
+                    <span className="nav-icon">📬</span>
+                    <span className="nav-text">Access Reviews</span>
+                  </NavLink>
+                )}
+
+                <NavLink
+                  to="/dashboard/sharing/discovery"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Sharing Discovery"
+                >
+                  <span className="nav-icon">🌐</span>
+                  <span className="nav-text">Sharing Discovery</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/external-booking"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="External Booking"
+                >
+                  <span className="nav-icon">🗓️</span>
+                  <span className="nav-text">External Booking</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/sharing/my-requests"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="My Access Requests"
+                >
+                  <span className="nav-icon">📑</span>
+                  <span className="nav-text">My Access Requests</span>
+                </NavLink>
               </>
             ) : (
               /* Other Generic Roles (Fallback - No Dashboard page) */
