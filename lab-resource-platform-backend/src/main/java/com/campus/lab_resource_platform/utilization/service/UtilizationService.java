@@ -64,6 +64,10 @@ public class UtilizationService {
     private final UtilizationWebSocketHandler webSocketHandler;
     private final FeeCalculationService feeCalculationService;
 
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.campus.lab_resource_platform.billing.service.UsageChargeService usageChargeService;
+
     @Autowired
     public UtilizationService(
             UtilizationRepository utilizationRepository,
@@ -428,6 +432,14 @@ public class UtilizationService {
             booking.setStatus(BookingStatus.COMPLETED);
             booking.setActualFee(actualFee);
             bookingRepository.save(booking);
+
+            if (usageChargeService != null && minutes > 0) {
+                try {
+                    usageChargeService.recordUsageCharge(booking, minutes);
+                } catch (Exception ex) {
+                    log.warn("Could not record usage charge for booking #{}: {}", booking.getId(), ex.getMessage());
+                }
+            }
         }
         Equipment equipment = utilization.getEquipment();
         if (equipment != null && equipment.getStatus() == EquipmentStatus.IN_USE) {
