@@ -17,7 +17,7 @@ public class MaintenanceAnalyticsController {
         this.downtimeAnalyticsService = downtimeAnalyticsService;
     }
 
-    @GetMapping("/equipment/{equipmentId}/history")
+    @GetMapping({"/equipment/{equipmentId}/history", "/history/equipment/{equipmentId}"})
     public ResponseEntity<EquipmentMaintenanceHistoryResponse> getEquipmentMaintenanceHistory(
             @PathVariable Long equipmentId,
             Authentication authentication
@@ -25,7 +25,7 @@ public class MaintenanceAnalyticsController {
         return ResponseEntity.ok(downtimeAnalyticsService.getEquipmentMaintenanceHistory(equipmentId, authentication.getName()));
     }
 
-    @GetMapping("/analytics/downtime")
+    @GetMapping({"/analytics/downtime", "/analytics/downtime-summary"})
     public ResponseEntity<DowntimeSummaryResponse> getDowntimeSummary(
             @RequestParam(defaultValue = "INSTITUTION") String scope,
             @RequestParam(required = false) Long scopeId,

@@ -44,7 +44,7 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(requestService.getMyRequests(authentication.getName(), pageable));
     }
 
-    @GetMapping
+    @GetMapping({"", "/queue"})
     public ResponseEntity<Page<MaintenanceRequestResponse>> getManagerQueue(
             @RequestParam(required = false) MaintenanceRequestStatus status,
             @RequestParam(required = false) MaintenancePriority priority,
@@ -57,7 +57,7 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(requestService.getManagerQueue(status, priority, equipmentId, authentication.getName(), pageable));
     }
 
-    @PostMapping("/{id}/approve")
+    @RequestMapping(value = "/{id}/approve", method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<MaintenanceRequestResponse> approveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) MaintenanceRequestReviewDto reviewDto,
@@ -66,7 +66,7 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(requestService.approveRequest(id, reviewDto, authentication.getName()));
     }
 
-    @PostMapping("/{id}/reject")
+    @RequestMapping(value = "/{id}/reject", method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<MaintenanceRequestResponse> rejectRequest(
             @PathVariable Long id,
             @RequestBody(required = false) MaintenanceRequestReviewDto reviewDto,

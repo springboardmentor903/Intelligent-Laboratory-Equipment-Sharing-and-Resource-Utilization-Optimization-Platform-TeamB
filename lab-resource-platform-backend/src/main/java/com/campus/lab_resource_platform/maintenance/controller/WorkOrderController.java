@@ -65,7 +65,7 @@ public class WorkOrderController {
         return ResponseEntity.ok(workOrderService.assignTechnician(id, dto, authentication.getName()));
     }
 
-    @PostMapping("/{id}/start-preview")
+    @RequestMapping(value = "/{id}/start-preview", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<StartPreviewResponse> previewStartWorkOrder(
             @PathVariable Long id,
             Authentication authentication
