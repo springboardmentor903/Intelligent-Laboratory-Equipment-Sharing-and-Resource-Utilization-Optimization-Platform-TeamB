@@ -198,13 +198,54 @@ public class SecurityConfig {
                                 "SYSTEM_ADMINISTRATOR"
                         )
 
+                        // Token-based document preview/download
+                        .requestMatchers("/api/documents/view/**").permitAll()
+
+                        // Maintenance Requests (Students, Dept Heads, Technicians, Managers can submit/view)
+                        .requestMatchers("/api/maintenance/requests", "/api/maintenance/requests/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR"
+                        )
+
+                        // Calibration APIs (T2)
+                        .requestMatchers("/api/calibration/**", "/api/technician/**")
+                        .hasAnyRole(
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR"
+                        )
+
+                        // Document Upload & Management
+                        .requestMatchers("/api/documents/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR"
+                        )
+
+                        // Billing, Charges, and Budgets (T3)
+                        .requestMatchers("/api/billing/**")
+                        .hasAnyRole(
+                                "RESEARCHER_STUDENT",
+                                "LAB_TECHNICIAN",
+                                "LAB_MANAGER",
+                                "DEPARTMENT_HEAD",
+                                "INSTITUTION_ADMINISTRATOR"
+                        )
+
                         // Maintenance APIs
                         .requestMatchers("/api/maintenance/**")
                         .hasAnyRole(
                                 "LAB_TECHNICIAN",
                                 "LAB_MANAGER",
-                                "INSTITUTION_ADMINISTRATOR",
-                                "SYSTEM_ADMINISTRATOR"
+                                "INSTITUTION_ADMINISTRATOR"
                         )
 
                         // Analytics and reports
