@@ -18,6 +18,7 @@ import RoleBasedAccess from "./components/RoleBasedAccess";
 import StudentEquipmentsPage from "./pages/student/StudentEquipmentsPage";
 import StudentBookingPage from "./pages/student/StudentBookingPage";
 import StudentBookingHistoryPage from "./pages/student/StudentBookingHistoryPage";
+import EquipmentSchedulePage from "./pages/equipment/EquipmentSchedulePage";
 
 import StaffEquipmentsPage from "./pages/staff/StaffEquipmentsPage";
 import StaffBookingsPage from "./pages/staff/StaffBookingsPage";
@@ -33,7 +34,15 @@ import CrossInstitutionDiscoveryPage from "./pages/sharing/CrossInstitutionDisco
 import SharingAgreementsPage from "./pages/sharing/SharingAgreementsPage";
 import SharingAnalyticsPage from "./pages/sharing/SharingAnalyticsPage";
 
+import StudentDashboard from "./pages/dashboards/StudentDashboard";
+import LabTechnicianDashboard from "./pages/dashboards/LabTechnicianDashboard";
+import LabManagerDashboard from "./pages/dashboards/LabManagerDashboard";
+import DepartmentHeadDashboard from "./pages/dashboards/DepartmentHeadDashboard";
+import InstitutionAdminDashboard from "./pages/dashboards/InstitutionAdminDashboard";
+import SystemAdminDashboard from "./pages/dashboards/SystemAdminDashboard";
+
 import "./App.css";
+import "./components/dashboard/Dashboard.css";
 import TechnicianAccessRequest from "./pages/auth/TechnicianAccessRequest";
 
 function AuthProvider({ children }) {
@@ -129,17 +138,17 @@ function RoleDefaultRedirect() {
 
   switch (user?.role) {
     case "RESEARCHER_STUDENT":
-      return <Navigate to="/dashboard/student/equipments" replace />;
+      return <Navigate to="/dashboard/student" replace />;
     case "LAB_TECHNICIAN":
-      return <Navigate to="/dashboard/technician/equipments" replace />;
+      return <Navigate to="/dashboard/technician" replace />;
     case "LAB_MANAGER":
-      return <Navigate to="/dashboard/lab-manager/equipments" replace />;
+      return <Navigate to="/dashboard/lab-manager" replace />;
     case "DEPARTMENT_HEAD":
-      return <Navigate to="/dashboard/department-head/equipments" replace />;
+      return <Navigate to="/dashboard/department-head" replace />;
     case "INSTITUTION_ADMINISTRATOR":
-      return <Navigate to="/dashboard/institution-admin/equipments" replace />;
+      return <Navigate to="/dashboard/institution-admin" replace />;
     case "SYSTEM_ADMINISTRATOR":
-      return <Navigate to="/dashboard/admin/equipments" replace />;
+      return <Navigate to="/dashboard/admin" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -184,6 +193,16 @@ function AppRoutes() {
               ]}
             >
               <CreateEquipmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Dedicated standalone equipment schedule calendar page */}
+        <Route
+          path="equipment/:id/schedule"
+          element={
+            <ProtectedRoute>
+              <EquipmentSchedulePage />
             </ProtectedRoute>
           }
         />
@@ -261,10 +280,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Student Routes - Default is Equipments */}
+        {/* Student Routes */}
         <Route
           path="student"
-          element={<Navigate to="/dashboard/student/equipments" replace />}
+          element={
+            <ProtectedRoute allowedRoles={["RESEARCHER_STUDENT"]}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="student/equipments"
@@ -299,10 +322,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Lab Technician Routes - Default is Equipments */}
+        {/* Lab Technician Routes */}
         <Route
           path="technician"
-          element={<Navigate to="/dashboard/technician/equipments" replace />}
+          element={
+            <ProtectedRoute allowedRoles={["LAB_TECHNICIAN"]}>
+              <LabTechnicianDashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="technician/equipments"
@@ -321,10 +348,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Lab Manager Routes - Default is Equipments */}
+        {/* Lab Manager Routes */}
         <Route
           path="lab-manager"
-          element={<Navigate to="/dashboard/lab-manager/equipments" replace />}
+          element={
+            <ProtectedRoute allowedRoles={["LAB_MANAGER"]}>
+              <LabManagerDashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="lab-manager/equipments"
@@ -343,10 +374,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Department Head Routes - Default is Equipments */}
+        {/* Department Head Routes */}
         <Route
           path="department-head"
-          element={<Navigate to="/dashboard/department-head/equipments" replace />}
+          element={
+            <ProtectedRoute allowedRoles={["DEPARTMENT_HEAD"]}>
+              <DepartmentHeadDashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="department-head/equipments"
@@ -365,10 +400,14 @@ function AppRoutes() {
           }
         />
 
-        {/* Institution Administrator Routes - Default is Equipments */}
+        {/* Institution Administrator Routes */}
         <Route
           path="institution-admin"
-          element={<Navigate to="/dashboard/institution-admin/equipments" replace />}
+          element={
+            <ProtectedRoute allowedRoles={["INSTITUTION_ADMINISTRATOR"]}>
+              <InstitutionAdminDashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="institution-admin/equipments"
@@ -387,10 +426,18 @@ function AppRoutes() {
           }
         />
 
-        {/* System Administrator Routes - Default is Equipments */}
+        {/* System Administrator Routes */}
+        <Route
+          path="admin"
+          element={
+            <ProtectedRoute allowedRoles={["SYSTEM_ADMINISTRATOR"]}>
+              <SystemAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="system-admin"
-          element={<Navigate to="/dashboard/admin/equipments" replace />}
+          element={<Navigate to="/dashboard/admin" replace />}
         />
         <Route
           path="admin/equipments"

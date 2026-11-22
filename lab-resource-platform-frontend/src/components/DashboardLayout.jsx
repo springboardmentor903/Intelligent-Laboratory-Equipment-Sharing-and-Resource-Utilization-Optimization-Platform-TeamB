@@ -10,6 +10,7 @@ import {
   FiSettings,
   FiKey,
   FiLogOut,
+  FiHome,
   FiLayers,
   FiClipboard,
   FiCalendar,
@@ -19,6 +20,8 @@ import {
   FiShare2,
   FiFileText,
   FiTrendingUp,
+  FiMenu,
+  FiChevronDown,
 } from "react-icons/fi";
 
 function DashboardLayout() {
@@ -31,6 +34,7 @@ function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const isSystemAdmin = user?.role === "SYSTEM_ADMINISTRATOR";
   const isStudent = user?.role === "RESEARCHER_STUDENT";
@@ -39,9 +43,30 @@ function DashboardLayout() {
   const isLabManager = user?.role === "LAB_MANAGER";
   const isTechnician = user?.role === "LAB_TECHNICIAN";
   const canAccessAnalytics = isSystemAdmin || isInstitutionAdmin || isDepartmentHead || isLabManager;
-  const canAccessSharingAnalytics = isSystemAdmin || isInstitutionAdmin;
 
-  // Close dropdown when clicking outside
+  // Global Ctrl+K (or Cmd+K) shortcut to focus search input
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        if (showSearch && searchInputRef.current) {
+          e.preventDefault();
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+      }
+      if (e.key === "Escape") {
+        if (profileDropdownOpen) {
+          setProfileDropdownOpen(false);
+        } else if (searchInputRef.current && document.activeElement === searchInputRef.current) {
+          searchInputRef.current.blur();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showSearch, profileDropdownOpen]);
+
+  // Close profile dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -55,6 +80,21 @@ function DashboardLayout() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [profileDropdownOpen]);
+
+  const getStaffDashboardPath = () => {
+    switch (user?.role) {
+      case "INSTITUTION_ADMINISTRATOR":
+        return "/dashboard/institution-admin";
+      case "DEPARTMENT_HEAD":
+        return "/dashboard/department-head";
+      case "LAB_MANAGER":
+        return "/dashboard/lab-manager";
+      case "LAB_TECHNICIAN":
+        return "/dashboard/technician";
+      default:
+        return "/dashboard";
+    }
+  };
 
   const getStaffEquipmentsPath = () => {
     switch (user?.role) {
@@ -97,90 +137,119 @@ function DashboardLayout() {
     }
   }
 
+  const userInitial = (user?.fullName || user?.name || user?.email || "U")
+    .charAt(0)
+    .toUpperCase();
+
+  const formattedRole = user?.role
+    ? user.role.replaceAll("_", " ")
+    : "RESEARCHER";
+
   return (
     <div className={`dashboard-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
       {/* Fixed Sticky Top Navbar Header */}
-      <header className="fixed-top-navbar">
+      <header className="fixed-top-navbar" role="banner">
         <div className="navbar-left-cluster">
+          {/* Sidebar collapse toggle button */}
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setMobileOpen((prev) => !prev);
+              } else {
+                setSidebarCollapsed((prev) => !prev);
+              }
+            }}
+            aria-label={sidebarCollapsed ? "Expand sidebar navigation" : "Collapse sidebar navigation"}
+            title={sidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar"}
+          >
+            <FiMenu size={18} />
+          </button>
+
           {/* Platform brand logo with reload capability */}
           <a
             type="button"
-            className="navbar-brand-pill navbar-brand-reload-btn"
+            className="navbar-brand-reload-btn"
             onClick={() => window.location.reload()}
-            title="Click to reload page"
+            title="Click to reload application"
             aria-label="Reload platform"
           >
-            <img src="/logo.png" alt="LabResource Logo" className="brand-logo-image" />
+            <img src="/logo.png" alt="LabResource" className="brand-logo-image" />
             <span className="brand-title-text">LabResource</span>
           </a>
         </div>
 
         {/* Dynamic Page-Aware Search Bar in Center Navbar */}
         {showSearch && (
-          <div className="navbar-center-search-cluster">
+          <div className="navbar-center-search-cluster" role="search">
             <div className="navbar-search-bar">
-              <span className="navbar-search-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                <FiSearch size={16} />
+              <span className="navbar-search-icon" aria-hidden="true">
+                <FiSearch size={15} />
               </span>
               <input
+                ref={searchInputRef}
                 type="text"
                 className="navbar-search-input"
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder || "Search resources, equipment, bookings..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Search on current page"
+                aria-label="Search current workspace"
               />
-              {searchTerm && (
+              {searchTerm ? (
                 <button
                   type="button"
                   className="navbar-search-clear"
-                  onClick={() => setSearchTerm("")}
+                  onClick={() => {
+                    setSearchTerm("");
+                    searchInputRef.current?.focus();
+                  }}
                   title="Clear search query"
                   aria-label="Clear search query"
-                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <FiX size={14} />
                 </button>
+              ) : (
+                <span className="navbar-search-kbd" title="Press Ctrl+K to search">
+                  Ctrl+K
+                </span>
               )}
             </div>
           </div>
         )}
 
-        {/* Right side Profile Icon with Dropdown Menu */}
+        {/* Right side Profile Popover Menu */}
         <div className="navbar-right-cluster" ref={dropdownRef}>
           <button
             type="button"
-            className={`myntra-profile-btn ${profileDropdownOpen ? "active" : ""}`}
+            className={`enterprise-profile-trigger ${profileDropdownOpen ? "active" : ""}`}
             onClick={() => setProfileDropdownOpen((prev) => !prev)}
             aria-expanded={profileDropdownOpen}
             aria-haspopup="true"
-            aria-label="Open profile menu"
+            aria-label="Open user account menu"
           >
-            <svg
-              className="myntra-profile-svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span className="myntra-profile-label">Profile</span>
+            <span className="enterprise-avatar-circle" aria-hidden="true">
+              {userInitial}
+            </span>
+            <div className="enterprise-user-meta">
+              <span className="enterprise-user-name">
+                {user?.fullName || user?.name || "Account"}
+              </span>
+              <span className="enterprise-user-role">
+                {formattedRole}
+              </span>
+            </div>
+            <FiChevronDown size={14} className="enterprise-chevron-icon" aria-hidden="true" />
           </button>
 
-          {/* Profile Dropdown Menu */}
+          {/* Profile Dropdown Popover */}
           {profileDropdownOpen && (
-            <div className="profile-dropdown-menu" role="menu">
+            <div className="profile-dropdown-menu" role="menu" aria-label="Account options">
               <div className="profile-dropdown-header">
-                <strong>{user?.fullName || "User"}</strong>
-                <p>{user?.email || ""}</p>
+                <strong>{user?.fullName || user?.name || "User"}</strong>
+                <p title={user?.email || ""}>{user?.email || "No email"}</p>
                 <span className="profile-dropdown-role">
-                  {user?.role ? user.role.replaceAll("_", " ") : "Member"}
+                  {formattedRole}
                 </span>
               </div>
 
@@ -192,10 +261,10 @@ function DashboardLayout() {
                 role="menuitem"
                 onClick={() => setProfileDropdownOpen(false)}
               >
-                <span className="dropdown-item-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                  <FiUser size={16} />
+                <span className="dropdown-item-icon" aria-hidden="true">
+                  <FiUser size={15} />
                 </span>
-                <span>Profile</span>
+                <span>Profile Details</span>
               </Link>
 
               <Link
@@ -204,8 +273,8 @@ function DashboardLayout() {
                 role="menuitem"
                 onClick={() => setProfileDropdownOpen(false)}
               >
-                <span className="dropdown-item-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                  <FiSettings size={16} />
+                <span className="dropdown-item-icon" aria-hidden="true">
+                  <FiSettings size={15} />
                 </span>
                 <span>Account Settings</span>
               </Link>
@@ -216,10 +285,10 @@ function DashboardLayout() {
                 role="menuitem"
                 onClick={() => setProfileDropdownOpen(false)}
               >
-                <span className="dropdown-item-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                  <FiKey size={16} />
+                <span className="dropdown-item-icon" aria-hidden="true">
+                  <FiKey size={15} />
                 </span>
-                <span>Forgot / Reset Password</span>
+                <span>Reset Password</span>
               </Link>
 
               <div className="profile-dropdown-divider" />
@@ -230,8 +299,8 @@ function DashboardLayout() {
                 role="menuitem"
                 onClick={handleLogout}
               >
-                <span className="dropdown-item-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                  <FiLogOut size={16} />
+                <span className="dropdown-item-icon" aria-hidden="true">
+                  <FiLogOut size={15} />
                 </span>
                 <span>Log out</span>
               </button>
@@ -251,79 +320,46 @@ function DashboardLayout() {
           />
         )}
 
-        {/* Sidebar */}
-        <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-          <div className="workspace-header">
-            <p className="sidebar-label">WORKSPACE</p>
-
-            <button
-              type="button"
-              className="sidebar-toggle-btn"
-              onClick={() => setSidebarCollapsed((prev) => !prev)}
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <svg
-                className="toggle-sidebar-svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
-            </button>
-          </div>
-
+        {/* Deep Navy Enterprise Sidebar */}
+        <aside
+          className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+          aria-label="Workspace Navigation"
+        >
           <nav className="sidebar-nav">
             {isSystemAdmin ? (
               /* System Admin Specific Navigation */
               <>
+                <p className="sidebar-section-label">OVERVIEW</p>
+
+                <NavLink
+                  to="/dashboard/admin"
+                  end
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="System Admin Dashboard"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiHome size={17} />
+                  </span>
+                  <span className="nav-text">Dashboard</span>
+                </NavLink>
+
+                <p className="sidebar-section-label">OPERATIONS</p>
+
                 <NavLink
                   to="/dashboard/admin/equipments"
                   className={({ isActive }) =>
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Equipments"
+                  title="Equipments Catalog"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiLayers size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiLayers size={17} />
                   </span>
                   <span className="nav-text">Equipments</span>
-                </NavLink>
-
-                <NavLink
-                  to="/dashboard/sharing/discovery"
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Inter-Institution Discovery"
-                >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiShare2 size={18} />
-                  </span>
-                  <span className="nav-text">Cross-Institution</span>
-                </NavLink>
-
-                <NavLink
-                  to="/dashboard/admin/role-requests"
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Role Requests"
-                >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiClipboard size={18} />
-                  </span>
-                  <span className="nav-text">Role Requests</span>
                 </NavLink>
 
                 <NavLink
@@ -334,10 +370,40 @@ function DashboardLayout() {
                   onClick={() => setMobileOpen(false)}
                   title="Bookings & Approvals"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiCalendar size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiCalendar size={17} />
                   </span>
                   <span className="nav-text">Bookings</span>
+                </NavLink>
+
+                <p className="sidebar-section-label">COLLABORATION</p>
+
+                <NavLink
+                  to="/dashboard/sharing/discovery"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Inter-Institution Resource Discovery"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiShare2 size={17} />
+                  </span>
+                  <span className="nav-text">Cross-Institution</span>
+                </NavLink>
+
+                <NavLink
+                  to="/dashboard/admin/role-requests"
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Role Elevation Requests"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiClipboard size={17} />
+                  </span>
+                  <span className="nav-text">Role Requests</span>
                 </NavLink>
 
                 <NavLink
@@ -346,13 +412,15 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Sharing Agreements"
+                  title="Sharing Agreements & Contracts"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiFileText size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiFileText size={17} />
                   </span>
                   <span className="nav-text">Sharing Contracts</span>
                 </NavLink>
+
+                <p className="sidebar-section-label">MONITORING &amp; METRICS</p>
 
                 <NavLink
                   to="/dashboard/utilization"
@@ -360,10 +428,10 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Live Utilization"
+                  title="Live Telemetry & Utilization"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiActivity size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiActivity size={17} />
                   </span>
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
@@ -374,10 +442,10 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Utilization Analytics"
+                  title="Utilization Analytics Engine"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiBarChart2 size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiBarChart2 size={17} />
                   </span>
                   <span className="nav-text">Analytics Engine</span>
                 </NavLink>
@@ -388,27 +456,15 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Sharing Analytics"
+                  title="Inter-Institution Sharing Analytics"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiTrendingUp size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiTrendingUp size={17} />
                   </span>
                   <span className="nav-text">Sharing Analytics</span>
                 </NavLink>
 
-                {canAccessSharingAnalytics && (
-                  <NavLink
-                    to="/dashboard/sharing/analytics"
-                    className={({ isActive }) =>
-                      `sidebar-nav-item ${isActive ? "active" : ""}`
-                    }
-                    onClick={() => setMobileOpen(false)}
-                    title="Partnership Analytics"
-                  >
-                    <span className="nav-icon">🤝</span>
-                    <span className="nav-text">Partnership Analytics</span>
-                  </NavLink>
-                )}
+                <p className="sidebar-section-label">ADMINISTRATION</p>
 
                 <NavLink
                   to="/dashboard/admin/accounts"
@@ -416,10 +472,10 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Accounts Manage"
+                  title="Manage User Accounts & Roles"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiUsers size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiUsers size={17} />
                   </span>
                   <span className="nav-text">Accounts Manage</span>
                 </NavLink>
@@ -427,19 +483,40 @@ function DashboardLayout() {
             ) : isStudent ? (
               /* Student / Researcher Navigation */
               <>
+                <p className="sidebar-section-label">OVERVIEW</p>
+
+                <NavLink
+                  to="/dashboard/student"
+                  end
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Student Dashboard"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiHome size={17} />
+                  </span>
+                  <span className="nav-text">Dashboard</span>
+                </NavLink>
+
+                <p className="sidebar-section-label">RESEARCH WORKSPACE</p>
+
                 <NavLink
                   to="/dashboard/student/equipments"
                   className={({ isActive }) =>
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Equipments"
+                  title="Equipment Catalog"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiLayers size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiLayers size={17} />
                   </span>
                   <span className="nav-text">Equipments</span>
                 </NavLink>
+
+                <p className="sidebar-section-label">MY RESERVATIONS</p>
 
                 <NavLink
                   to="/dashboard/student/bookings"
@@ -447,13 +524,15 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Booking History"
+                  title="My Booking History & Waitlist"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiCalendar size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiCalendar size={17} />
                   </span>
                   <span className="nav-text">Booking History</span>
                 </NavLink>
+
+                <p className="sidebar-section-label">MONITORING</p>
 
                 <NavLink
                   to="/dashboard/utilization"
@@ -461,10 +540,10 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Live Telemetry"
+                  title="Live Telemetry Monitoring"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiActivity size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiActivity size={17} />
                   </span>
                   <span className="nav-text">Live Telemetry</span>
                 </NavLink>
@@ -472,19 +551,40 @@ function DashboardLayout() {
             ) : isInstitutionAdmin || isDepartmentHead || isLabManager || isTechnician ? (
               /* Institute Admin, Department Head, Lab Manager, Lab Technician Navigation */
               <>
+                <p className="sidebar-section-label">OVERVIEW</p>
+
+                <NavLink
+                  to={getStaffDashboardPath()}
+                  end
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Dashboard Overview"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiHome size={17} />
+                  </span>
+                  <span className="nav-text">Dashboard</span>
+                </NavLink>
+
+                <p className="sidebar-section-label">LAB INVENTORY</p>
+
                 <NavLink
                   to={getStaffEquipmentsPath()}
                   className={({ isActive }) =>
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Equipments"
+                  title="Equipments Management"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiLayers size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiLayers size={17} />
                   </span>
                   <span className="nav-text">Equipments</span>
                 </NavLink>
+
+                <p className="sidebar-section-label">COLLABORATION</p>
 
                 {/* Inter-Equipment requesting page placed strictly for Department Head */}
                 {isDepartmentHead && (
@@ -496,26 +596,12 @@ function DashboardLayout() {
                     onClick={() => setMobileOpen(false)}
                     title="Request Equipment from Partner Institutions"
                   >
-                    <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                      <FiShare2 size={18} />
+                    <span className="nav-icon" aria-hidden="true">
+                      <FiShare2 size={17} />
                     </span>
                     <span className="nav-text">Inter-Institution Requests</span>
                   </NavLink>
                 )}
-
-                <NavLink
-                  to={getStaffBookingsPath()}
-                  className={({ isActive }) =>
-                    `sidebar-nav-item ${isActive ? "active" : ""}`
-                  }
-                  onClick={() => setMobileOpen(false)}
-                  title="Bookings & Approvals"
-                >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiCalendar size={18} />
-                  </span>
-                  <span className="nav-text">Bookings</span>
-                </NavLink>
 
                 {/* Sharing Contracts & Access Requests management - for Institution Admin & Department Head */}
                 <NavLink
@@ -526,11 +612,31 @@ function DashboardLayout() {
                   onClick={() => setMobileOpen(false)}
                   title={isInstitutionAdmin ? "Review & Manage Inter-Institution Access Requests" : "Sharing Agreements & Requests"}
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiFileText size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiFileText size={17} />
                   </span>
-                  <span className="nav-text">{isInstitutionAdmin ? "Sharing Requests & Contracts" : "Sharing Contracts"}</span>
+                  <span className="nav-text">
+                    {isInstitutionAdmin ? "Sharing Requests & Contracts" : "Sharing Contracts"}
+                  </span>
                 </NavLink>
+
+                <p className="sidebar-section-label">OPERATIONS</p>
+
+                <NavLink
+                  to={getStaffBookingsPath()}
+                  className={({ isActive }) =>
+                    `sidebar-nav-item ${isActive ? "active" : ""}`
+                  }
+                  onClick={() => setMobileOpen(false)}
+                  title="Bookings & Approvals"
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiCalendar size={17} />
+                  </span>
+                  <span className="nav-text">Bookings</span>
+                </NavLink>
+
+                <p className="sidebar-section-label">MONITORING</p>
 
                 <NavLink
                   to="/dashboard/utilization"
@@ -538,26 +644,28 @@ function DashboardLayout() {
                     `sidebar-nav-item ${isActive ? "active" : ""}`
                   }
                   onClick={() => setMobileOpen(false)}
-                  title="Live Utilization"
+                  title="Live Telemetry & Utilization"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiActivity size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiActivity size={17} />
                   </span>
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
 
                 {canAccessAnalytics && (
                   <>
+                    <p className="sidebar-section-label">ANALYTICS</p>
+
                     <NavLink
                       to="/dashboard/analytics"
                       className={({ isActive }) =>
                         `sidebar-nav-item ${isActive ? "active" : ""}`
                       }
                       onClick={() => setMobileOpen(false)}
-                      title="Utilization Analytics"
+                      title="Utilization Analytics Engine"
                     >
-                      <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                        <FiBarChart2 size={18} />
+                      <span className="nav-icon" aria-hidden="true">
+                        <FiBarChart2 size={17} />
                       </span>
                       <span className="nav-text">Analytics Engine</span>
                     </NavLink>
@@ -568,33 +676,21 @@ function DashboardLayout() {
                         `sidebar-nav-item ${isActive ? "active" : ""}`
                       }
                       onClick={() => setMobileOpen(false)}
-                      title="Sharing Analytics"
+                      title="Inter-Institution Sharing Analytics"
                     >
-                      <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                        <FiTrendingUp size={18} />
+                      <span className="nav-icon" aria-hidden="true">
+                        <FiTrendingUp size={17} />
                       </span>
                       <span className="nav-text">Sharing Analytics</span>
                     </NavLink>
                   </>
                 )}
-
-                {canAccessSharingAnalytics && (
-                  <NavLink
-                    to="/dashboard/sharing/analytics"
-                    className={({ isActive }) =>
-                      `sidebar-nav-item ${isActive ? "active" : ""}`
-                    }
-                    onClick={() => setMobileOpen(false)}
-                    title="Partnership Analytics"
-                  >
-                    <span className="nav-icon">🤝</span>
-                    <span className="nav-text">Partnership Analytics</span>
-                  </NavLink>
-                )}
               </>
             ) : (
               /* Fallback Generic Roles */
               <>
+                <p className="sidebar-section-label">WORKSPACE</p>
+
                 <NavLink
                   to="/dashboard/utilization"
                   className={({ isActive }) =>
@@ -603,8 +699,8 @@ function DashboardLayout() {
                   onClick={() => setMobileOpen(false)}
                   title="Live Utilization"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiActivity size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiActivity size={17} />
                   </span>
                   <span className="nav-text">Live Utilization</span>
                 </NavLink>
@@ -617,8 +713,8 @@ function DashboardLayout() {
                   onClick={() => setMobileOpen(false)}
                   title="Profile"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiUser size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiUser size={17} />
                   </span>
                   <span className="nav-text">Profile</span>
                 </NavLink>
@@ -631,8 +727,8 @@ function DashboardLayout() {
                   onClick={() => setMobileOpen(false)}
                   title="Account Settings"
                 >
-                  <span className="nav-icon" style={{ display: "inline-flex", alignItems: "center" }}>
-                    <FiSettings size={18} />
+                  <span className="nav-icon" aria-hidden="true">
+                    <FiSettings size={17} />
                   </span>
                   <span className="nav-text">Account Settings</span>
                 </NavLink>
@@ -642,7 +738,7 @@ function DashboardLayout() {
         </aside>
 
         {/* Main Content Body */}
-        <main className="dashboard-main">
+        <main className="dashboard-main" id="main-content">
           <Outlet />
         </main>
       </div>
