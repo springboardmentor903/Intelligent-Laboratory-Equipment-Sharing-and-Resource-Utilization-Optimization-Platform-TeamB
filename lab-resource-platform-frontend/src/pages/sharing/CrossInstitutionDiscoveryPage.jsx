@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { useSearch } from "../../context/SearchContext";
 import FilterDropdown from "../../components/FilterDropdown";
+import EquipmentCard from "../../components/EquipmentCard";
 import {
   FiShare2,
   FiSearch,
@@ -252,103 +253,17 @@ export default function CrossInstitutionDiscoveryPage() {
           <p>No equipment from other colleges matches your filter parameters. Equipments from your own college are excluded so you can discover partner resources.</p>
         </div>
       ) : (
-        <div className="student-equipment-grid">
-          {partnerListings.map((item) => {
-            const eqName = item.equipmentName || item.name;
-            const instName = item.ownerInstitutionName || item.institutionName || item.collegeName || "Partner Institution";
-            const catName = item.categoryName || item.category || "Research Tool";
-            const feeVal = item.feePerHour ?? item.hourlyFee ?? 250;
-            const fee = `₹${feeVal}/hr`;
-            const maxHours = item.maxBookingDurationHours || item.maxUsageHours || 8;
-
-            return (
-              <article key={item.id || item.listingId} className="student-equipment-card">
-                <div className="student-card-header">
-                  <span className="admin-badge-college">
-                    <FiLayers style={{ marginRight: "4px" }} />
-                    {instName}
-                  </span>
-                  <span
-                    className="admin-status-pill"
-                    style={{ backgroundColor: "#dcfce7", color: "#15803d" }}
-                  >
-                    <FiCheckCircle style={{ marginRight: "4px" }} />
-                    Available for Sharing
-                  </span>
-                </div>
-
-                <div className="student-card-body">
-                  <h3 className="student-equipment-title">{eqName}</h3>
-
-                  <div className="student-equipment-meta">
-                    <span className="student-meta-item">
-                      <FiFolder style={{ marginRight: "4px" }} />
-                      <strong>Category:</strong> {catName}
-                    </span>
-                    {item.model && (
-                      <span className="student-meta-item">
-                        <FiTag style={{ marginRight: "4px" }} />
-                        <strong>Model:</strong> {item.model}
-                      </span>
-                    )}
-                    {item.manufacturer && (
-                      <span className="student-meta-item">
-                        <FiCpu style={{ marginRight: "4px" }} />
-                        <strong>Mfr:</strong> {item.manufacturer}
-                      </span>
-                    )}
-                    {item.location && (
-                      <span className="student-meta-item">
-                        <FiMapPin style={{ marginRight: "4px" }} />
-                        <strong>Location:</strong> {item.location}
-                      </span>
-                    )}
-                  </div>
-
-                  {item.description && (
-                    <p className="student-equipment-desc">{item.description}</p>
-                  )}
-
-                  {item.specifications && (
-                    <div className="student-equipment-specs">
-                      <strong>Specifications:</strong> {item.specifications}
-                    </div>
-                  )}
-
-                  <div className="student-equipment-features">
-                    <span className="student-feature-pill" style={{ color: "#047857", background: "#ecfdf5", borderColor: "#a7f3d0" }}>
-                      <FiDollarSign style={{ marginRight: "2px" }} /> Rate: {fee}
-                    </span>
-                    <span className="student-feature-pill">
-                      <FiClock style={{ marginRight: "4px" }} /> Max {maxHours} hrs/session
-                    </span>
-                  </div>
-                </div>
-
-                <div className="student-card-footer">
-                  <button
-                    type="button"
-                    className="student-book-btn"
-                    onClick={() => setRequestModalListing(item)}
-                    title="Request Inter-Institution Access"
-                  >
-                    <FiSend style={{ marginRight: "6px" }} />
-                    Request Access &amp; Book
-                  </button>
-
-                  <button
-                    type="button"
-                    className="student-availability-btn"
-                    onClick={() => handleOpenSchedule(item)}
-                    title="View shared schedule and usage windows"
-                  >
-                    <FiCalendar style={{ marginRight: "6px" }} />
-                    Shared Schedule
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+        <div className="eq-card-list">
+          {partnerListings.map((item, idx) => (
+            <EquipmentCard
+              key={item.id || item.listingId}
+              equipment={item}
+              mode="discovery"
+              index={idx}
+              onRequestAccess={(listing) => setRequestModalListing(listing)}
+              onViewSchedule={(listing) => navigate(`/dashboard/equipment/${listing.equipmentId || listing.id}/schedule`)}
+            />
+          ))}
         </div>
       )}
 

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { FiX } from "react-icons/fi";
+import { TeamLanyardRail } from "@/components/ui/team-lanyard-rail";
 
 const ROLE_OPTIONS = [
   { value: "SYSTEM_ADMINISTRATOR", label: "System Administrator", color: "#6d28d9" },
@@ -11,6 +12,16 @@ const ROLE_OPTIONS = [
   { value: "LAB_MANAGER", label: "Lab Manager", color: "#047857" },
   { value: "LAB_TECHNICIAN", label: "Lab Technician", color: "#b45309" },
   { value: "RESEARCHER_STUDENT", label: "Researcher / Student", color: "#4b5563" },
+];
+
+const AVATAR_LIST = [
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=320&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=320&auto=format&fit=crop&q=80",
 ];
 
 export default function AdminAccountsPage() {
@@ -25,6 +36,7 @@ export default function AdminAccountsPage() {
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("wall"); // "wall" (default) or "table"
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -192,6 +204,60 @@ export default function AdminAccountsPage() {
     return true;
   });
 
+  // Transform users into interactive Lanyard Badges
+  const lanyardMembers = useMemo(() => {
+    const list = filteredUsers.length > 0 ? filteredUsers : users;
+    if (list.length === 0) {
+      return [
+        {
+          id: "admin-root",
+          name: currentAdmin?.fullName || "System Administrator",
+          role: "System Administrator",
+          team: "Platform Administration · Central",
+          image: AVATAR_LIST[0],
+          bio: "Managing institutional tenant configurations, global RBAC permissions, and laboratory sharing networks.",
+          tags: ["Platform Admin", "Infrastructure", "Security"],
+          links: [{ label: "Email", href: `mailto:${currentAdmin?.email || "admin@platform.edu"}` }],
+          tone: 1,
+        },
+      ];
+    }
+
+    const roleToneMap = {
+      SYSTEM_ADMINISTRATOR: 1,
+      INSTITUTION_ADMINISTRATOR: 2,
+      DEPARTMENT_HEAD: 3,
+      LAB_MANAGER: 4,
+      LAB_TECHNICIAN: 5,
+      RESEARCHER_STUDENT: 2,
+    };
+
+    return list.slice(0, 10).map((u, i) => {
+      const roleObj = ROLE_OPTIONS.find((r) => r.value === u.role);
+      const roleLabel = roleObj ? roleObj.label : u.role || "Team Member";
+      const tone = roleToneMap[u.role] || ((i % 5) + 1);
+      return {
+        id: String(u.id || i),
+        name: u.fullName || u.username || `User #${u.id}`,
+        role: roleLabel,
+        team: u.collegeName ? `${u.collegeName.slice(0, 24)} · Lab Ops` : "Engineering & Research Labs",
+        image: u.avatarUrl || AVATAR_LIST[i % AVATAR_LIST.length],
+        bio: `${roleLabel} at ${u.collegeName || "Institution"}. Contact: ${u.email}`,
+        tags: [
+          roleLabel.split(" ")[0],
+          u.active ? "Active" : "Inactive",
+          u.collegeName ? u.collegeName.slice(0, 14) : "Campus",
+        ],
+        links: [
+          { label: "Email", href: `mailto:${u.email}` },
+          ...(u.phone ? [{ label: "Call", href: `tel:${u.phone}` }] : []),
+        ],
+        tone,
+        drop: (i % 3) * 6,
+      };
+    });
+  }, [filteredUsers, users, currentAdmin]);
+
   const collegeMap = Object.fromEntries(colleges.map((c) => [c.id, c.name]));
   const currentCollegeName = selectedCollegeId
     ? collegeMap[selectedCollegeId] || "Selected College"
@@ -209,9 +275,50 @@ export default function AdminAccountsPage() {
           </p>
         </div>
 
-        <button type="button" className="admin-btn-primary" onClick={handleOpenCreate}>
-          + Create Account
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "inline-flex", background: "#f1f5f9", padding: "4px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: viewMode === "table" ? "600" : "500",
+                background: viewMode === "table" ? "#ffffff" : "transparent",
+                color: viewMode === "table" ? "#0f172a" : "#64748b",
+                boxShadow: viewMode === "table" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              📋 Directory Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("wall")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: viewMode === "wall" ? "600" : "500",
+                background: viewMode === "wall" ? "#ffffff" : "transparent",
+                color: viewMode === "wall" ? "#0f172a" : "#64748b",
+                boxShadow: viewMode === "wall" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              🪪 Team Lanyard Wall
+            </button>
+          </div>
+
+          <button type="button" className="admin-btn-primary" onClick={handleOpenCreate}>
+            + Create Account
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -297,8 +404,27 @@ export default function AdminAccountsPage() {
         {filteredUsers.length === 1 ? "account" : "accounts"})
       </div>
 
-      {/* Users Table */}
-      {loading ? (
+      {/* View Switch: Team Lanyard Rail vs Table */}
+      {viewMode === "wall" ? (
+        <div className="lanyard-wall-container">
+          <div className="lanyard-wall-header">
+            <div>
+              <span className="lanyard-wall-badge">INTERACTIVE BADGE RAIL</span>
+              <h2 className="lanyard-wall-title" style={{ marginTop: "4px" }}>
+                Personnel & Lab Staff Badges
+              </h2>
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted, #64748b)", margin: 0 }}>
+              Showing {lanyardMembers.length} team member{lanyardMembers.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <TeamLanyardRail
+            items={lanyardMembers}
+            heading="A team wall you can flip through, right on the page."
+            caption="Hover or swipe through badges. Click to flip and inspect verified institutional credentials & contact links."
+          />
+        </div>
+      ) : loading ? (
         <div className="admin-loading-state">Loading user accounts...</div>
       ) : filteredUsers.length === 0 ? (
         <div className="admin-empty-card">
